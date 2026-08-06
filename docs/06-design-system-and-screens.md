@@ -4,6 +4,14 @@ This document is the contract between the Figma mocks and the Angular implementa
 defined here are created as Figma variables and as CSS custom properties layered over the
 PrimeNG Aura preset already configured in `src/app/app.config.ts`.
 
+**Mocks:** [Fantasy Football Draft Optimizer — Mocks](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z)
+
+The Figma file has two pages. **Components** holds the token swatches and the seven variant
+component sets; **Screens** holds the ten 1600×1000 desktop mocks listed in §6. Every colour,
+spacing value and radius in the mocks is a bound Figma variable rather than a hardcoded value,
+and every typographic style is a named text style, so the file can be read directly as the
+implementation spec.
+
 ---
 
 ## 1. Design Direction
@@ -134,12 +142,19 @@ never confused with a green factor grade.
 | `body-strong` | Inter | 14 / 20 | 600 | Player names |
 | `small` | Inter | 12 / 18 | 400 | Metadata |
 | `label` | Inter | 11 / 16 | 600, 0.06em tracking, uppercase | Column headers, tags |
-| `mono-lg` | JetBrains Mono | 22 / 28 | 600, tabular | Composite scores |
-| `mono` | JetBrains Mono | 13 / 18 | 500, tabular | All table numerics |
+| `small-strong` | Inter | 12 / 18 | 600 | Emphasised metadata |
+| `mono-lg` | JetBrains Mono | 22 / 28 | Bold, tabular | Composite scores |
+| `mono` | JetBrains Mono | 13 / 18 | Medium, tabular | All table numerics |
+| `mono-sm` | JetBrains Mono | 11 / 16 | Medium, tabular | Dense cells, factor strips |
 
 Tabular monospace numerals for every number in a column is not a stylistic flourish — with
 twelve factor values per player row, proportional digits make columns fail to align and the
 board becomes materially harder to scan.
+
+Two naming details that matter when writing code against the Figma file: Inter's 600 weight is
+the style `Semi Bold` (with a space), while JetBrains Mono has no semibold at all, so the mono
+ramp uses `Medium` and `Bold`. Guessing either string is a common source of font-loading
+failures.
 
 ---
 
@@ -161,6 +176,14 @@ and a 12px cell gutter.
 ---
 
 ## 5. Core Components
+
+Seven of these exist as variant component sets in the Figma file's **Components** page and are
+instanced throughout the mocks: `Cell/FactorGrade` (green / yellow / orange / red / unknown),
+`Badge/Position` (QB / RB / WR / TE), `Chip/Tier` (S / A / B / C / D / F / Unrated),
+`Badge/Archetype` (Prime WR1 / Prime WR2 / Prime RB / Prime / Breakout / Trusty Vet),
+`Chip/ValueDelta` (Discount / Neutral / Premium), `Row/Player`, `Nav/Sidebar` and `Nav/TopBar`.
+Each carries a description explaining what it encodes, and the archetype badges carry their
+historical outcome rates. The remainder below are specified but composed inline in the mocks.
 
 Components that carry the model's semantics and must be built once and reused everywhere:
 
@@ -217,20 +240,20 @@ inflation rate, and the max-bid figure that is the auction room's most valuable 
 
 ## 6. Screen Inventory
 
-Ten screens for the mocks, ordered by the flow a new user follows:
+Ten screens, ordered by the flow a new user follows. All are built in the Figma file.
 
-| # | Screen | Purpose | Key components |
-| --- | --- | --- | --- |
-| 1 | **Dashboard** | Multi-league hub, upcoming drafts, draft-time conflict warnings, quick resume | League cards, draft countdown, `SyncStatusChip` |
-| 2 | **Connect Leagues** | Sleeper username flow and ESPN cookie flow with guided instructions, discovered-league selection | Platform cards, guided steps, league picker |
-| 3 | **Scoring Settings** | Imported scoring in plain language, validation result, manual override | Scoring summary, validation banner, override form |
-| 4 | **Strategy Planner** | Choose from the nine strategies with tier grades, set draft slot, see the round plan | `StrategyCard` grid, slot tier map, `RoundPlanTimeline` |
-| 5 | **Strategy Simulator** | Monte Carlo outcome distribution and side-by-side strategy comparison | Distribution chart, comparison table |
-| 6 | **Player Board** | The ranked big board with tiers, filters, and full factor columns | `PlayerRow`, `TierBreak`, filters, virtual scroll |
-| 7 | **Player Detail** | Full 12-factor breakdown, archetype rates, injury history, season log, market value | `FactorGrid`, `CeilingScoreDial`, `RiskMeter`, `ValueDelta` |
-| 8 | **Live Draft Room (snake)** | The flagship: board grid, roster, recommendations, needs, adherence | `RecommendationCard`, `NeedsPanel`, `AdherenceMeter`, board grid |
-| 9 | **Auction Draft Room** | Nomination, bidding, budgets, inflation, max bid, contract terms | `BudgetBar`, `MaxBidCallout`, budget grid, contract selector |
-| 10 | **Dynasty Roster** | Multi-year value curves, roster age distribution, pick assets, contend/rebuild toggle | Age curve chart, value curves, pick asset list |
+| # | Screen | Purpose |
+| --- | --- | --- |
+| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub across both platforms and all three formats, draft-time conflict warning, research findings panel, readiness checklist, and an explicit model-coverage card marking RB provisional |
+| 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow marked recommended, ESPN cookie flow marked beta with guided steps and a credential-handling note, discovered-league table with detected format and scoring |
+| 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |
+| 4 | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240) | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout |
+| 5 | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces |
+| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the 12-factor strip per row |
+| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full 12-factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
+| 8 | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108) | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert |
+| 9 | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108) | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector |
+| 10 | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149) | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets |
 
 A post-draft recap screen (`05-architecture.md` §4, `/leagues/:id/recap`) is specified but
 deferred out of the first mock set, since its content depends on decisions made in the live

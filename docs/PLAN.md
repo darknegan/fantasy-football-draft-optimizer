@@ -156,9 +156,27 @@ confirmed rather than silently decided in code.
 
 ---
 
+## Mocks
+
+All ten screens are built in Figma:
+[Fantasy Football Draft Optimizer — Mocks](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z).
+Per-screen links are in [`06-design-system-and-screens.md`](./06-design-system-and-screens.md) §6.
+
+The file is structured to be read as an implementation spec rather than just a picture. Colours,
+spacing and radii are bound Figma variables matching the token names in that document,
+typography uses named text styles, and the repeated elements that carry the model's semantics —
+the factor grade cell, position badge, tier chip, archetype badge, value delta chip, player row,
+sidebar and top bar — exist as variant component sets with descriptions explaining what they
+encode.
+
 ## Next step
 
-The Figma mocks for the ten screens in
-[`06-design-system-and-screens.md`](./06-design-system-and-screens.md) §6, built on the tokens
-and components defined in that document, then the Angular + PrimeNG implementation against
-the phase sequence in [`05-architecture.md`](./05-architecture.md) §5.
+The Angular + PrimeNG implementation, following the phase sequence in
+[`05-architecture.md`](./05-architecture.md) §5. Phase 1 ends with unit tests that reproduce the
+three verified ceiling scores (Allen 41, Chase 42, Bowers 36) from the source spreadsheets,
+which is the proof the evaluation model is faithfully implemented before anything is built on
+top of it.
+
+Two decisions are worth making before that work starts, because both change what gets built
+rather than just how: whether to source the missing running back benchmarks or ship RB scores
+marked provisional, and whether the ESPN integration clears terms-of-service review.
