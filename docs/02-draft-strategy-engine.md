@@ -116,11 +116,28 @@ available in round 3, not round 1. The app should nudge Elite QB adherents towar
 **TE is bimodal**: 43% in round 2, 25% in round 3, then a collapse to 0% in round 4, and a
 secondary 20% spike in round 10. This is the clearest tactical instruction in the dataset —
 either pay for a top TE in rounds 2–3 or wait until round 10, and specifically do *not* take
-a TE in round 4, where the historical league-winner rate is zero. It also validates the
-Elite TE strategy while narrowing it: the definition says "top 4-5 round tight end anchor",
-but the data says rounds 2–3, with round 4 as the worst possible TE round. That is a genuine
-tension between two artifacts in this repo, and I would resolve it in favour of the
-round-by-round data, which is outcome-based.
+a TE in round 4, where the historical league-winner rate is zero.
+
+This resolves a genuine tension between two artifacts in the repo. The Elite TE strategy
+definition says "top 4-5 round tight end anchor", while the round-by-round table says round 4
+is the *worst* possible round to take a tight end. **Decision: the round-by-round data wins.**
+The Elite TE window is rounds 2–3, and round 4 is an explicit avoid.
+
+The reasoning is that the two artifacts are not equal kinds of evidence. The strategy
+definition is a description of an approach, written in approximate language — "4-5 round"
+reads like a characterisation of "early-ish" rather than a measured claim. The round table is
+an outcome count: of the tight ends actually drafted in round 4 across the sample, none went on
+to win a league. When a description and a measurement disagree, the measurement should win.
+
+Two honest caveats the app should carry rather than hide. A 0% cell is a statement about a
+finite sample, not a law — with a few dozen round-4 tight ends observed, zero is strong
+evidence of a bad round but not proof that the next one cannot work. And the round-4 collapse
+sitting between 25% in round 3 and a 20% spike in round 10 is a sharper discontinuity than most
+underlying processes produce, which is consistent with a real effect (round 4 is where the
+elite tier is gone but the cheap upside tier has not yet arrived) but also with sample noise.
+The recommendation is unchanged either way, since both readings say the same thing: there is no
+round-4 tight end worth taking. The engine treats it as a strong penalty rather than a hard
+block, and always shows the 0% next to the warning so the user can judge it themselves.
 
 **RB is the most consistently productive early position**, 22%/26%/18%/19% across the first
 four rounds with no dead round. WR peaks in round 2 at 25% but has a striking round-3 trough

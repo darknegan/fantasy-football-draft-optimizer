@@ -219,23 +219,47 @@ injury base rates (`RB Avg Games Missed.PNG`), and a season-outcome audit
 (`2025 RB Results.PNG`).
 
 This is a real inconsistency in the source material rather than an oversight on my part to
-paper over, and it needs a decision. Two options:
+paper over.
 
-1. **Author a 12-factor RB set** matching the other positions, so `CeilingScore` is
-   comparable across all four. Proposed factors, chosen to mirror the volume + situation +
-   profile structure: touches per game, rush attempts per game, targets per game, total
-   TDs per game, offensive rank in PPG, offensive line rank in run blocking, red zone
-   touch share, snap share, goal-line carry share, team neutral-situation run rate,
-   archetype, injury concern.
-2. **Score RBs on VORP + archetype only** and accept that RB rankings are not directly
-   comparable to WR rankings on the `CeilingScore` axis.
+**Decision: running backs ship provisional.** The RB benchmarks do not exist yet and will be
+supplied later. Until they arrive, the RB board runs on `ArchetypeEV` + VORP + `RiskProfile`,
+and RB rows display **no `CeilingScore` at all** rather than a computed-looking number — a
+dash and a `provisional` marker, as in the
+[player board mock](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341).
 
-I recommend option 1, with the explicit caveat that the benchmark values for those twelve
-factors are **not** present in the current stats folder and must be sourced before the RB
-model can be considered calibrated. Until then the RB board should run on VORP + archetype
-+ risk and the UI should mark RB `CeilingScore` as provisional. Shipping a number that
-looks as authoritative as the QB/WR/TE scores while resting on invented benchmarks would be
-the single easiest way to make this tool untrustworthy.
+Showing a number that looks as authoritative as Ja'Marr Chase's verified 42 while resting on
+invented benchmarks would be the fastest possible way to make this tool untrustworthy, and it
+would be undetectable to the user. A visible gap is the honest representation, and it has a
+useful side effect: it makes the missing data obvious to whoever is looking at the board,
+rather than letting a placeholder quietly harden into an assumption.
+
+### 1.5.1 Designing for the benchmarks arriving later
+
+Because the benchmarks are expected rather than hypothetical, the engine should be built so
+that adding them is a configuration change and not a code change. Three requirements follow:
+
+**Benchmarks live in versioned configuration, not code.** A per-position, per-season table of
+factor definitions with their benchmark values, comparison direction, and grading bands (the
+cut-points in §1.1). Adding RB means adding one entry, and recalibrating QB/WR/TE next season
+means editing values rather than shipping a release.
+
+**The factor set is position-parameterised from the start.** The grading pipeline should take
+the twelve factors as data and iterate, so nothing about the number twelve or the specific
+factor names is hardcoded. The QB, WR and TE tables prove the shape; RB slots into it.
+
+**RB carries `ConfidenceScore` 0 until it lands.** The confidence mechanism in §1 already
+expresses exactly this state — factors whose values are not known — so RB needs no special
+case in the model, only in the UI copy that explains why.
+
+Proposed RB factor set, for when the data is available, mirroring the volume + situational +
+profile structure of the other three positions: touches per game, rush attempts per game,
+targets per game and total touchdowns per game for volume; offensive rank in PPG, offensive
+line rank in run blocking, red zone touch share, snap share, goal-line carry share and team
+neutral-situation run rate for situational; archetype and injury concern for profile. That is
+twelve, keeping the -36…60 scale directly comparable across all four positions. It is a
+proposal to check against the research rather than a specification — the benchmark values are
+what matter, and they should come from the same outcome-derived method as the others: the
+average profile of running backs who actually won leagues.
 
 ---
 
@@ -489,7 +513,9 @@ absence of any of these is what forces the `unknown` grade discussed in §1:
 
 Candidate sources, all of which need licence review before the build starts: `nflverse` /
 `nflfastR` public play-by-play and roster data for volume and biographical fields, Sleeper's
-public API for ADP and player metadata, ESPN's undocumented fantasy endpoints for
-projections, and manual or licensed feeds for PFF, DVOA, and Reception Perception. The
+public API for ADP and player metadata, and manual or licensed feeds for PFF, DVOA, and
+Reception Perception. The ESPN projection ranks in the value model come from the collected
+research in `public/stats/` rather than any API, so they are unaffected by the decision not to
+integrate with ESPN. The
 proprietary efficiency metrics are the hard dependency, and the plan should assume they
 start as a manually maintained seasonal CSV import rather than a live feed.

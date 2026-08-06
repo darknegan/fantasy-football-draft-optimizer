@@ -2,7 +2,7 @@
 
 A real-time fantasy football draft tool that helps you plan a draft strategy in advance,
 ranks the best available players at every position using age, experience, injury history, and
-past performance, syncs your real leagues from Sleeper and ESPN, and then guides you pick by
+past performance, syncs your real leagues from Sleeper, and then guides you pick by
 pick during the draft itself.
 
 ---
@@ -13,7 +13,7 @@ pick during the draft itself.
 | --- | --- |
 | [`01-player-evaluation-model.md`](./01-player-evaluation-model.md) | The scoring engine, reverse-engineered from the research in `public/stats/`: factor grading, career-stage archetypes, injury risk, market value, composite `DraftScore` |
 | [`02-draft-strategy-engine.md`](./02-draft-strategy-engine.md) | The nine draft strategies, their tier grades, draft slot values, round-by-round positional targets, adherence and pivot logic |
-| [`03-league-integrations.md`](./03-league-integrations.md) | Sleeper and ESPN integration, scoring settings import, and support for redraft / dynasty / auction-with-contracts |
+| [`03-league-integrations.md`](./03-league-integrations.md) | Sleeper integration, manual league setup, scoring settings import, and support for redraft / dynasty / auction-with-contracts |
 | [`04-live-draft-team-builder.md`](./04-live-draft-team-builder.md) | The flagship real-time feature: data flow, contextual re-ranking, draft room modes, failure modes |
 | [`05-architecture.md`](./05-architecture.md) | Angular + PrimeNG + Node.js system design, data model, API surface, delivery phases, risks |
 | [`06-design-system-and-screens.md`](./06-design-system-and-screens.md) | Design tokens, core components, and the ten-screen inventory that the Figma mocks follow |
@@ -100,10 +100,11 @@ covering volume, team situation, and career-stage profile, producing a ceiling s
 career-stage archetype with its historical outcome rates, an injury risk profile, and a market
 value delta — all expressed in your league's own scoring.
 
-**League sync.** Connect Sleeper by username, ESPN by session cookie with a guided flow, and
-import as many leagues as you are in across both. Scoring settings are parsed into a canonical
-profile, validated by recomputing last season's standings, and shown back in plain language.
-Every projection, VORP figure, and ranking is then denominated in your league's rules.
+**League sync.** Connect Sleeper with just your username and import as many of your leagues as
+you like — no password, no cookies, nothing to copy. Scoring settings are parsed into a
+canonical profile, validated by recomputing last season's standings, and shown back in plain
+language. Leagues on other platforms are configured manually and then behave identically.
+Either way, every projection, VORP figure, and ranking is denominated in your league's rules.
 
 **All three league formats.** Redraft on the base model; dynasty with multi-year value curves,
 rookie drafts, tradeable pick assets, roster age curves, and a contend/rebuild toggle; auction
@@ -119,26 +120,50 @@ and offers to switch.
 
 ---
 
-## Constraints and risks worth knowing before build
+## Decisions made
 
-**Running back benchmarks are missing.** QB, WR, and TE each have a full twelve-factor
-benchmark set in `public/stats/`. RB does not — it has archetype rates, VORP, and injury base
-rates instead. RB is arguably the most important position in a draft tool, so either those
-benchmarks get sourced or RB ceiling scores ship explicitly marked provisional. Inventing
-benchmarks and presenting them with the same authority as the verified ones is the fastest way
-to make the tool untrustworthy.
+**No ESPN integration.** ESPN publishes no official fantasy API, and reaching a user's private
+league would mean sending their full account session cookies to undocumented endpoints —
+cookies the user has to copy out of browser developer tools by hand. Rather than resolve the
+terms-of-service question, the project is not going there. This removes the largest external
+risk in the plan: an unversioned dependency that could break without notice, reached with
+over-scoped credentials, behind an onboarding flow that would have lost most non-technical
+users anyway. Users in ESPN leagues are served by **manual league setup**, promoted from
+fallback to a first-class path. Manual leagues get the full evaluation model, strategy engine
+and Live Draft Team Builder — they just do not auto-sync.
 
-**Sleeper has no WebSocket.** Its API is polling-only with a documented budget under 1,000
-calls per minute per IP — a resource shared across every user of the app, load-bearing for the
-flagship feature, concentrated into a few weeks a year. Backend-only polling, `last_picked`
-change detection, adaptive intervals, a distributed rate limiter, and manual pick entry as a
-genuine equal path are all required in the same phase as the draft room, not afterwards.
+One thing this does *not* affect, since the naming invites confusion: the ESPN projection ranks
+in the value model come from the research already collected by hand in `public/stats/`, not from
+any API call. The FSE-versus-ESPN arbitrage signal is untouched.
 
-**ESPN has no official API.** Private leagues need `espn_s2` and `SWID` cookies that cannot be
-obtained programmatically, so onboarding requires the user to open developer tools. Those
-cookies are full account session credentials and must be encrypted per-user and never logged.
-Terms-of-service review is a prerequisite. Ship Sleeper first and completely; ESPN as labelled
-beta with a manual fallback.
+**Running back scores ship provisional.** The RB benchmarks will be supplied later. Until they
+arrive, the RB board runs on archetype expected value, VORP and injury risk, and RB rows show
+**no ceiling score at all** — a dash and a `provisional` marker rather than a computed-looking
+number. A placeholder that looked as authoritative as Ja'Marr Chase's verified 42 would be
+undetectable to the user and would quietly harden into an assumption; a visible gap is the
+honest representation and keeps the missing data obvious. The engine keeps benchmarks in
+versioned configuration and treats the factor set as data, so adding RB later is a config change
+rather than a code change.
+
+**Elite TE timing follows the outcome data.** The strategy definition says a "top 4-5 round
+tight end anchor"; the round-by-round table says round 4 tight ends have a 0% league-winner
+rate. The measurement wins over the description — the definition's "4-5 round" reads as a
+characterisation of "early-ish" rather than a measured claim, while the table is an outcome
+count. **The Elite TE window is rounds 2–3, and round 4 is an explicit avoid.** Two caveats the
+app carries rather than hides: a 0% cell is a finite sample rather than a law, and a collapse
+from 25% to 0% and back to 20% is a sharp discontinuity that is consistent with a real effect
+but also with noise. Both readings give the same recommendation, so the engine applies a heavy
+penalty rather than a hard block and always shows the percentage next to the warning.
+
+## Constraints still open
+
+**Sleeper has no WebSocket, and is now the only integration.** Its API is polling-only with a
+documented budget under 1,000 calls per minute per IP — a resource shared across every user of
+the app, load-bearing for the flagship feature, concentrated into a few weeks a year.
+Backend-only polling, `last_picked` change detection, adaptive intervals, and a distributed rate
+limiter are all required in the same phase as the draft room. With no second platform to fall
+back on, manual pick entry is the only thing between a Sleeper outage and a user with no working
+draft tool on draft night, so it is a requirement rather than a nicety.
 
 **Some efficiency metrics are licensed.** PFF grades, DVOA, and Reception Perception
 percentiles are load-bearing in the WR and TE factor sets and are not freely redistributable.
@@ -148,11 +173,6 @@ known.
 
 **Two source images are cropped.** Zero RB and Elite QB have definitions but no visible tier
 grade, and draft slot 1.05 is missing. The app shows these as unrated rather than guessing.
-
-**Two artifacts disagree about Elite TE timing.** The strategy definition says a "top 4-5 round
-tight end anchor"; the round-by-round data says round 4 TEs have a 0% league-winner rate. This
-plan resolves it in favour of the outcome data, but the conflict is real and should be
-confirmed rather than silently decided in code.
 
 ---
 
@@ -177,6 +197,4 @@ three verified ceiling scores (Allen 41, Chase 42, Bowers 36) from the source sp
 which is the proof the evaluation model is faithfully implemented before anything is built on
 top of it.
 
-Two decisions are worth making before that work starts, because both change what gets built
-rather than just how: whether to source the missing running back benchmarks or ship RB scores
-marked provisional, and whether the ESPN integration clears terms-of-service review.
+No open decisions block the start of that work.

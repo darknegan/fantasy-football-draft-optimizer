@@ -244,8 +244,8 @@ Ten screens, ordered by the flow a new user follows. All are built in the Figma 
 
 | # | Screen | Purpose |
 | --- | --- | --- |
-| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub across both platforms and all three formats, draft-time conflict warning, research findings panel, readiness checklist, and an explicit model-coverage card marking RB provisional |
-| 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow marked recommended, ESPN cookie flow marked beta with guided steps and a credential-handling note, discovered-league table with detected format and scoring |
+| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and an explicit model-coverage card marking RB provisional |
+| 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow, manual league setup as an equal path for other platforms, discovered-league table with detected format and scoring, and a note stating plainly why ESPN is not supported |
 | 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |
 | 4 | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240) | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout |
 | 5 | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces |

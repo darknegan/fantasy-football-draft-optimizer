@@ -4,12 +4,17 @@ Three related capabilities are specified here: connecting external fantasy accou
 importing their scoring settings so that every projection the app shows is expressed in the
 user's own points, and supporting the three league formats.
 
+**Scope decision:** Sleeper is the only platform integration. ESPN is deferred indefinitely on
+terms-of-service grounds (§2), and users in leagues on any other platform are served by manual
+league setup, which is a first-class path rather than a fallback.
+
 ---
 
 ## 1. Sleeper Integration
 
 Sleeper publishes a genuinely public, documented, token-free read-only HTTP API at
-`https://api.sleeper.app/v1`. This is the easy integration and should ship first.
+`https://api.sleeper.app/v1`. It is now the app's only platform integration, which makes the
+polling constraints in §1.2 the single external dependency worth engineering carefully.
 
 ### 1.1 Endpoints used
 
@@ -77,67 +82,63 @@ can be updated without a second lookup.
 
 ---
 
-## 2. ESPN Integration
+## 2. ESPN — Deferred, Not In Scope
 
-ESPN has **no official public fantasy API**. The endpoints under
-`https://fantasy.espn.com/apis/v3/games/ffl/` are undocumented, unversioned in practice, and
-subject to change without notice. This needs to be stated plainly in planning because it
-carries real product risk, and the plan should not present ESPN support as equivalent in
-reliability to Sleeper.
+**Decision: no ESPN integration will be built.** ESPN publishes no official public fantasy
+API. Reaching a user's private league means sending their `espn_s2` and `SWID` session
+cookies to undocumented endpoints under `https://fantasy.espn.com/apis/v3/games/ffl/`, and
+those cookies cannot be obtained programmatically — the user has to copy them out of browser
+developer tools. That is a terms-of-service question rather than a technical one, and rather
+than resolve it, the project is not going there.
 
-### 2.1 Endpoints
+This is the right call and it removes the largest external risk in the plan. What was being
+contemplated was an unofficial, unversioned dependency that could break without notice,
+reached using full account session credentials, behind an onboarding flow that asks a
+non-technical fantasy player to open DevTools. Every one of those is a liability. Cutting it
+means the platform integration surface is exactly one well-documented, token-free, explicitly
+public API.
 
-Current season:
+### 2.1 What replaces it
 
-```
-GET /apis/v3/games/ffl/seasons/2026/segments/0/leagues/{leagueId}
-    ?view=mSettings&view=mTeam&view=mRoster&view=mDraftDetail
-```
+Users who are in ESPN leagues are served by the **manual league setup path** (§2.2), which was
+already required as the fallback for users who would not complete the cookie flow. Promoting it
+from fallback to first-class is a small amount of extra design work and removes the entire
+integration.
 
-Historical seasons use a different path shape:
+Nothing else in the plan depends on ESPN. Specifically worth being clear about, because the
+naming invites confusion: the `ESPN Projections` column in the value model
+(`01-player-evaluation-model.md` §4) is **not** affected. Those ranks come from the research
+already collected by hand in `public/stats/`, not from any API call, so the FSE-versus-ESPN
+arbitrage signal — one of the most useful things the app computes — is untouched by this
+decision.
 
-```
-GET /apis/v3/games/ffl/leagueHistory/{leagueId}?seasonId={year}&view=mSettings
-```
+### 2.2 Manual league setup
 
-Useful views: `mSettings` (scoring, roster, league config), `mTeam`, `mRoster`,
-`mDraftDetail` (draft picks), `mMatchup`, `mStandings`, `kona_player_info` (player data and
-projections, filtered via the `x-fantasy-filter` request header).
+For any league on a platform the app does not integrate with, the user configures it directly:
 
-### 2.2 The authentication problem
+- **League shape** — team count, roster positions including flex and superflex, bench and IR
+  slots, league format (redraft / dynasty / auction)
+- **Scoring** — entered against the canonical `ScoringProfile` in §3.1, with presets for the
+  common configurations (full PPR, half PPR, standard, TE premium, superflex) so most users
+  adjust two or three fields rather than thirty
+- **Draft** — type, date, and the user's slot
+- **Live draft** — run entirely through manual pick entry, which is the same code path the
+  Sleeper integration falls back to when polling degrades (see
+  `04-live-draft-team-builder.md` §1 and §7)
 
-Private ESPN leagues — which is most leagues — require two cookies, `espn_s2` (often 250+
-characters) and `SWID` (~38 characters including braces). There is no OAuth flow and no
-programmatic login. As the `ffscrapr` documentation states directly, this "cannot be done
-programmatically at this time"; the user must open developer tools, find the cookies for
-`fantasy.espn.com`, and copy them.
+Because manual entry is already a hard requirement for draft-night resilience on Sleeper, the
+incremental cost of supporting manual leagues is the configuration UI, not the draft
+experience. A manually configured league gets the full evaluation model, strategy engine and
+Live Draft Team Builder — it simply does not auto-sync.
 
-This has consequences worth confronting up front:
+### 2.3 If this is revisited
 
-**The onboarding is genuinely bad and cannot be fully fixed.** Asking a non-technical
-fantasy player to open Chrome DevTools and copy a cookie value is a serious funnel problem.
-It should be mitigated with a very carefully designed guided flow — annotated screenshots,
-platform-specific instructions, paste validation that immediately confirms the connection by
-naming the leagues found — and the app should support a **manual league setup path** for
-users who will not or cannot do it. A browser extension that reads the cookies with user
-consent is the better long-term answer and should be scoped as a follow-on.
-
-**These credentials are session cookies for the user's entire ESPN account**, not
-scoped fantasy tokens. They must be encrypted at rest with a per-user data key, never
-logged, never returned to the client after storage, and never included in error reports.
-They also expire, so the app needs clean re-auth prompting that detects a `401` and asks for
-fresh values without losing the user's league configuration.
-
-**Terms of service require review before build.** Scraping undocumented ESPN endpoints with
-a user's session cookie is a legal and policy question, not just a technical one, and it
-should be resolved before engineering time goes into it.
-
-### 2.3 Recommended sequencing
-
-Ship Sleeper first and completely. Add ESPN as a clearly-labelled beta with the manual
-fallback available from day one. Treat any ESPN breakage as expected rather than
-exceptional, with monitoring on schema drift and a user-facing status indicator per
-connected platform.
+Should the terms-of-service position change, the research is preserved in git history: the
+relevant endpoints are the `seasons/{year}/segments/0/leagues/{id}` and
+`leagueHistory/{id}` paths with `mSettings`, `mTeam`, `mRoster` and `mDraftDetail` views.
+Two things would need to be true first — a resolved ToS position, and a credential story
+better than pasting account session cookies, most plausibly a browser extension that reads
+them with explicit user consent. Until both hold, this stays out.
 
 ---
 
@@ -150,7 +151,7 @@ calculus entirely.
 
 ### 3.1 Canonical internal model
 
-Both platforms map onto one internal `ScoringProfile`:
+Sleeper import and manual setup both produce one internal `ScoringProfile`:
 
 ```ts
 interface ScoringProfile {
@@ -170,9 +171,10 @@ interface ScoringProfile {
 ```
 
 Sleeper's `scoring_settings` object is already a flat map of scoring keys to values and maps
-almost directly. ESPN uses numeric `statId` keys in `mSettings.scoringSettings.scoringItems`,
-which requires a maintained lookup table from ESPN stat id to the canonical field — a known
-maintenance burden and a likely source of silent errors when ESPN adds a stat id.
+almost directly, so the adapter is thin. Manually configured leagues write the same structure
+through the setup UI. Dropping ESPN also drops a maintained lookup table from ESPN's numeric
+`statId` keys to these fields, which would have been a standing maintenance burden and a
+likely source of silent scoring errors whenever ESPN added a stat id.
 
 ### 3.2 Deriving league-specific rankings
 
@@ -200,6 +202,10 @@ then compare against the platform's recorded results. A mismatch means the impor
 and the user should see that before they trust a draft board built on it. Present the
 imported settings for confirmation in plain language ("full PPR, 4-point passing TDs,
 TE premium +0.5") rather than a raw settings dump.
+
+This check only applies to imported leagues, since it validates the adapter rather than the
+user. Manually configured leagues get the plain-language confirmation summary but no
+recomputation, so the summary carries more weight there and should be hard to skip past.
 
 ---
 
@@ -268,11 +274,15 @@ largest scope item in the project and a strong candidate for the last phase.
 
 ## 5. Multi-League Support
 
-Users are typically in several leagues across both platforms simultaneously, and the same
-player is a different proposition in each. The data model treats a `LeagueConnection` as a
-first-class entity keyed on platform, external league id, and season, with its own scoring
-profile, roster shape, strategy selection, and draft state. A player's `DraftScore` is
-therefore computed **per league**, never globally cached, and the UI needs a persistent
-league switcher plus a cross-league view that flags scheduling conflicts between drafts —
-which is a real problem for anyone in five leagues during draft season, and a small feature
-that will be disproportionately appreciated.
+Users are typically in several leagues at once, and the same player is a different proposition
+in each. The data model treats a `LeagueConnection` as a first-class entity keyed on platform,
+external league id, and season, with its own scoring profile, roster shape, strategy selection,
+and draft state. A player's `DraftScore` is therefore computed **per league**, never globally
+cached, and the UI needs a persistent league switcher plus a cross-league view that flags
+scheduling conflicts between drafts — a real problem for anyone in five leagues during draft
+season, and a small feature that will be disproportionately appreciated.
+
+Mixed Sleeper-and-manual portfolios are the expected case, not an edge case, so the two kinds
+of league must be indistinguishable everywhere except the sync indicator. A manually
+configured league should never look second-class on the dashboard, the board, or in the draft
+room; it simply shows "manual" rather than a last-synced timestamp.

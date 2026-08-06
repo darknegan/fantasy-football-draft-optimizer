@@ -15,7 +15,7 @@ of that.
 ## 1. Data Flow
 
 ```
-Sleeper / ESPN                Backend                          Angular client
+Sleeper API                   Backend                          Angular client
 ─────────────                 ───────                          ──────────────
 draft picks   ──poll──▶  DraftPoller
                               │
