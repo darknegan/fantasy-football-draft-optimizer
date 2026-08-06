@@ -48,7 +48,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
         </ng-template>
         <ng-template #body let-row let-i="rowIndex">
           <tr [class.drafted]="row.drafted" [class.dim]="row.drafted">
-            <td class="dl-mono">{{ row.recommendation?.rank ?? i + 1 }}</td>
+            <td class="dl-mono">{{ row.drafted ? '—' : (row.recommendation?.rank ?? i + 1) }}</td>
             <td>
               <a [routerLink]="['/leagues', leagueId, 'board', row.player.id]">{{ row.player.name }}</a>
               <div class="team dl-muted">{{ row.player.team }}</div>
