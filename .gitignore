@@ -8,6 +8,8 @@
 **/out-tsc
 /bazel-out
 **/.angular
+**/*.tsbuildinfo
+**/node_modules/.vite/
 
 # Node
 /node_modules
