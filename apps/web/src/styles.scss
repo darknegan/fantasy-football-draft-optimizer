@@ -1,0 +1,162 @@
+@import '../../../packages/ui/tokens.css';
+@import 'primeicons/primeicons.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--dl-surface-base);
+  color: var(--dl-text-primary);
+  font-family: var(--dl-font-sans);
+  font-feature-settings: 'tnum' 1;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #0f2a24 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #151a2e 0%, transparent 50%),
+    var(--dl-surface-base);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.dl-mono {
+  font-family: var(--dl-font-mono);
+}
+
+.dl-muted {
+  color: var(--dl-text-secondary);
+}
+
+.dl-panel {
+  background: var(--dl-surface-raised);
+  border: 1px solid var(--dl-border-subtle);
+  border-radius: var(--dl-radius-md);
+}
+
+.grade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: var(--dl-radius-sm);
+  font-family: var(--dl-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  &.green {
+    color: var(--dl-grade-green);
+    background: var(--dl-grade-green-fill);
+  }
+  &.yellow {
+    color: var(--dl-grade-yellow);
+    background: var(--dl-grade-yellow-fill);
+  }
+  &.orange {
+    color: var(--dl-grade-orange);
+    background: var(--dl-grade-orange-fill);
+  }
+  &.red {
+    color: var(--dl-grade-red);
+    background: var(--dl-grade-red-fill);
+  }
+  &.unknown {
+    color: var(--dl-grade-unknown);
+    background: var(--dl-grade-unknown-fill);
+  }
+}
+
+.pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 1.4rem;
+  border-radius: var(--dl-radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  &.QB {
+    color: var(--dl-pos-qb);
+    background: color-mix(in srgb, var(--dl-pos-qb) 18%, transparent);
+  }
+  &.RB {
+    color: var(--dl-pos-rb);
+    background: color-mix(in srgb, var(--dl-pos-rb) 18%, transparent);
+  }
+  &.WR {
+    color: var(--dl-pos-wr);
+    background: color-mix(in srgb, var(--dl-pos-wr) 18%, transparent);
+  }
+  &.TE {
+    color: var(--dl-pos-te);
+    background: color-mix(in srgb, var(--dl-pos-te) 18%, transparent);
+  }
+}
+
+.tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: var(--dl-radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  &.S {
+    color: var(--dl-tier-s);
+    background: color-mix(in srgb, var(--dl-tier-s) 18%, transparent);
+  }
+  &.A {
+    color: var(--dl-tier-a);
+    background: color-mix(in srgb, var(--dl-tier-a) 18%, transparent);
+  }
+  &.B {
+    color: var(--dl-tier-b);
+    background: color-mix(in srgb, var(--dl-tier-b) 18%, transparent);
+  }
+  &.C {
+    color: var(--dl-tier-c);
+    background: color-mix(in srgb, var(--dl-tier-c) 18%, transparent);
+  }
+  &.unrated {
+    color: var(--dl-tier-unrated);
+    background: color-mix(in srgb, var(--dl-tier-unrated) 18%, transparent);
+  }
+}
+
+/* PrimeNG dark overrides */
+.p-datatable {
+  --p-datatable-header-background: var(--dl-surface-sunken);
+  --p-datatable-header-color: var(--dl-text-secondary);
+  --p-datatable-row-background: transparent;
+  --p-datatable-body-cell-border-color: var(--dl-border-subtle);
+}
+
+.p-button {
+  --p-button-primary-background: var(--dl-accent);
+  --p-button-primary-border-color: var(--dl-accent);
+  --p-button-primary-color: var(--dl-text-inverse);
+  --p-button-primary-hover-background: #12f0ad;
+  --p-button-primary-hover-border-color: #12f0ad;
+}
