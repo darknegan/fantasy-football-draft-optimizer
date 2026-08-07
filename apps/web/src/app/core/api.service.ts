@@ -2,13 +2,20 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type {
   AdherenceResult,
+  AuctionState,
   BoardPlayer,
+  CalibrationProposal,
+  CalibrationSummary,
   CheatSheetGroup,
   CompareStrategiesResult,
+  ContractValuation,
   DraftRecap,
   DraftSlotInfo,
   DraftState,
+  DynastyMode,
+  DynastyOverview,
   League,
+  MaxBidResult,
   Player,
   PlayerEvaluation,
   ScoringSummary,
@@ -136,5 +143,50 @@ export class ApiService {
       `/api/leagues/${leagueId}/recalculate`,
       {},
     );
+  }
+
+  dynasty(leagueId: string) {
+    return this.http.get<DynastyOverview>(`/api/leagues/${leagueId}/dynasty`);
+  }
+
+  setDynastyMode(leagueId: string, mode: DynastyMode) {
+    return this.http.post<DynastyOverview>(`/api/leagues/${leagueId}/dynasty/mode`, { mode });
+  }
+
+  auctionState(leagueId: string) {
+    return this.http.get<AuctionState>(`/api/leagues/${leagueId}/auction/values`);
+  }
+
+  auctionBid(leagueId: string, body: { playerId: string; amount: number; contractYears?: number }) {
+    return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/bid`, body);
+  }
+
+  auctionMaxBid(leagueId: string, playerId: string) {
+    return this.http.get<MaxBidResult>(`/api/leagues/${leagueId}/auction/max-bid`, {
+      params: { playerId },
+    });
+  }
+
+  auctionContractPreview(
+    leagueId: string,
+    body: { playerId: string; annualSalary: number; years: number },
+  ) {
+    return this.http.post<ContractValuation>(`/api/leagues/${leagueId}/auction/contract-preview`, body);
+  }
+
+  setContractRules(leagueId: string, body: Record<string, unknown>) {
+    return this.http.put(`/api/leagues/${leagueId}/auction/contract-rules`, body);
+  }
+
+  calibration(leagueId: string) {
+    return this.http.get<CalibrationSummary>(`/api/leagues/${leagueId}/calibration`);
+  }
+
+  proposeCalibration(leagueId: string) {
+    return this.http.post<CalibrationProposal>(`/api/leagues/${leagueId}/calibration/propose`, {});
+  }
+
+  applyCalibration(leagueId: string) {
+    return this.http.post<CalibrationProposal>(`/api/leagues/${leagueId}/calibration/apply`, {});
   }
 }

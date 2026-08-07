@@ -9,7 +9,10 @@ import type { DraftRecap } from '../../core/api.types';
   template: `
     <a class="back" [routerLink]="['/leagues', leagueId, 'draft']">← Draft room</a>
     <h1>Post-draft recap</h1>
-    <p class="lede dl-muted">Roster grade, strategy adherence, and the calibration log for what you took vs the model.</p>
+    <p class="lede dl-muted">
+      Roster grade, strategy adherence, and the calibration log for what you took vs the model.
+      <a [routerLink]="['/leagues', leagueId, 'calibration']">Open calibration →</a>
+    </p>
 
     @if (recap(); as r) {
       <div class="grid">

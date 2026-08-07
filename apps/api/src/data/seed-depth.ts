@@ -40,6 +40,11 @@ const DEPTH: Array<{
   { id: 'mark-andrews', name: 'Mark Andrews', team: 'BAL', position: 'TE', age: 30, seasons: 8, adp: '5.10', fse: 64, espn: 60 },
   { id: 'david-njoku', name: 'David Njoku', team: 'CLE', position: 'TE', age: 29, seasons: 9, adp: '7.02', fse: 78, espn: 75 },
   { id: 'oronde-gadsden', name: 'Oronde Gadsden II', team: 'LAC', position: 'TE', age: 22, seasons: 1, adp: '13.10', fse: 128, espn: 258 },
+  // Rookie-class stubs for dynasty rookie board (seasonsInLeague === 0).
+  { id: 'ashton-jeanty', name: 'Ashton Jeanty', team: 'LV', position: 'RB', age: 21, seasons: 0, adp: '1.04', fse: 8, espn: 9 },
+  { id: 'tetairoa-mcmillan', name: 'Tetairoa McMillan', team: 'CAR', position: 'WR', age: 22, seasons: 0, adp: '2.08', fse: 22, espn: 25 },
+  { id: 'cam-ward', name: 'Cam Ward', team: 'TEN', position: 'QB', age: 23, seasons: 0, adp: '8.01', fse: 85, espn: 90 },
+  { id: 'colston-loveland', name: 'Colston Loveland', team: 'CHI', position: 'TE', age: 21, seasons: 0, adp: '7.06', fse: 72, espn: 80 },
 ];
 
 function emptyFactors(position: Position): FactorInput[] {
@@ -56,8 +61,8 @@ function toPlayer(d: (typeof DEPTH)[number]): Player {
     position: d.position,
     age: d.age,
     seasonsInLeague: d.seasons,
-    draftYear: 2026 - d.seasons,
-    draftRound: 1,
+    draftYear: d.seasons === 0 ? 2025 : 2025 - d.seasons + 1,
+    draftRound: d.seasons === 0 ? 1 : 2,
     status: 'active',
     hasPositionalTop12Finish: d.position !== 'TE' || d.adp.startsWith('3') || d.adp.startsWith('2'),
     isClearWr1: d.position === 'WR' && Number(d.adp.split('.')[0]) <= 3,

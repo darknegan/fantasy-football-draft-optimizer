@@ -73,3 +73,62 @@ CREATE TABLE IF NOT EXISTS draft_picks (
 
 CREATE INDEX IF NOT EXISTS idx_players_position ON players(position);
 CREATE INDEX IF NOT EXISTS idx_draft_picks_league ON draft_picks(league_id);
+
+-- Phase 6–7: dynasty pick assets, auction bids/contracts, calibration outcomes
+
+CREATE TABLE IF NOT EXISTS draft_pick_assets (
+  id TEXT PRIMARY KEY,
+  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  season INT NOT NULL,
+  round INT NOT NULL,
+  original_roster_id TEXT NOT NULL,
+  owner_roster_id TEXT NOT NULL,
+  estimated_value DOUBLE PRECISION NOT NULL,
+  label TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auction_bids (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  roster_id TEXT NOT NULL,
+  amount INT NOT NULL,
+  contract_years INT,
+  nominated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS contract_rules (
+  league_id TEXT PRIMARY KEY REFERENCES leagues(id) ON DELETE CASCADE,
+  max_length INT NOT NULL DEFAULT 4,
+  salary_cap INT,
+  dead_cap_pct_on_release DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+  allow_extensions BOOLEAN NOT NULL DEFAULT TRUE,
+  franchise_tag BOOLEAN NOT NULL DEFAULT FALSE,
+  rollover_unused_cap BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS draft_outcomes (
+  id TEXT PRIMARY KEY,
+  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  pick_number INT NOT NULL,
+  recommended_player_id TEXT,
+  actual_player_id TEXT NOT NULL,
+  recommended_rank INT,
+  actual_rank_at_pick INT,
+  followed BOOLEAN NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (league_id, pick_number)
+);
+
+CREATE TABLE IF NOT EXISTS calibration_configs (
+  version TEXT PRIMARY KEY,
+  bands JSONB NOT NULL,
+  weights JSONB NOT NULL,
+  sample_size INT NOT NULL,
+  notes JSONB NOT NULL DEFAULT '[]',
+  applied_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS dynasty_mode TEXT;
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS auction_budget INT;

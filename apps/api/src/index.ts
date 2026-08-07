@@ -6,6 +6,7 @@ import { DraftPoller } from './services/draft-poller.js';
 import { playerRoutes } from './routes/players.js';
 import { leagueRoutes } from './routes/leagues.js';
 import { strategyRoutes } from './routes/strategies.js';
+import { formatRoutes } from './routes/formats.js';
 
 const PORT = Number(process.env['PORT'] ?? 3001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -31,6 +32,7 @@ async function main() {
   await playerRoutes(app, store);
   await leagueRoutes(app, store, poller);
   await strategyRoutes(app, store);
+  await formatRoutes(app, store);
 
   app.get<{ Params: { leagueId: string } }>('/ws/draft/:leagueId', { websocket: true }, (socket, req) => {
     const { leagueId } = req.params;

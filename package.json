@@ -8,12 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/api -w @draftlab/web",
-    "build:packages": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations",
+    "build": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/dynasty-engine -w @draftlab/auction-engine -w @draftlab/calibration-engine -w @draftlab/api -w @draftlab/web",
+    "build:packages": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/dynasty-engine -w @draftlab/auction-engine -w @draftlab/calibration-engine",
     "dev:api": "npm run dev -w @draftlab/api",
     "dev:web": "npm run start -w @draftlab/web",
-    "test": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/api",
-    "test:engines": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations",
+    "test": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/dynasty-engine -w @draftlab/auction-engine -w @draftlab/calibration-engine -w @draftlab/api",
+    "test:engines": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/dynasty-engine -w @draftlab/auction-engine -w @draftlab/calibration-engine",
     "lint": "prettier --check ."
   },
   "devDependencies": {

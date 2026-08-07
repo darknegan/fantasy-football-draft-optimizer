@@ -1,4 +1,13 @@
-import type { DraftType, League, LeagueType, RosterShape, ScoringProfile, StrategyId } from '@draftlab/domain';
+import type {
+  ContractRules,
+  DraftType,
+  DynastyMode,
+  League,
+  LeagueType,
+  RosterShape,
+  ScoringProfile,
+  StrategyId,
+} from '@draftlab/domain';
 
 export interface ManualLeagueInput {
   name: string;
@@ -10,6 +19,9 @@ export interface ManualLeagueInput {
   roster: RosterShape;
   draftSlot?: number;
   strategyId?: StrategyId;
+  dynastyMode?: DynastyMode;
+  auctionBudget?: number;
+  contractRules?: ContractRules;
 }
 
 export function createManualLeague(input: ManualLeagueInput): League {
@@ -36,6 +48,9 @@ export function createManualLeague(input: ManualLeagueInput): League {
     roster,
     draftSlot: input.draftSlot,
     strategyId: input.strategyId ?? 'balanced',
+    dynastyMode: input.dynastyMode,
+    auctionBudget: input.auctionBudget,
+    contractRules: input.contractRules,
   };
 }
 

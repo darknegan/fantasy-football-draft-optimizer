@@ -221,6 +221,12 @@ export interface League {
   strategyId?: StrategyId;
   sleeperDraftId?: string;
   sleeperUserId?: string;
+  /** Dynasty contend / rebuild tilt. */
+  dynastyMode?: DynastyMode;
+  /** Auction starting budget per team. */
+  auctionBudget?: number;
+  /** Configurable multi-year contract rules for auction leagues. */
+  contractRules?: ContractRules;
 }
 
 export interface PickEvent {
@@ -283,4 +289,156 @@ export interface BoardPlayer {
   drafted: boolean;
   target?: boolean;
   avoid?: boolean;
+}
+
+// --- Dynasty ---
+
+export type DynastyMode = 'contend' | 'rebuild' | 'neutral';
+
+export interface MultiYearPoint {
+  yearOffset: number;
+  season: number;
+  value: number;
+  productionWeight: number;
+  assetWeight: number;
+}
+
+export interface MultiYearCurve {
+  playerId: string;
+  points: MultiYearPoint[];
+  npv: number;
+  peakYearOffset: number;
+  contendWindow: { start: number; end: number } | null;
+}
+
+export interface DraftPickAsset {
+  id: string;
+  season: number;
+  round: number;
+  originalRosterId: string;
+  ownerRosterId: string;
+  estimatedValue: number;
+  label: string;
+}
+
+export interface RosterAgeBucket {
+  label: string;
+  minAge: number;
+  maxAge: number;
+  count: number;
+  playerIds: string[];
+}
+
+export interface RosterAgeCurve {
+  meanAge: number;
+  medianAge: number;
+  buckets: RosterAgeBucket[];
+  contendScore: number;
+  rebuildScore: number;
+}
+
+// --- Auction ---
+
+export interface ContractRules {
+  maxLength: number;
+  salaryCap: number | null;
+  deadCapPctOnRelease: number;
+  allowExtensions: boolean;
+  franchiseTag: boolean;
+  rolloverUnusedCap: boolean;
+}
+
+export interface AuctionTeamBudget {
+  rosterId: string;
+  name: string;
+  startingBudget: number;
+  spent: number;
+  remaining: number;
+  rosterSlotsFilled: number;
+  rosterSlotsTotal: number;
+}
+
+export interface AuctionPlayerValue {
+  playerId: string;
+  fairValue: number;
+  inflatedValue: number;
+  vorpShare: number;
+}
+
+export interface AuctionBid {
+  playerId: string;
+  rosterId: string;
+  amount: number;
+  contractYears?: number;
+  nominatedAt?: string;
+}
+
+export interface MaxBidResult {
+  playerId: string;
+  maxBid: number;
+  remainingBudget: number;
+  slotsLeft: number;
+  reserveForRest: number;
+}
+
+export interface NominationSuggestion {
+  playerId: string;
+  reason: string;
+  priority: number;
+  kind: 'drain' | 'target_cheap' | 'value';
+}
+
+export interface ContractYearProjection {
+  yearOffset: number;
+  projectedValue: number;
+  salary: number;
+  surplus: number;
+}
+
+export interface ContractValuation {
+  playerId: string;
+  years: number;
+  annualSalary: number;
+  totalSalary: number;
+  yearProjections: ContractYearProjection[];
+  totalSurplus: number;
+  deadCapOnRelease: number;
+  note: string;
+}
+
+// --- Calibration ---
+
+export interface DraftOutcome {
+  id: string;
+  leagueId: string;
+  pickNumber: number;
+  recommendedPlayerId: string | null;
+  actualPlayerId: string;
+  recommendedRank: number | null;
+  actualRankAtPick: number | null;
+  followed: boolean;
+  recordedAt: string;
+}
+
+export interface RecVsActualRow {
+  pickNumber: number;
+  recommendedPlayerId: string | null;
+  recommendedName: string | null;
+  actualPlayerId: string;
+  actualName: string;
+  followed: boolean;
+  rankDelta: number | null;
+}
+
+export interface CalibrationProposal {
+  version: string;
+  sampleSize: number;
+  followRate: number;
+  meanRankDelta: number;
+  proposedBands: GradingBands;
+  proposedWeights: DraftScoreWeights;
+  currentBands: GradingBands;
+  currentWeights: DraftScoreWeights;
+  notes: string[];
+  applied: boolean;
 }

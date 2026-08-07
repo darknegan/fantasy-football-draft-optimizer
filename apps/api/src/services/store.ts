@@ -1,11 +1,38 @@
 import type {
   BoardPlayer,
+  ContractRules,
   DraftState,
+  DynastyMode,
   League,
   PickEvent,
   PlayerEvaluation,
   StrategyId,
 } from '@draftlab/domain';
+import {
+  applyBidToBudgets,
+  applyInflation,
+  computeDollarValues,
+  computeInflationRate,
+  computeMaxBid,
+  DEFAULT_CONTRACT_RULES,
+  suggestNominations,
+  valueContract,
+  vorpFromEvaluation,
+} from '@draftlab/auction-engine';
+import {
+  buildRecVsActual,
+  proposeCalibration,
+  recordOutcome,
+} from '@draftlab/calibration-engine';
+import {
+  applyDynastyModeToRecommendations,
+  buildMultiYearCurve,
+  buildRosterAgeCurve,
+  buildRookieBoard,
+  dynastyCompositeScore,
+  ownedPickValue,
+  seedPickAssets,
+} from '@draftlab/dynasty-engine';
 import { adpToOverallPick, evaluatePlayer } from '@draftlab/evaluation-engine';
 import {
   createManualLeague,
@@ -26,6 +53,7 @@ import {
   type SimPlayer,
 } from '@draftlab/strategy-engine';
 import { SEED_PLAYERS } from '../data/seed-players.js';
+import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
 
 export class AppStore {
@@ -34,6 +62,7 @@ export class AppStore {
   private readonly drafts = new Map<string, DraftState>();
   private readonly targets = new Map<string, Set<string>>();
   private readonly avoids = new Map<string, Set<string>>();
+  readonly formats = new FormatState();
 
   constructor() {
     for (const seed of SEED_PLAYERS) {
@@ -63,6 +92,111 @@ export class AppStore {
     demo.id = 'demo-league';
     this.leagues.set(demo.id, demo);
     this.drafts.set(demo.id, this.createEmptyDraft(demo.id));
+
+    const dynasty = createManualLeague({
+      name: 'Demo Dynasty Superflex',
+      type: 'dynasty',
+      draftType: 'rookie',
+      teamCount: 12,
+      season: 2025,
+      scoring: SCORING_PRESETS[4] ?? SCORING_PRESETS[0]!,
+      roster: {
+        qb: 1,
+        rb: 2,
+        wr: 3,
+        te: 1,
+        flex: 1,
+        superflex: 1,
+        bench: 8,
+        totalStarters: 9,
+      },
+      draftSlot: 4,
+      strategyId: 'balanced',
+      dynastyMode: 'rebuild',
+    });
+    dynasty.id = 'demo-dynasty';
+    this.leagues.set(dynasty.id, dynasty);
+    this.drafts.set(dynasty.id, this.createEmptyDraft(dynasty.id));
+    this.formats.ensureDynasty(dynasty.id, 'rebuild');
+    this.formats.pickAssets.set(
+      dynasty.id,
+      seedPickAssets(dynasty.teamCount, dynasty.season, 'roster-user'),
+    );
+
+    const auction = createManualLeague({
+      name: 'Demo Auction Contracts',
+      type: 'auction',
+      draftType: 'auction',
+      teamCount: 12,
+      season: 2025,
+      scoring: SCORING_PRESETS[0]!,
+      roster: DEFAULT_ROSTER_12,
+      draftSlot: 1,
+      strategyId: 'balanced',
+      auctionBudget: 200,
+      contractRules: { ...DEFAULT_CONTRACT_RULES },
+    });
+    auction.id = 'demo-auction';
+    this.leagues.set(auction.id, auction);
+    this.drafts.set(auction.id, this.createEmptyDraft(auction.id));
+    const slots =
+      auction.roster.qb +
+      auction.roster.rb +
+      auction.roster.wr +
+      auction.roster.te +
+      auction.roster.flex +
+      auction.roster.superflex +
+      auction.roster.bench;
+    this.formats.ensureAuction(auction.id, auction.teamCount, 200, slots, 'roster-user');
+
+    // Seed a few calibration outcomes so Phase 7 UI has something to show on first load.
+    this.seedDemoOutcomes(demo.id);
+  }
+
+  private seedDemoOutcomes(leagueId: string) {
+    const board = this.getBoard(leagueId)
+      .filter((b) => b.recommendation)
+      .map((b) => b.recommendation!)
+      .sort((a, b) => a.rank - b.rank);
+    if (board.length < 4) return;
+    const samples = [
+      recordOutcome({
+        leagueId,
+        pickNumber: 3,
+        actualPlayerId: board[0]!.playerId,
+        recommendations: board,
+      }),
+      recordOutcome({
+        leagueId,
+        pickNumber: 28,
+        actualPlayerId: board[3]!.playerId,
+        recommendations: board,
+      }),
+      recordOutcome({
+        leagueId,
+        pickNumber: 51,
+        actualPlayerId: board[1]!.playerId,
+        recommendations: board,
+      }),
+      recordOutcome({
+        leagueId,
+        pickNumber: 76,
+        actualPlayerId: board[5]?.playerId ?? board[2]!.playerId,
+        recommendations: board,
+      }),
+    ];
+    // Pad to a calibratable sample with synthetic reach-downs.
+    for (let i = 0; i < 8; i++) {
+      samples.push(
+        recordOutcome({
+          leagueId,
+          pickNumber: 100 + i,
+          actualPlayerId: board[Math.min(board.length - 1, 2 + (i % 4))]!.playerId,
+          recommendations: board,
+        }),
+      );
+    }
+    this.formats.outcomes.set(leagueId, samples);
   }
 
   listPlayers() {
@@ -192,7 +326,7 @@ export class AppStore {
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
     const targetSet = this.targets.get(leagueId) ?? new Set();
     const avoidSet = this.avoids.get(leagueId) ?? new Set();
-    const recs = recommendPlayers({
+    let recs = recommendPlayers({
       strategyId,
       round,
       picksUntilNext,
@@ -202,6 +336,17 @@ export class AppStore {
       targets: targetSet,
       avoids: avoidSet,
     });
+
+    if (league.type === 'dynasty') {
+      const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
+      const npvByPlayer = new Map<string, number>();
+      for (const s of SEED_PLAYERS) {
+        const evaluation = this.evaluations.get(s.player.id)!;
+        npvByPlayer.set(s.player.id, buildMultiYearCurve(s.player, evaluation, league.season).npv);
+      }
+      recs = applyDynastyModeToRecommendations(recs, mode, npvByPlayer);
+    }
+
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
     return SEED_PLAYERS.map((s) => ({
@@ -227,6 +372,15 @@ export class AppStore {
       pickedAt: pick.pickedAt ?? new Date().toISOString(),
     };
 
+    // Capture recommendations before mutating draft state (calibration).
+    const prePickRecs =
+      event.playerId && event.rosterId === draft.userRosterId
+        ? this.getBoard(leagueId)
+            .filter((b) => b.recommendation && !b.drafted)
+            .map((b) => b.recommendation!)
+            .sort((a, b) => a.rank - b.rank)
+        : null;
+
     const existingIdx = draft.picks.findIndex((p) => p.pickNumber === event.pickNumber);
     if (existingIdx >= 0) draft.picks[existingIdx] = event;
     else draft.picks.push(event);
@@ -242,6 +396,21 @@ export class AppStore {
       const next = info.pickNumbers.find((n) => n >= draft.currentPick);
       draft.picksUntilUser = next != null ? Math.max(0, next - draft.currentPick) : null;
     }
+
+    if (prePickRecs && event.playerId) {
+      const outcome = recordOutcome({
+        leagueId,
+        pickNumber: event.pickNumber,
+        actualPlayerId: event.playerId,
+        recommendations: prePickRecs,
+      });
+      const list = this.formats.outcomes.get(leagueId) ?? [];
+      const idx = list.findIndex((o) => o.pickNumber === outcome.pickNumber);
+      if (idx >= 0) list[idx] = outcome;
+      else list.push(outcome);
+      this.formats.outcomes.set(leagueId, list);
+    }
+
     return draft;
   }
 
@@ -338,6 +507,293 @@ export class AppStore {
       };
     });
     return buildCheatSheet(players);
+  }
+
+  // --- Dynasty ---
+
+  setDynastyMode(leagueId: string, mode: DynastyMode) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    this.formats.dynastyMode.set(leagueId, mode);
+    return this.updateLeague(leagueId, { dynastyMode: mode, type: 'dynasty' });
+  }
+
+  dynastyOverview(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    const draft = this.drafts.get(leagueId);
+    if (!league || !draft) return null;
+
+    const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
+    const userRoster = draft.picks
+      .filter((p) => p.rosterId === draft.userRosterId && p.playerId)
+      .map((p) => this.getPlayer(p.playerId!)!)
+      .filter(Boolean);
+
+    // If no picks yet, seed a plausible starter set from top dynasty scores for the age curve demo.
+    const rosterForAge =
+      userRoster.length > 0
+        ? userRoster
+        : SEED_PLAYERS.slice(0, 12).map((s) => s.player);
+
+    const curves = SEED_PLAYERS.map((s) => {
+      const evaluation = this.evaluations.get(s.player.id)!;
+      const curve = buildMultiYearCurve(s.player, evaluation, league.season);
+      return {
+        playerId: s.player.id,
+        name: s.player.name,
+        position: s.player.position,
+        age: s.player.age,
+        archetype: evaluation.archetype.archetype,
+        draftScore: evaluation.draftScore,
+        npv: curve.npv,
+        dynastyScore: dynastyCompositeScore(evaluation.draftScore, curve.npv, mode),
+        curve,
+      };
+    }).sort((a, b) => b.dynastyScore - a.dynastyScore);
+
+    if (!this.formats.pickAssets.has(leagueId)) {
+      this.formats.pickAssets.set(
+        leagueId,
+        seedPickAssets(league.teamCount, league.season, draft.userRosterId),
+      );
+    }
+    const pickAssets = this.formats.pickAssets.get(leagueId)!;
+
+    return {
+      leagueId,
+      mode,
+      ageCurve: buildRosterAgeCurve(rosterForAge),
+      pickAssets,
+      ownedPickValue: ownedPickValue(pickAssets, draft.userRosterId),
+      board: curves.slice(0, 40),
+      rookieBoard: buildRookieBoard(
+        SEED_PLAYERS.map((s) => ({
+          player: s.player,
+          evaluation: this.evaluations.get(s.player.id)!,
+        })),
+        league.season,
+        mode === 'contend' ? 'contend' : 'rebuild',
+      ),
+    };
+  }
+
+  // --- Auction ---
+
+  private auctionPool(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const draft = this.drafts.get(leagueId)!;
+    const budget = league.auctionBudget ?? 200;
+    const slots =
+      league.roster.qb +
+      league.roster.rb +
+      league.roster.wr +
+      league.roster.te +
+      league.roster.flex +
+      league.roster.superflex +
+      league.roster.bench;
+    this.formats.ensureAuction(leagueId, league.teamCount, budget, slots, draft.userRosterId);
+
+    const bids = this.formats.auctionBids.get(leagueId) ?? [];
+    const purchased = new Set(bids.map((b) => b.playerId));
+    const baseValues = computeDollarValues(
+      SEED_PLAYERS.map((s) => ({
+        playerId: s.player.id,
+        position: s.player.position,
+        draftScore: this.evaluations.get(s.player.id)!.draftScore,
+        vorp: vorpFromEvaluation(this.evaluations.get(s.player.id)!),
+      })),
+      {
+        teamCount: league.teamCount,
+        budgetPerTeam: budget,
+        rosterSlots: slots,
+      },
+    );
+    const inflationRate = computeInflationRate(bids, baseValues);
+    const values = applyInflation(baseValues, inflationRate, purchased);
+    return { league, draft, budget, slots, bids, purchased, values, inflationRate };
+  }
+
+  auctionState(leagueId: string) {
+    const pool = this.auctionPool(leagueId);
+    if (!pool) return null;
+    const budgets = this.formats.auctionBudgets.get(leagueId)!;
+    const rules = this.formats.contractRules.get(leagueId) ?? pool.league.contractRules ?? DEFAULT_CONTRACT_RULES;
+    const user = budgets.find((b) => b.rosterId === pool.draft.userRosterId)!;
+    const availableIds = new Set(pool.values.filter((v) => !pool.purchased.has(v.playerId)).map((v) => v.playerId));
+    const nominations = suggestNominations({
+      values: pool.values,
+      availableIds,
+      targets: this.targets.get(leagueId) ?? new Set(),
+      avoids: this.avoids.get(leagueId) ?? new Set(),
+      rivalRemaining: budgets.filter((b) => b.rosterId !== user.rosterId).map((b) => b.remaining),
+      userRemaining: user.remaining,
+    });
+
+    const valueRows = pool.values
+      .filter((v) => !pool.purchased.has(v.playerId))
+      .slice(0, 50)
+      .map((v) => {
+        const player = this.getPlayer(v.playerId)!;
+        return {
+          ...v,
+          name: player.name,
+          position: player.position,
+          age: player.age,
+          draftScore: this.evaluations.get(v.playerId)!.draftScore,
+        };
+      });
+
+    return {
+      leagueId,
+      inflationRate: pool.inflationRate,
+      budgets,
+      bids: pool.bids,
+      contractRules: rules,
+      values: valueRows,
+      nominations: nominations.map((n) => ({
+        ...n,
+        name: this.getPlayer(n.playerId)?.name ?? n.playerId,
+      })),
+      userBudget: user,
+    };
+  }
+
+  placeAuctionBid(
+    leagueId: string,
+    body: { playerId: string; amount: number; rosterId?: string; contractYears?: number },
+  ) {
+    const pool = this.auctionPool(leagueId);
+    if (!pool) return null;
+    if (pool.purchased.has(body.playerId)) return { error: 'Player already purchased' as const };
+
+    const rosterId = body.rosterId ?? pool.draft.userRosterId;
+    const budgets = this.formats.auctionBudgets.get(leagueId)!;
+    const team = budgets.find((b) => b.rosterId === rosterId);
+    if (!team) return { error: 'Unknown roster' as const };
+    if (body.amount > team.remaining) return { error: 'Bid exceeds remaining budget' as const };
+    if (body.amount < 1) return { error: 'Bid must be at least $1' as const };
+
+    const bid = {
+      playerId: body.playerId,
+      rosterId,
+      amount: body.amount,
+      contractYears: body.contractYears,
+      nominatedAt: new Date().toISOString(),
+    };
+    const bids = [...pool.bids, bid];
+    this.formats.auctionBids.set(leagueId, bids);
+    this.formats.auctionBudgets.set(leagueId, applyBidToBudgets(budgets, bid));
+
+    // Mirror into draft picks for shared board/recap tooling.
+    const pickNumber = bids.length;
+    this.applyPick(leagueId, {
+      pickNumber,
+      round: 1,
+      slot: 1,
+      playerId: body.playerId,
+      rosterId,
+      source: 'manual',
+    });
+
+    return this.auctionState(leagueId);
+  }
+
+  auctionMaxBid(leagueId: string, playerId: string) {
+    const pool = this.auctionPool(leagueId);
+    if (!pool) return null;
+    const budgets = this.formats.auctionBudgets.get(leagueId)!;
+    const user = budgets.find((b) => b.rosterId === pool.draft.userRosterId)!;
+    const slotsLeft = Math.max(1, user.rosterSlotsTotal - user.rosterSlotsFilled);
+    return computeMaxBid({
+      playerId,
+      remainingBudget: user.remaining,
+      slotsLeft,
+    });
+  }
+
+  auctionContractPreview(
+    leagueId: string,
+    body: { playerId: string; annualSalary: number; years: number },
+  ) {
+    const league = this.leagues.get(leagueId);
+    const player = this.getPlayer(body.playerId);
+    const evaluation = this.getEvaluation(body.playerId);
+    if (!league || !player || !evaluation) return null;
+    const rules =
+      this.formats.contractRules.get(leagueId) ?? league.contractRules ?? DEFAULT_CONTRACT_RULES;
+    const curve = buildMultiYearCurve(player, evaluation, league.season);
+    return valueContract({
+      playerId: body.playerId,
+      annualSalary: body.annualSalary,
+      years: body.years,
+      curve,
+      rules,
+    });
+  }
+
+  setContractRules(leagueId: string, rules: Partial<ContractRules>) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const next = {
+      ...(this.formats.contractRules.get(leagueId) ?? DEFAULT_CONTRACT_RULES),
+      ...rules,
+    };
+    this.formats.contractRules.set(leagueId, next);
+    this.updateLeague(leagueId, { contractRules: next, type: 'auction', draftType: 'auction' });
+    return next;
+  }
+
+  // --- Calibration ---
+
+  calibrationSummary(leagueId: string) {
+    if (!this.leagues.get(leagueId)) return null;
+    const outcomes = this.formats.outcomes.get(leagueId) ?? [];
+    const rows = buildRecVsActual(outcomes, (id) => this.getPlayer(id)?.name ?? null);
+    const proposal =
+      this.formats.calibration.get(leagueId) ??
+      (outcomes.length ? proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights) : null);
+    return {
+      leagueId,
+      outcomes,
+      rows,
+      proposal,
+      activeBands: this.formats.activeBands,
+      activeWeights: this.formats.activeWeights,
+    };
+  }
+
+  proposeLeagueCalibration(leagueId: string) {
+    if (!this.leagues.get(leagueId)) return null;
+    const outcomes = this.formats.outcomes.get(leagueId) ?? [];
+    const proposal = proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights);
+    this.formats.calibration.set(leagueId, proposal);
+    return proposal;
+  }
+
+  applyLeagueCalibration(leagueId: string) {
+    const proposal = this.formats.calibration.get(leagueId) ?? this.proposeLeagueCalibration(leagueId);
+    if (!proposal) return null;
+    this.formats.applyCalibration(proposal);
+    const applied = { ...proposal, applied: true };
+    this.formats.calibration.set(leagueId, applied);
+    // Re-score board with new weights.
+    for (const seed of SEED_PLAYERS) {
+      const evaluation = evaluatePlayer({
+        player: seed.player,
+        factors: seed.factors,
+        value: {
+          adpRoundPick: seed.market.adpRoundPick,
+          fseRank: seed.market.fseRank,
+          espnProjectionRank: seed.market.espnProjectionRank,
+          teamCount: this.leagues.get(leagueId)?.teamCount ?? 12,
+        },
+        risk: seed.risk,
+        weights: this.formats.activeWeights,
+      });
+      this.evaluations.set(seed.player.id, evaluation);
+    }
+    return applied;
   }
 
   private createEmptyDraft(leagueId: string): DraftState {
