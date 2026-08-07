@@ -14,6 +14,16 @@ export interface ManualLeagueInput {
 
 export function createManualLeague(input: ManualLeagueInput): League {
   const id = `manual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const roster = {
+    ...input.roster,
+    totalStarters:
+      input.roster.qb +
+      input.roster.rb +
+      input.roster.wr +
+      input.roster.te +
+      input.roster.flex +
+      input.roster.superflex,
+  };
   return {
     id,
     name: input.name,
@@ -23,7 +33,7 @@ export function createManualLeague(input: ManualLeagueInput): League {
     teamCount: input.teamCount,
     season: input.season,
     scoring: input.scoring,
-    roster: input.roster,
+    roster,
     draftSlot: input.draftSlot,
     strategyId: input.strategyId ?? 'balanced',
   };
@@ -72,6 +82,35 @@ export const SCORING_PRESETS: ScoringProfile[] = [
     recTd: 6,
     fumbleLost: -2,
   },
+  {
+    id: 'preset-te-premium',
+    name: 'PPR + TE Premium',
+    variant: 'ppr',
+    passYd: 0.04,
+    passTd: 4,
+    interception: -2,
+    rushYd: 0.1,
+    rushTd: 6,
+    reception: 1,
+    tePremiumBonus: 0.5,
+    recYd: 0.1,
+    recTd: 6,
+    fumbleLost: -2,
+  },
+  {
+    id: 'preset-sf-ppr',
+    name: 'Superflex PPR',
+    variant: 'ppr',
+    passYd: 0.04,
+    passTd: 4,
+    interception: -2,
+    rushYd: 0.1,
+    rushTd: 6,
+    reception: 1,
+    recYd: 0.1,
+    recTd: 6,
+    fumbleLost: -2,
+  },
 ];
 
 export const DEFAULT_ROSTER_12: RosterShape = {
@@ -84,3 +123,19 @@ export const DEFAULT_ROSTER_12: RosterShape = {
   bench: 6,
   totalStarters: 7,
 };
+
+export const DEFAULT_ROSTER_SUPERFLEX: RosterShape = {
+  qb: 1,
+  rb: 2,
+  wr: 2,
+  te: 1,
+  flex: 1,
+  superflex: 1,
+  bench: 6,
+  totalStarters: 8,
+};
+
+export function rosterPresetForScoring(scoringPresetId: string | undefined): RosterShape {
+  if (scoringPresetId === 'preset-sf-ppr') return { ...DEFAULT_ROSTER_SUPERFLEX };
+  return { ...DEFAULT_ROSTER_12 };
+}

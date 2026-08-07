@@ -12,8 +12,8 @@
     "build:packages": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations",
     "dev:api": "npm run dev -w @draftlab/api",
     "dev:web": "npm run start -w @draftlab/web",
-    "test": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/api",
-    "test:engines": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine",
+    "test": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/api",
+    "test:engines": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations",
     "lint": "prettier --check ."
   },
   "devDependencies": {

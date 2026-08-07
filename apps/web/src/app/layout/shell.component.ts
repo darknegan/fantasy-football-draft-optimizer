@@ -17,13 +17,15 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
         <nav>
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
           <a routerLink="/leagues/connect" routerLinkActive="active">Connect</a>
+          <a routerLink="/leagues/manual-setup" routerLinkActive="active">Manual Setup</a>
           <a routerLink="/leagues/demo-league/board" routerLinkActive="active">Player Board</a>
           <a routerLink="/leagues/demo-league/cheat-sheet" routerLinkActive="active">Cheat Sheet</a>
           <a routerLink="/leagues/demo-league/strategy" routerLinkActive="active">Strategy</a>
           <a routerLink="/leagues/demo-league/draft" routerLinkActive="active">Live Draft</a>
+          <a routerLink="/leagues/demo-league/recap" routerLinkActive="active">Recap</a>
           <a routerLink="/leagues/demo-league/scoring" routerLinkActive="active">Scoring</a>
         </nav>
-        <div class="side-foot dl-muted">Phase 2 pre-draft planning</div>
+        <div class="side-foot dl-muted">Phases 3–5 foundations</div>
       </aside>
       <div class="main">
         <header class="top">

@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { ApiService } from '../../core/api.service';
-import type { League } from '../../core/api.types';
+import type { League, ScoringSummary } from '../../core/api.types';
 
 @Component({
   selector: 'app-connect',
@@ -16,31 +16,42 @@ import type { League } from '../../core/api.types';
     <div class="grid">
       <article class="dl-panel card">
         <h2>Sleeper</h2>
-        <p class="dl-muted">Import leagues by username. Draft polling stays on the server.</p>
+        <p class="dl-muted">Import all leagues for a username. Polling stays on the server under a shared rate budget.</p>
         <div class="row">
           <input pInputText [(ngModel)]="username" placeholder="Sleeper username" />
+          <input pInputText type="number" [(ngModel)]="season" placeholder="Season" style="width:6rem" />
           <p-button label="Connect" (onClick)="connectSleeper()" [loading]="loading()" />
         </div>
         @if (error()) {
           <p class="err">{{ error() }}</p>
         }
         @if (imported().length) {
-          <ul>
+          <div class="imports">
             @for (l of imported(); track l.id) {
-              <li><a [routerLink]="['/leagues', l.id, 'board']">{{ l.name }}</a></li>
+              <div class="import">
+                <div>
+                  <strong>{{ l.name }}</strong>
+                  <div class="dl-muted">
+                    {{ l.teamCount }}-team · {{ l.draftType }} · slot {{ l.draftSlot ?? '—' }}
+                    @if (l.scoringSummary; as s) {
+                      · {{ s.plainLanguage.join(', ') }}
+                    }
+                  </div>
+                  @for (w of l.scoringSummary?.warnings ?? []; track w) {
+                    <div class="warn">{{ w }}</div>
+                  }
+                </div>
+                <a [routerLink]="['/leagues', l.id, 'board']">Open →</a>
+              </div>
             }
-          </ul>
+          </div>
         }
       </article>
 
       <article class="dl-panel card">
         <h2>Manual setup</h2>
-        <p class="dl-muted">First-class path for leagues on platforms we do not integrate with.</p>
-        <div class="row">
-          <input pInputText [(ngModel)]="manualName" placeholder="League name" />
-          <input pInputText type="number" [(ngModel)]="teamCount" placeholder="Teams" style="width:6rem" />
-        </div>
-        <p-button label="Create league" (onClick)="createManual()" />
+        <p class="dl-muted">Configure league shape, scoring presets (incl. TE premium / superflex), and draft slot.</p>
+        <a class="btn" routerLink="/leagues/manual-setup">Open setup wizard →</a>
       </article>
 
       <article class="dl-panel card note">
@@ -60,25 +71,33 @@ import type { League } from '../../core/api.types';
     h2 { margin: 0; font-size: 1.05rem; }
     .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
     .err { color: var(--dl-danger); margin: 0; }
-    ul { margin: 0; padding-left: 1.1rem; }
-    a { color: var(--dl-accent); }
+    .warn { color: var(--dl-warning); font-size: 0.8rem; margin-top: 0.25rem; }
+    .imports { display: grid; gap: 0.55rem; }
+    .import {
+      display: flex; justify-content: space-between; gap: 0.75rem; align-items: start;
+      padding: 0.55rem 0; border-top: 1px solid var(--dl-border-subtle);
+    }
+    .import:first-child { border-top: 0; }
+    a { color: var(--dl-accent); font-weight: 600; }
+    .btn {
+      display: inline-flex; width: fit-content; padding: 0.65rem 0.9rem; border-radius: 6px;
+      background: var(--dl-accent); color: var(--dl-text-inverse); font-weight: 600;
+    }
     @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } .note { grid-column: auto; } }
   `,
 })
 export class ConnectComponent {
   private readonly api = inject(ApiService);
-  private readonly router = inject(Router);
   username = '';
-  manualName = 'My League';
-  teamCount = 12;
+  season = new Date().getFullYear();
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly imported = signal<League[]>([]);
+  readonly imported = signal<Array<League & { scoringSummary?: ScoringSummary }>>([]);
 
   connectSleeper() {
     this.loading.set(true);
     this.error.set(null);
-    this.api.connectSleeper(this.username.trim()).subscribe({
+    this.api.connectSleeper(this.username.trim(), Number(this.season) || undefined).subscribe({
       next: (res) => {
         this.imported.set(res.leagues);
         this.loading.set(false);
@@ -88,17 +107,5 @@ export class ConnectComponent {
         this.loading.set(false);
       },
     });
-  }
-
-  createManual() {
-    this.api
-      .createManualLeague({
-        name: this.manualName,
-        teamCount: Number(this.teamCount) || 12,
-        draftSlot: 1,
-        strategyId: 'balanced',
-        scoringPresetId: 'preset-ppr',
-      })
-      .subscribe((league) => this.router.navigate(['/leagues', league.id, 'board']));
   }
 }
