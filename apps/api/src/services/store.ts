@@ -9,7 +9,15 @@ import type {
 import { evaluatePlayer } from '@draftlab/evaluation-engine';
 import { createManualLeague, DEFAULT_ROSTER_12, SCORING_PRESETS } from '@draftlab/integrations';
 import { recommendPlayers } from '@draftlab/recommendation-engine';
-import { getDraftSlotInfo, listStrategies } from '@draftlab/strategy-engine';
+import {
+  buildCheatSheet,
+  compareStrategies,
+  getDraftSlotInfo,
+  listStrategies,
+  simulateStrategy,
+  type SimPlayer,
+} from '@draftlab/strategy-engine';
+import { adpToOverallPick } from '@draftlab/evaluation-engine';
 import { SEED_PLAYERS } from '../data/seed-players.js';
 
 export class AppStore {
@@ -115,6 +123,8 @@ export class AppStore {
     const picksUntilNext = Math.max(0, nextUserPick - draft.currentPick);
 
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
+    const targetSet = this.targets.get(leagueId) ?? new Set();
+    const avoidSet = this.avoids.get(leagueId) ?? new Set();
     const recs = recommendPlayers({
       strategyId,
       round,
@@ -122,10 +132,10 @@ export class AppStore {
       userRoster,
       rosterShape: league.roster,
       available,
+      targets: targetSet,
+      avoids: avoidSet,
     });
     const recById = new Map(recs.map((r) => [r.playerId, r]));
-    const targetSet = this.targets.get(leagueId) ?? new Set();
-    const avoidSet = this.avoids.get(leagueId) ?? new Set();
 
     return SEED_PLAYERS.map((s) => ({
       player: s.player,
@@ -176,6 +186,85 @@ export class AppStore {
 
   strategies() {
     return listStrategies();
+  }
+
+  getFlags(leagueId: string) {
+    return {
+      targets: [...(this.targets.get(leagueId) ?? [])],
+      avoids: [...(this.avoids.get(leagueId) ?? [])],
+    };
+  }
+
+  private simPool(teamCount: number): SimPlayer[] {
+    return SEED_PLAYERS.map((s) => {
+      const evaluation = this.evaluations.get(s.player.id)!;
+      return {
+        id: s.player.id,
+        name: s.player.name,
+        position: s.player.position,
+        adpOverall: adpToOverallPick(s.market.adpRoundPick, teamCount),
+        draftScore: evaluation.draftScore,
+      };
+    });
+  }
+
+  simulate(
+    leagueId: string,
+    opts: { strategyId?: StrategyId; iterations?: number; rounds?: number; seed?: number },
+  ) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const strategyId = (opts.strategyId ?? league.strategyId ?? 'balanced') as StrategyId;
+    return simulateStrategy({
+      strategyId,
+      slot: league.draftSlot ?? 1,
+      teamCount: league.teamCount,
+      rounds: opts.rounds ?? 8,
+      iterations: opts.iterations ?? 200,
+      seed: opts.seed ?? 42,
+      players: this.simPool(league.teamCount),
+    });
+  }
+
+  compare(
+    leagueId: string,
+    opts: { strategyIds?: StrategyId[]; iterations?: number; rounds?: number; seed?: number },
+  ) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const strategyIds = (opts.strategyIds ??
+      (['balanced', 'hero_wr', 'double_hero_rb', 'elite_te', 'zero_rb'] as StrategyId[])) as StrategyId[];
+    return compareStrategies({
+      strategyIds,
+      slot: league.draftSlot ?? 1,
+      teamCount: league.teamCount,
+      rounds: opts.rounds ?? 8,
+      iterations: opts.iterations ?? 150,
+      seed: opts.seed ?? 42,
+      players: this.simPool(league.teamCount),
+    });
+  }
+
+  cheatSheet(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const targetSet = this.targets.get(leagueId) ?? new Set();
+    const avoidSet = this.avoids.get(leagueId) ?? new Set();
+    const players = SEED_PLAYERS.map((s) => {
+      const evaluation = this.evaluations.get(s.player.id)!;
+      return {
+        id: s.player.id,
+        name: s.player.name,
+        position: s.player.position,
+        draftScore: evaluation.draftScore,
+        ceilingScore: evaluation.ceiling.ceilingScore,
+        provisional: evaluation.ceiling.provisional,
+        adpRoundPick: evaluation.value.adpRoundPick,
+        target: targetSet.has(s.player.id),
+        avoid: avoidSet.has(s.player.id),
+      };
+    });
+    return buildCheatSheet(players);
   }
 
   private createEmptyDraft(leagueId: string): DraftState {

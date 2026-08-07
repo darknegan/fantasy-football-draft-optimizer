@@ -1,0 +1,138 @@
+import type { FactorInput, Player, Position } from '@draftlab/domain';
+import type { SeedPlayer } from './seed-players.js';
+
+/** Extra depth so Monte Carlo / cheat sheets have a usable board past round 1–2. */
+const DEPTH: Array<{
+  id: string;
+  name: string;
+  team: string;
+  position: Position;
+  age: number;
+  seasons: number;
+  adp: string;
+  fse: number;
+  espn: number;
+  draftScoreHint?: number;
+}> = [
+  { id: 'nico-collins', name: 'Nico Collins', team: 'HOU', position: 'WR', age: 26, seasons: 5, adp: '2.02', fse: 14, espn: 16 },
+  { id: 'aj-brown', name: 'A.J. Brown', team: 'PHI', position: 'WR', age: 28, seasons: 7, adp: '2.06', fse: 16, espn: 15 },
+  { id: 'puka-nacua', name: 'Puka Nacua', team: 'LAR', position: 'WR', age: 24, seasons: 3, adp: '2.10', fse: 17, espn: 19 },
+  { id: 'tyreek-hill', name: 'Tyreek Hill', team: 'MIA', position: 'WR', age: 31, seasons: 10, adp: '3.02', fse: 26, espn: 24 },
+  { id: 'drake-london', name: 'Drake London', team: 'ATL', position: 'WR', age: 24, seasons: 4, adp: '3.06', fse: 29, espn: 31 },
+  { id: 'malik-nabers', name: 'Malik Nabers', team: 'NYG', position: 'WR', age: 22, seasons: 2, adp: '2.12', fse: 20, espn: 21 },
+  { id: 'devonta-smith', name: "DeVonta Smith", team: 'PHI', position: 'WR', age: 26, seasons: 5, adp: '4.02', fse: 38, espn: 36 },
+  { id: 'garrett-wilson', name: 'Garrett Wilson', team: 'NYJ', position: 'WR', age: 25, seasons: 4, adp: '3.10', fse: 33, espn: 34 },
+  { id: 'breece-hall', name: 'Breece Hall', team: 'NYJ', position: 'RB', age: 24, seasons: 4, adp: '2.01', fse: 12, espn: 13 },
+  { id: 'jonathan-taylor', name: 'Jonathan Taylor', team: 'IND', position: 'RB', age: 26, seasons: 6, adp: '2.05', fse: 13, espn: 14 },
+  { id: 'derrick-henry', name: 'Derrick Henry', team: 'BAL', position: 'RB', age: 31, seasons: 10, adp: '2.09', fse: 19, espn: 17 },
+  { id: 'kyren-williams', name: 'Kyren Williams', team: 'LAR', position: 'RB', age: 25, seasons: 4, adp: '3.03', fse: 24, espn: 26 },
+  { id: 'josh-jacobs', name: 'Josh Jacobs', team: 'GB', position: 'RB', age: 27, seasons: 7, adp: '3.07', fse: 27, espn: 28 },
+  { id: 'james-cook', name: 'James Cook', team: 'BUF', position: 'RB', age: 25, seasons: 4, adp: '3.11', fse: 31, espn: 33 },
+  { id: 'kenneth-walker', name: 'Kenneth Walker III', team: 'SEA', position: 'RB', age: 25, seasons: 4, adp: '4.04', fse: 40, espn: 42 },
+  { id: 'chase-brown', name: 'Chase Brown', team: 'CIN', position: 'RB', age: 25, seasons: 3, adp: '4.08', fse: 44, espn: 46 },
+  { id: 'jayden-daniels', name: 'Jayden Daniels', team: 'WAS', position: 'QB', age: 24, seasons: 2, adp: '3.04', fse: 32, espn: 29 },
+  { id: 'jalen-hurts', name: 'Jalen Hurts', team: 'PHI', position: 'QB', age: 27, seasons: 6, adp: '3.08', fse: 34, espn: 35 },
+  { id: 'joe-burrow', name: 'Joe Burrow', team: 'CIN', position: 'QB', age: 28, seasons: 6, adp: '4.01', fse: 41, espn: 39 },
+  { id: 'patrick-mahomes', name: 'Patrick Mahomes', team: 'KC', position: 'QB', age: 30, seasons: 9, adp: '5.02', fse: 55, espn: 50 },
+  { id: 'bo-nix', name: 'Bo Nix', team: 'DEN', position: 'QB', age: 25, seasons: 2, adp: '6.04', fse: 70, espn: 68 },
+  { id: 'sam-laoporta', name: 'Sam LaPorta', team: 'DET', position: 'TE', age: 24, seasons: 3, adp: '3.12', fse: 36, espn: 37 },
+  { id: 'tucker-kraft', name: 'Tucker Kraft', team: 'GB', position: 'TE', age: 24, seasons: 3, adp: '5.06', fse: 58, espn: 62 },
+  { id: 'mark-andrews', name: 'Mark Andrews', team: 'BAL', position: 'TE', age: 30, seasons: 8, adp: '5.10', fse: 64, espn: 60 },
+  { id: 'david-njoku', name: 'David Njoku', team: 'CLE', position: 'TE', age: 29, seasons: 9, adp: '7.02', fse: 78, espn: 75 },
+  { id: 'oronde-gadsden', name: 'Oronde Gadsden II', team: 'LAC', position: 'TE', age: 22, seasons: 1, adp: '13.10', fse: 128, espn: 258 },
+];
+
+function emptyFactors(position: Position): FactorInput[] {
+  if (position === 'RB') return [];
+  return [];
+}
+
+function toPlayer(d: (typeof DEPTH)[number]): Player {
+  return {
+    id: d.id,
+    externalIds: {},
+    name: d.name,
+    team: d.team,
+    position: d.position,
+    age: d.age,
+    seasonsInLeague: d.seasons,
+    draftYear: 2026 - d.seasons,
+    draftRound: 1,
+    status: 'active',
+    hasPositionalTop12Finish: d.position !== 'TE' || d.adp.startsWith('3') || d.adp.startsWith('2'),
+    isClearWr1: d.position === 'WR' && Number(d.adp.split('.')[0]) <= 3,
+  };
+}
+
+/** Synthetic volume inputs so non-RB depth still gets a CeilingScore. */
+function syntheticFactors(position: Position, quality: number): FactorInput[] {
+  // quality 0–1 → roughly yellow/green heavy profiles
+  const hi = 0.95 + quality * 0.25;
+  const mid = 0.85 + quality * 0.2;
+  if (position === 'WR') {
+    return [
+      { factorId: 'targets', value: 10.7 * hi },
+      { factorId: 'receptions', value: 7.21 * mid },
+      { factorId: 'touchdowns', value: 0.76 * mid },
+      { factorId: 'off_ppg_rank', value: 8.94 / mid },
+      { factorId: 'qb_pff_rank', value: 10.36 / mid },
+      { factorId: 'team_pass_attempts', value: 594.94 * mid },
+      { factorId: 'secondary_target', value: 100, categorical: quality > 0.6 ? 'same' : 'more' },
+      { factorId: 'ol_pass_block_rank', value: 10.75 / mid },
+      { factorId: 'yprr', value: 4.81 * mid },
+      { factorId: 'reception_perception', value: 90 * mid },
+      {
+        factorId: 'archetype',
+        value: 1,
+        categorical: quality > 0.7 ? 'PRIME_WR1' : quality > 0.4 ? 'PRIME_WR2' : 'BREAKOUT_CANDIDATE',
+      },
+      { factorId: 'injury_concern', value: 1, categorical: quality > 0.5 ? 'minimal' : 'some' },
+    ];
+  }
+  if (position === 'TE') {
+    return [
+      { factorId: 'targets', value: 8.1 * mid },
+      { factorId: 'receptions', value: 5.71 * mid },
+      { factorId: 'touchdowns', value: 0.56 * mid },
+      { factorId: 'off_ppg_rank', value: 11.78 / mid },
+      { factorId: 'qb_qbr_rank', value: 9.7 / mid },
+      { factorId: 'team_pass_att_rank', value: 11.81 / mid },
+      { factorId: 'team_target_rank', value: quality > 0.5 ? 1 : 3 },
+      { factorId: 'rec_td_rank', value: quality > 0.5 ? 1 : 3 },
+      { factorId: 'route_participation', value: 79.8 * mid },
+      { factorId: 'inline_pct', value: quality > 0.5 ? 32 : 50 },
+      { factorId: 'yprr_rank', value: 5.14 / mid },
+      { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
+    ];
+  }
+  if (position === 'QB') {
+    return [
+      { factorId: 'pass_attempts', value: 33.91 * mid },
+      { factorId: 'passing_tds', value: 2.63 * mid },
+      { factorId: 'rush_attempts', value: 5.74 * (quality > 0.5 ? hi : 0.7) },
+      { factorId: 'rushing_tds', value: 0.32 * (quality > 0.5 ? hi : 0.7) },
+      { factorId: 'off_ppg_rank', value: 6.35 / mid },
+      { factorId: 'ol_pass_block_rank', value: 11.54 / mid },
+      { factorId: 'deep_ball_attempts', value: 4.31 * mid },
+      { factorId: 'qbr_rank', value: 6.9 / mid },
+      { factorId: 'red_zone_attempts', value: 6.3 * mid },
+      { factorId: 'adp', value: 8.22 / mid },
+      { factorId: 'neutral_pace_rank', value: 12.86 / mid },
+      { factorId: 'pass_dvoa_rank', value: 7.01 / mid },
+    ];
+  }
+  return emptyFactors(position);
+}
+
+export const DEPTH_SEED_PLAYERS: SeedPlayer[] = DEPTH.map((d, i) => {
+  const quality = Math.max(0.15, 1 - i / DEPTH.length);
+  return {
+    player: toPlayer(d),
+    factors: syntheticFactors(d.position, quality),
+    market: {
+      adpRoundPick: d.adp,
+      fseRank: d.fse,
+      espnProjectionRank: d.espn,
+    },
+  };
+});

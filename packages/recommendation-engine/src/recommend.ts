@@ -17,11 +17,20 @@ export interface RecommendContext {
   userRoster: Player[];
   rosterShape: RosterShape;
   available: Array<{ player: Player; evaluation: PlayerEvaluation }>;
+  targets?: Set<string> | string[];
+  avoids?: Set<string> | string[];
+}
+
+function asSet(input?: Set<string> | string[]): Set<string> {
+  if (!input) return new Set();
+  return input instanceof Set ? input : new Set(input);
 }
 
 export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] {
   const needs = computePositionNeeds(ctx.userRoster, ctx.rosterShape);
   const target = getRoundTarget(ctx.strategyId, ctx.round);
+  const targets = asSet(ctx.targets);
+  const avoids = asSet(ctx.avoids);
 
   const scored = ctx.available.map(({ player, evaluation }) => {
     const strategyFit = strategyFitMultiplier(ctx.strategyId, ctx.round, player.position);
@@ -39,9 +48,19 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
       contextualScore *= 0.5;
     }
 
+    if (targets.has(player.id)) contextualScore *= 1.12;
+    if (avoids.has(player.id)) contextualScore *= 0.55;
+
     const reasons: RecommendationReason[] = [];
     const fitReason = strategyFitReason(ctx.strategyId, ctx.round, player.position);
     if (fitReason) reasons.push(fitReason);
+
+    if (targets.has(player.id)) {
+      reasons.unshift({ code: 'user_target', message: 'On your target list', severity: 'info' });
+    }
+    if (avoids.has(player.id)) {
+      reasons.unshift({ code: 'user_avoid', message: 'On your avoid list', severity: 'warning' });
+    }
 
     if (evaluation.ceiling.provisional) {
       reasons.push({

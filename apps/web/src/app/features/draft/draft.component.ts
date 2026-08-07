@@ -42,7 +42,7 @@ export class DateAgoPipe implements PipeTransform {
         <h2>Recommended now</h2>
         <div class="recs">
           @for (row of available().slice(0, 8); track row.player.id) {
-            <button type="button" class="rec" (click)="pick(row)" [disabled]="picking()">
+            <button type="button" class="rec" [class.target]="row.target" [class.avoid]="row.avoid" (click)="pick(row)" [disabled]="picking()">
               <div class="left">
                 <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
                 <div>
@@ -99,6 +99,8 @@ export class DateAgoPipe implements PipeTransform {
     }
     .rec:hover:not(:disabled) { border-color: var(--dl-accent); transform: translateX(2px); }
     .rec:disabled { opacity: 0.5; cursor: wait; }
+    .rec.target { border-color: color-mix(in srgb, var(--dl-accent) 50%, transparent); }
+    .rec.avoid { border-color: color-mix(in srgb, var(--dl-grade-red) 50%, transparent); }
     .left { display: flex; gap: 0.65rem; align-items: start; }
     .reason { font-size: 0.75rem; margin-top: 0.15rem; max-width: 36ch; }
     .score { color: var(--dl-accent); font-weight: 700; font-size: 1.1rem; }
