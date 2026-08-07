@@ -2,12 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type {
   BoardPlayer,
+  CheatSheetGroup,
+  CompareStrategiesResult,
   DraftSlotInfo,
   DraftState,
   League,
   Player,
   PlayerEvaluation,
   StrategyDefinition,
+  StrategySimResult,
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -82,5 +85,24 @@ export class ApiService {
 
   scoringPresets() {
     return this.http.get<Array<{ id: string; name: string; variant: string }>>('/api/scoring-presets');
+  }
+
+  setFlag(leagueId: string, playerId: string, kind: 'target' | 'avoid', value: boolean) {
+    return this.http.post<{ ok: boolean; targets: string[]; avoids: string[] }>(
+      `/api/leagues/${leagueId}/flags`,
+      { playerId, kind, value },
+    );
+  }
+
+  simulate(leagueId: string, body: { strategyId?: string; iterations?: number; rounds?: number } = {}) {
+    return this.http.post<StrategySimResult>(`/api/leagues/${leagueId}/simulate`, body);
+  }
+
+  compareStrategies(leagueId: string, body: { strategyIds?: string[]; iterations?: number; rounds?: number } = {}) {
+    return this.http.post<CompareStrategiesResult>(`/api/leagues/${leagueId}/compare-strategies`, body);
+  }
+
+  cheatSheet(leagueId: string) {
+    return this.http.get<CheatSheetGroup[]>(`/api/leagues/${leagueId}/cheat-sheet`);
   }
 }

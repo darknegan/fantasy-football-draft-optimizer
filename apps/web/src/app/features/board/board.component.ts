@@ -13,7 +13,10 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     <div class="head">
       <div>
         <h1>Player board</h1>
-        <p class="dl-muted">Ceiling, archetype EV, value, and live contextual rank.</p>
+        <p class="dl-muted">
+          Ceiling, archetype EV, value, and live contextual rank.
+          <a [routerLink]="['/leagues', leagueId, 'cheat-sheet']">Tier cheat sheet →</a>
+        </p>
       </div>
       <p-selectbutton
         [options]="posOptions"
@@ -25,13 +28,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     </div>
 
     <div class="dl-panel table-wrap">
-      <p-table
-        [value]="filtered()"
-        [scrollable]="true"
-        scrollHeight="70vh"
-        styleClass="p-datatable-sm"
-        [rowHover]="true"
-      >
+      <p-table [value]="filtered()" [scrollable]="true" scrollHeight="70vh" styleClass="p-datatable-sm" [rowHover]="true">
         <ng-template #header>
           <tr>
             <th style="width:3rem">#</th>
@@ -44,10 +41,16 @@ import type { BoardPlayer, Position } from '../../core/api.types';
             <th>Value</th>
             <th>Risk</th>
             <th>ADP</th>
+            <th style="width:7rem">Flags</th>
           </tr>
         </ng-template>
         <ng-template #body let-row let-i="rowIndex">
-          <tr [class.drafted]="row.drafted" [class.dim]="row.drafted">
+          <tr
+            [class.drafted]="row.drafted"
+            [class.dim]="row.drafted"
+            [class.is-target]="row.target"
+            [class.is-avoid]="row.avoid"
+          >
             <td class="dl-mono">{{ row.drafted ? '—' : (row.recommendation?.rank ?? i + 1) }}</td>
             <td>
               <a [routerLink]="['/leagues', leagueId, 'board', row.player.id]">{{ row.player.name }}</a>
@@ -64,11 +67,21 @@ import type { BoardPlayer, Position } from '../../core/api.types';
             <td class="dl-mono">{{ row.evaluation.draftScore }}</td>
             <td class="dl-mono accent">{{ row.recommendation?.contextualScore ?? '—' }}</td>
             <td class="small">{{ formatArchetype(row.evaluation.archetype.archetype) }}</td>
-            <td class="dl-mono" [class.pos-val]="row.evaluation.value.valueScore > 0" [class.neg-val]="row.evaluation.value.valueScore < 0">
+            <td
+              class="dl-mono"
+              [class.pos-val]="row.evaluation.value.valueScore > 0"
+              [class.neg-val]="row.evaluation.value.valueScore < 0"
+            >
               {{ row.evaluation.value.valueScore > 0 ? '+' : '' }}{{ row.evaluation.value.valueScore }}
             </td>
             <td class="dl-mono">{{ row.evaluation.risk.riskProfile }}</td>
             <td class="dl-mono">{{ row.evaluation.value.adpRoundPick }}</td>
+            <td>
+              <div class="flags">
+                <button type="button" class="flag-btn" [class.on]="row.target" (click)="toggle(row, 'target')" title="Target">T</button>
+                <button type="button" class="flag-btn avoid" [class.on]="row.avoid" (click)="toggle(row, 'avoid')" title="Avoid">A</button>
+              </div>
+            </td>
           </tr>
         </ng-template>
       </p-table>
@@ -77,6 +90,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
   styles: `
     .head { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; flex-wrap: wrap; }
     h1 { margin: 0 0 0.25rem; }
+    .dl-muted a { color: var(--dl-accent); margin-left: 0.35rem; }
     .table-wrap { overflow: hidden; }
     a { color: var(--dl-text-primary); font-weight: 600; }
     a:hover { color: var(--dl-accent); }
@@ -87,6 +101,15 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     .pos-val { color: var(--dl-grade-green); }
     .neg-val { color: var(--dl-grade-red); }
     tr.dim { opacity: 0.4; }
+    tr.is-target td:first-child { box-shadow: inset 3px 0 0 var(--dl-accent); }
+    tr.is-avoid td:first-child { box-shadow: inset 3px 0 0 var(--dl-grade-red); }
+    .flags { display: flex; gap: 0.3rem; }
+    .flag-btn {
+      width: 1.6rem; height: 1.6rem; border-radius: 4px; border: 1px solid var(--dl-border-strong);
+      background: transparent; color: var(--dl-text-tertiary); cursor: pointer; font-weight: 700; font-size: 0.7rem;
+    }
+    .flag-btn.on { background: var(--dl-accent-dim); color: var(--dl-accent); border-color: var(--dl-accent); }
+    .flag-btn.avoid.on { background: var(--dl-grade-red-fill); color: var(--dl-grade-red); border-color: var(--dl-grade-red); }
   `,
 })
 export class BoardComponent implements OnInit {
@@ -111,7 +134,16 @@ export class BoardComponent implements OnInit {
 
   ngOnInit() {
     this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.reload();
+  }
+
+  reload() {
     this.api.board(this.leagueId).subscribe((b) => this.rows.set(b));
+  }
+
+  toggle(row: BoardPlayer, kind: 'target' | 'avoid') {
+    const next = !row[kind];
+    this.api.setFlag(this.leagueId, row.player.id, kind, next).subscribe(() => this.reload());
   }
 
   formatArchetype(a: string) {

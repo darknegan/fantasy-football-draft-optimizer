@@ -19,6 +19,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/strategy/strategy.component').then((m) => m.StrategyComponent),
       },
       {
+        path: 'leagues/:id/cheat-sheet',
+        loadComponent: () =>
+          import('./features/cheat-sheet/cheat-sheet.component').then((m) => m.CheatSheetComponent),
+      },
+      {
         path: 'leagues/:id/board',
         loadComponent: () => import('./features/board/board.component').then((m) => m.BoardComponent),
       },

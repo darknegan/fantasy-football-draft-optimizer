@@ -1,4 +1,5 @@
 import type { FactorInput, Player } from '@draftlab/domain';
+import { DEPTH_SEED_PLAYERS } from './seed-depth.js';
 
 export interface SeedPlayer {
   player: Player;
@@ -345,4 +346,5 @@ export const SEED_PLAYERS: SeedPlayer[] = [
     ],
     market: { adpRoundPick: '4.06', fseRank: 48, espnProjectionRank: 40 },
   },
+  ...DEPTH_SEED_PLAYERS,
 ];

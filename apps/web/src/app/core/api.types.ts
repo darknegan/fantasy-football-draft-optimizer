@@ -115,3 +115,47 @@ export interface DraftSlotInfo {
   tier: StrategyTier;
   pickNumbers: number[];
 }
+
+export interface StrategySimResult {
+  strategyId: string;
+  slot: number;
+  iterations: number;
+  assumptions: {
+    adpVarianceRatio: number;
+    adpVarianceFloor: number;
+    rounds: number;
+    teamCount: number;
+    note: string;
+  };
+  meanRosterScore: number;
+  medianRosterScore: number;
+  topThirdRate: number;
+  positionMix: Record<Position, number>;
+  sampleRosters: Array<{ score: number; playerIds: string[]; playerNames: string[] }>;
+}
+
+export interface CompareStrategiesResult {
+  slot: number;
+  iterations: number;
+  results: StrategySimResult[];
+  ranking: Array<{ strategyId: string; meanRosterScore: number; topThirdRate: number; rank: number }>;
+}
+
+export interface CheatSheetGroup {
+  position: Position;
+  tiers: Array<{
+    tier: string;
+    label: string;
+    players: Array<{
+      id: string;
+      name: string;
+      position: Position;
+      draftScore: number;
+      ceilingScore: number | null;
+      provisional: boolean;
+      adpRoundPick: string;
+      target?: boolean;
+      avoid?: boolean;
+    }>;
+  }>;
+}

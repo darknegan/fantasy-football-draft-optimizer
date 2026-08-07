@@ -114,7 +114,12 @@ export async function leagueRoutes(app: FastifyInstance, store: AppStore, poller
     async (req, reply) => {
       if (!store.getLeague(req.params.id)) return reply.code(404).send({ error: 'League not found' });
       store.setFlag(req.params.id, req.body.playerId, req.body.kind, req.body.value ?? true);
-      return { ok: true };
+      return { ok: true, ...store.getFlags(req.params.id) };
     },
   );
+
+  app.get<{ Params: { id: string } }>('/api/leagues/:id/flags', async (req, reply) => {
+    if (!store.getLeague(req.params.id)) return reply.code(404).send({ error: 'League not found' });
+    return store.getFlags(req.params.id);
+  });
 }
