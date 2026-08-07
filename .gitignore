@@ -2,9 +2,14 @@
 
 # Compiled output
 /dist
+**/dist
 /tmp
 /out-tsc
+**/out-tsc
 /bazel-out
+**/.angular
+**/*.tsbuildinfo
+**/node_modules/.vite/
 
 # Node
 /node_modules

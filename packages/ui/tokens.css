@@ -1,0 +1,57 @@
+:root {
+  /* Surfaces */
+  --dl-surface-base: #0a0e14;
+  --dl-surface-raised: #111722;
+  --dl-surface-overlay: #1a2130;
+  --dl-surface-sunken: #070a0f;
+  --dl-border-subtle: #1e2635;
+  --dl-border-strong: #2e3a4d;
+
+  /* Text */
+  --dl-text-primary: #e8edf5;
+  --dl-text-secondary: #96a3b8;
+  --dl-text-tertiary: #5d6b80;
+  --dl-text-inverse: #0a0e14;
+
+  /* Grades */
+  --dl-grade-green: #22c55e;
+  --dl-grade-green-fill: #22c55e1f;
+  --dl-grade-yellow: #eab308;
+  --dl-grade-yellow-fill: #eab3081f;
+  --dl-grade-orange: #f97316;
+  --dl-grade-orange-fill: #f973161f;
+  --dl-grade-red: #ef4444;
+  --dl-grade-red-fill: #ef44441f;
+  --dl-grade-unknown: #5d6b80;
+  --dl-grade-unknown-fill: #5d6b801f;
+
+  /* Accent */
+  --dl-accent: #00e5a0;
+  --dl-accent-dim: #00e5a029;
+  --dl-accent-secondary: #6366f1;
+  --dl-info: #38bdf8;
+  --dl-warning: #fbbf24;
+  --dl-danger: #f43f5e;
+  --dl-live: #00e5a0;
+
+  /* Tiers */
+  --dl-tier-s: #00e5a0;
+  --dl-tier-a: #38bdf8;
+  --dl-tier-b: #eab308;
+  --dl-tier-c: #f97316;
+  --dl-tier-unrated: #5d6b80;
+
+  /* Positions */
+  --dl-pos-qb: #a78bfa;
+  --dl-pos-rb: #34d399;
+  --dl-pos-wr: #60a5fa;
+  --dl-pos-te: #fbbf24;
+
+  /* Spacing / radius */
+  --dl-radius-sm: 4px;
+  --dl-radius-md: 8px;
+  --dl-radius-lg: 12px;
+
+  --dl-font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --dl-font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+}

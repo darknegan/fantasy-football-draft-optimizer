@@ -1,32 +1,22 @@
 {
   "name": "fantasy-football-draft-optimizer",
-  "version": "0.0.0",
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
-  },
+  "version": "0.1.0",
   "private": true,
   "packageManager": "npm@11.8.0",
-  "dependencies": {
-    "@angular/common": "^21.2.0",
-    "@angular/compiler": "^21.2.0",
-    "@angular/core": "^21.2.0",
-    "@angular/forms": "^21.2.0",
-    "@angular/platform-browser": "^21.2.0",
-    "@angular/router": "^21.2.0",
-    "@primeuix/themes": "^3.0.0",
-    "primeng": "^21.1.9",
-    "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations -w @draftlab/api -w @draftlab/web",
+    "build:packages": "npm run build -w @draftlab/domain -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/integrations",
+    "dev:api": "npm run dev -w @draftlab/api",
+    "dev:web": "npm run start -w @draftlab/web",
+    "test": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine -w @draftlab/api",
+    "test:engines": "npm run test -w @draftlab/evaluation-engine -w @draftlab/strategy-engine -w @draftlab/recommendation-engine",
+    "lint": "prettier --check ."
   },
   "devDependencies": {
-    "@angular/build": "^21.2.5",
-    "@angular/cli": "^21.2.5",
-    "@angular/compiler-cli": "^21.2.0",
-    "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
