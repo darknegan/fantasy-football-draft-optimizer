@@ -15,6 +15,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/connect/connect.component').then((m) => m.ConnectComponent),
       },
       {
+        path: 'leagues/manual-setup',
+        loadComponent: () =>
+          import('./features/manual-setup/manual-setup.component').then((m) => m.ManualSetupComponent),
+      },
+      {
         path: 'leagues/:id/strategy',
         loadComponent: () => import('./features/strategy/strategy.component').then((m) => m.StrategyComponent),
       },
@@ -34,6 +39,10 @@ export const routes: Routes = [
       {
         path: 'leagues/:id/draft',
         loadComponent: () => import('./features/draft/draft.component').then((m) => m.DraftComponent),
+      },
+      {
+        path: 'leagues/:id/recap',
+        loadComponent: () => import('./features/recap/recap.component').then((m) => m.RecapComponent),
       },
       {
         path: 'leagues/:id/scoring',

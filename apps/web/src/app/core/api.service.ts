@@ -1,14 +1,17 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type {
+  AdherenceResult,
   BoardPlayer,
   CheatSheetGroup,
   CompareStrategiesResult,
+  DraftRecap,
   DraftSlotInfo,
   DraftState,
   League,
   Player,
   PlayerEvaluation,
+  ScoringSummary,
   StrategyDefinition,
   StrategySimResult,
 } from './api.types';
@@ -34,7 +37,7 @@ export class ApiService {
   }
 
   league(id: string) {
-    return this.http.get<League>(`/api/leagues/${id}`);
+    return this.http.get<League & { scoringSummary: ScoringSummary }>(`/api/leagues/${id}`);
   }
 
   board(leagueId: string) {
@@ -53,20 +56,20 @@ export class ApiService {
     return this.http.get<DraftSlotInfo[]>('/api/draft-slots');
   }
 
-  createManualLeague(body: {
-    name: string;
-    teamCount: number;
-    draftSlot?: number;
-    strategyId?: string;
-    scoringPresetId?: string;
-  }) {
-    return this.http.post<League>('/api/leagues/manual', body);
+  createManualLeague(body: Record<string, unknown>) {
+    return this.http.post<{
+      league: League;
+      scoringSummary: ScoringSummary;
+      requiresConfirmation: boolean;
+      message?: string;
+    }>('/api/leagues/manual', body);
   }
 
-  connectSleeper(username: string) {
-    return this.http.post<{ user: { username: string }; leagues: League[] }>('/api/leagues/sleeper/connect', {
-      username,
-    });
+  connectSleeper(username: string, season?: number) {
+    return this.http.post<{
+      user: { username: string; display_name: string };
+      leagues: Array<League & { scoringSummary: ScoringSummary }>;
+    }>('/api/leagues/sleeper/connect', { username, season });
   }
 
   updateLeague(id: string, body: Partial<League>) {
@@ -77,14 +80,16 @@ export class ApiService {
     leagueId: string,
     body: { pickNumber: number; round: number; slot: number; playerId: string },
   ) {
-    return this.http.post<{ draft: DraftState; board: BoardPlayer[] }>(
+    return this.http.post<{ draft: DraftState; board: BoardPlayer[]; adherence: AdherenceResult }>(
       `/api/leagues/${leagueId}/draft/picks`,
       body,
     );
   }
 
   scoringPresets() {
-    return this.http.get<Array<{ id: string; name: string; variant: string }>>('/api/scoring-presets');
+    return this.http.get<Array<{ id: string; name: string; variant: string; tePremiumBonus?: number }>>(
+      '/api/scoring-presets',
+    );
   }
 
   setFlag(leagueId: string, playerId: string, kind: 'target' | 'avoid', value: boolean) {
@@ -104,5 +109,32 @@ export class ApiService {
 
   cheatSheet(leagueId: string) {
     return this.http.get<CheatSheetGroup[]>(`/api/leagues/${leagueId}/cheat-sheet`);
+  }
+
+  scoringSummary(leagueId: string) {
+    return this.http.get<ScoringSummary>(`/api/leagues/${leagueId}/scoring-summary`);
+  }
+
+  adherence(leagueId: string) {
+    return this.http.get<AdherenceResult>(`/api/leagues/${leagueId}/adherence`);
+  }
+
+  recap(leagueId: string) {
+    return this.http.get<DraftRecap>(`/api/leagues/${leagueId}/recap`);
+  }
+
+  setManualMode(leagueId: string) {
+    return this.http.post<DraftState>(`/api/leagues/${leagueId}/draft/manual-mode`, {});
+  }
+
+  startPolling(leagueId: string) {
+    return this.http.post<DraftState>(`/api/leagues/${leagueId}/draft/start-polling`, {});
+  }
+
+  recalculate(leagueId: string) {
+    return this.http.post<{ leagueId: string; scoring: ScoringSummary }>(
+      `/api/leagues/${leagueId}/recalculate`,
+      {},
+    );
   }
 }

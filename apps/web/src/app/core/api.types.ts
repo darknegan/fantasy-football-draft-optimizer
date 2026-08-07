@@ -65,6 +65,14 @@ export interface BoardPlayer {
   avoid?: boolean;
 }
 
+export interface ScoringSummary {
+  plainLanguage: string[];
+  variant: string;
+  tePremium: boolean;
+  superflex: boolean;
+  warnings: string[];
+}
+
 export interface League {
   id: string;
   name: string;
@@ -76,6 +84,7 @@ export interface League {
   draftSlot?: number;
   strategyId?: string;
   sleeperDraftId?: string;
+  scoringSummary?: ScoringSummary;
 }
 
 export interface StrategyDefinition {
@@ -108,6 +117,26 @@ export interface DraftState {
   userRosterId: string;
   lastSyncedAt: string | null;
   syncMode: string;
+  syncBanner?: string | null;
+  picksUntilUser?: number | null;
+}
+
+export interface AdherenceResult {
+  score: number;
+  state: 'on_plan' | 'drifting' | 'pivot_recommended';
+  offPlanCount: number;
+  gapPositions: string[];
+}
+
+export interface DraftRecap {
+  leagueId: string;
+  strategyId: string;
+  adherence: AdherenceResult;
+  rosterByPosition: Record<string, Array<{ id: string; name: string; draftScore: number; pickNumber: number }>>;
+  meanDraftScore: number;
+  bestValue: { id: string; name: string; valueScore: number; pickNumber: number } | null;
+  worstValue: { id: string; name: string; valueScore: number; pickNumber: number } | null;
+  weaknesses: string[];
 }
 
 export interface DraftSlotInfo {

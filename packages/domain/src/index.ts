@@ -188,6 +188,8 @@ export interface ScoringProfile {
   rushYd: number;
   rushTd: number;
   reception: number;
+  /** Extra PPR for TE only (TE premium). */
+  tePremiumBonus?: number;
   recYd: number;
   recTd: number;
   fumbleLost: number;
@@ -231,6 +233,8 @@ export interface PickEvent {
   source: 'sleeper' | 'manual';
 }
 
+export type DraftSyncMode = 'polling' | 'manual' | 'hybrid' | 'degraded';
+
 export interface DraftState {
   leagueId: string;
   draftId: string;
@@ -240,7 +244,11 @@ export interface DraftState {
   availablePlayerIds: string[];
   userRosterId: string;
   lastSyncedAt: string | null;
-  syncMode: 'polling' | 'manual' | 'hybrid';
+  syncMode: DraftSyncMode;
+  /** User-visible banner for failure modes (429, unreachable, etc.). */
+  syncBanner?: string | null;
+  lastPickedUpstream?: number | null;
+  picksUntilUser?: number | null;
 }
 
 export interface PositionNeed {

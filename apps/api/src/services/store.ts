@@ -6,19 +6,27 @@ import type {
   PlayerEvaluation,
   StrategyId,
 } from '@draftlab/domain';
-import { evaluatePlayer } from '@draftlab/evaluation-engine';
-import { createManualLeague, DEFAULT_ROSTER_12, SCORING_PRESETS } from '@draftlab/integrations';
+import { adpToOverallPick, evaluatePlayer } from '@draftlab/evaluation-engine';
+import {
+  createManualLeague,
+  DEFAULT_ROSTER_12,
+  scoringConfirmation,
+  SCORING_PRESETS,
+  summarizeScoring,
+} from '@draftlab/integrations';
 import { recommendPlayers } from '@draftlab/recommendation-engine';
 import {
   buildCheatSheet,
   compareStrategies,
   getDraftSlotInfo,
   listStrategies,
+  picksFromEvents,
+  scoreAdherence,
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { adpToOverallPick } from '@draftlab/evaluation-engine';
 import { SEED_PLAYERS } from '../data/seed-players.js';
+import { buildRecap } from './recap.js';
 
 export class AppStore {
   private readonly evaluations = new Map<string, PlayerEvaluation>();
@@ -101,6 +109,65 @@ export class AppStore {
     return this.drafts.get(leagueId);
   }
 
+  patchDraft(leagueId: string, patch: Partial<DraftState>) {
+    const draft = this.drafts.get(leagueId);
+    if (!draft) return null;
+    const next = { ...draft, ...patch };
+    this.drafts.set(leagueId, next);
+    return next;
+  }
+
+  scoringSummary(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    return summarizeScoring(league.scoring, league.roster);
+  }
+
+  /** Recompute evaluations against the league's team count (ADP overall pick depends on it). */
+  recalculateForLeague(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    for (const seed of SEED_PLAYERS) {
+      const evaluation = evaluatePlayer({
+        player: seed.player,
+        factors: seed.factors,
+        value: {
+          adpRoundPick: seed.market.adpRoundPick,
+          fseRank: seed.market.fseRank,
+          espnProjectionRank: seed.market.espnProjectionRank,
+          teamCount: league.teamCount,
+        },
+        risk: seed.risk,
+      });
+      this.evaluations.set(seed.player.id, evaluation);
+    }
+    return {
+      leagueId,
+      playerCount: SEED_PLAYERS.length,
+      scoring: scoringConfirmation(league),
+    };
+  }
+
+  adherence(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    const draft = this.drafts.get(leagueId);
+    if (!league || !draft) return null;
+    const picks = picksFromEvents(draft.picks, draft.userRosterId, (id) => this.getPlayer(id)?.position ?? null);
+    return scoreAdherence(league.strategyId ?? 'balanced', picks);
+  }
+
+  recap(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    const draft = this.drafts.get(leagueId);
+    if (!league || !draft) return null;
+    return buildRecap({
+      league,
+      draft,
+      getPlayer: (id) => this.getPlayer(id),
+      getEvaluation: (id) => this.getEvaluation(id),
+    });
+  }
+
   getBoard(leagueId: string): BoardPlayer[] {
     const league = this.leagues.get(leagueId);
     const draft = this.drafts.get(leagueId);
@@ -169,6 +236,12 @@ export class AppStore {
     draft.availablePlayerIds = draft.availablePlayerIds.filter((id) => id !== event.playerId);
     draft.lastSyncedAt = new Date().toISOString();
     draft.status = 'drafting';
+    const league = this.leagues.get(leagueId);
+    if (league) {
+      const info = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
+      const next = info.pickNumbers.find((n) => n >= draft.currentPick);
+      draft.picksUntilUser = next != null ? Math.max(0, next - draft.currentPick) : null;
+    }
     return draft;
   }
 
@@ -278,6 +351,9 @@ export class AppStore {
       userRosterId: 'roster-user',
       lastSyncedAt: null,
       syncMode: 'manual',
+      syncBanner: null,
+      lastPickedUpstream: null,
+      picksUntilUser: null,
     };
   }
 }
