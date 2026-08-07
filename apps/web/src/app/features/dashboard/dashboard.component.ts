@@ -16,7 +16,8 @@ import type { BoardPlayer, League } from '../../core/api.types';
         </p>
         <div class="cta">
           <a class="btn primary" routerLink="/leagues/demo-league/board">Open player board</a>
-          <a class="btn ghost" routerLink="/leagues/connect">Connect a league</a>
+          <a class="btn ghost" routerLink="/leagues/demo-dynasty/roster">Dynasty</a>
+          <a class="btn ghost" routerLink="/leagues/demo-auction/auction">Auction</a>
         </div>
       </div>
       <div class="hero-panel dl-panel">

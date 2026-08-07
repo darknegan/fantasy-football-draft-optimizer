@@ -295,13 +295,15 @@ not integrate with: league shape, roster positions, scoring with presets, draft 
 replaces what was previously an ESPN integration phase and is substantially smaller, since it
 reuses the manual pick entry path already built in phase 4 for draft-night resilience.
 
-**Phase 6 — Dynasty and auction.** Multi-year value curves, rookie drafts, pick assets, then
-the auction room with dollar values, inflation, max-bid, and finally the configurable
-multi-year contract rule set — the largest single scope item in the project.
+**Phase 6 — Dynasty and auction.** ✅ Multi-year value curves, rookie drafts, pick assets,
+contend/rebuild mode, then the auction room with dollar values, inflation, max-bid, nomination
+strategy, and configurable multi-year contract rule set (`@draftlab/dynasty-engine`,
+`@draftlab/auction-engine`).
 
-**Phase 7 — Calibration.** Outcome tracking, recommendation-versus-actual comparison, and
-recalibration of the §1.1 grading bands and §5 weights against observed results. This is what
-turns the model from plausible into validated, and it cannot happen until a season has run.
+**Phase 7 — Calibration.** ✅ Outcome tracking on user picks, recommendation-versus-actual
+comparison, and proposed recalibration of the §1.1 grading bands and §5 DraftScore weights
+against observed results (`@draftlab/calibration-engine`). Full seasonal validation still
+requires live draft history beyond the seeded demo log.
 
 ---
 

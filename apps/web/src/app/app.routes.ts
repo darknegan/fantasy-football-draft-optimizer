@@ -48,6 +48,19 @@ export const routes: Routes = [
         path: 'leagues/:id/scoring',
         loadComponent: () => import('./features/scoring/scoring.component').then((m) => m.ScoringComponent),
       },
+      {
+        path: 'leagues/:id/roster',
+        loadComponent: () => import('./features/dynasty/dynasty.component').then((m) => m.DynastyComponent),
+      },
+      {
+        path: 'leagues/:id/auction',
+        loadComponent: () => import('./features/auction/auction.component').then((m) => m.AuctionComponent),
+      },
+      {
+        path: 'leagues/:id/calibration',
+        loadComponent: () =>
+          import('./features/calibration/calibration.component').then((m) => m.CalibrationComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

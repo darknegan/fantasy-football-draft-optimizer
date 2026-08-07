@@ -10,7 +10,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@draftlab/auction-engine": "*",
+    "@draftlab/calibration-engine": "*",
     "@draftlab/domain": "*",
+    "@draftlab/dynasty-engine": "*",
     "@draftlab/evaluation-engine": "*",
     "@draftlab/integrations": "*",
     "@draftlab/recommendation-engine": "*",
