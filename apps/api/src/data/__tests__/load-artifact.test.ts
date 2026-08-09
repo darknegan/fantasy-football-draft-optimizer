@@ -140,7 +140,41 @@ describe('seedPlayersFromArtifact', () => {
     // 'unknown'), not present-but-permanently-null.
     expect(sp.factors.some((f) => f.factorId === 'injury_concern')).toBe(false);
 
-    expect(sp.market).toEqual({ adpRoundPick: '1.02', fseRank: null, espnProjectionRank: null });
+    expect(sp.market).toEqual({
+      adpRoundPick: '1.02',
+      fseRank: null,
+      espnProjectionRank: null,
+      projectedRank: null,
+    });
+  });
+
+  it('passes projected_rank through into market.projectedRank when present', () => {
+    const doc = artifact({
+      players: [
+        {
+          sleeper_id: '9221',
+          name: 'Jahmyr Gibbs',
+          position: 'RB',
+          team: 'DET',
+          adp: 2.2,
+          adp_round_pick: '1.02',
+          matched: true,
+          projected_rank: 3,
+          bio: {
+            age: 24,
+            seasons_in_league: 3,
+            draft_year: 2023,
+            status: 'Active',
+            provenance: 'measured',
+            top12_finish_count: 3,
+            top12_finish_seasons: [2023, 2024, 2025],
+          },
+          factors: {},
+        },
+      ],
+    });
+    const { players } = seedPlayersFromArtifact(doc);
+    expect(players[0].market.projectedRank).toBe(3);
   });
 
   it.each([

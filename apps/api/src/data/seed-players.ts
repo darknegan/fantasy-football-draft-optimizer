@@ -8,6 +8,8 @@ export interface SeedPlayer {
     adpRoundPick: string;
     fseRank: number | null;
     espnProjectionRank: number | null;
+    /** Mechanical fallback for fseRank/espnProjectionRank. See ValueInput.projectedRank. */
+    projectedRank?: number | null;
   };
   risk?: {
     careerGamesMissedRate?: number;

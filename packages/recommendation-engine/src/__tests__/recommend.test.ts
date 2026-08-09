@@ -37,7 +37,12 @@ function stubEval(playerId: string, draftScore: number, failsGate = false): Play
     risk: {
       riskProfile: 20,
       expectedGamesMissed: 2,
-      components: { careerMissedRate: 0.1, archetypeInjury: 0.15, ageCurvePenalty: 0, recentSeriousInjury: 0 },
+      components: {
+        careerMissedRate: 0.1,
+        archetypeInjury: 0.15,
+        ageCurvePenalty: 0,
+        recentSeriousInjury: 0,
+      },
     },
     value: {
       valueScore: 10,
@@ -45,6 +50,7 @@ function stubEval(playerId: string, draftScore: number, failsGate = false): Play
       blendedRank: 15,
       fseRank: 15,
       espnProjectionRank: 18,
+      projectedRank: null,
       adpRoundPick: '2.08',
     },
     draftScore,

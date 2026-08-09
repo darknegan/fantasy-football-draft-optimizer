@@ -43,6 +43,8 @@ interface ArtifactPlayer {
   adp: number | null;
   adp_round_pick: string | null;
   matched: boolean;
+  /** Mechanical fallback for fseRank/espnProjectionRank. schema_version 3+; absent on older artifacts. */
+  projected_rank?: number | null;
   bio: ArtifactBio;
   factors: Record<string, ArtifactFactor>;
 }
@@ -157,6 +159,7 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
         adpRoundPick: p.adp_round_pick ?? 'N/A',
         fseRank: null,
         espnProjectionRank: null,
+        projectedRank: p.projected_rank ?? null,
       },
     });
   }

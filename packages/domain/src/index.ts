@@ -155,6 +155,8 @@ export interface ValueResult {
   blendedRank: number;
   fseRank: number | null;
   espnProjectionRank: number | null;
+  /** Mechanical fallback rank when neither licensed source is available. See ValueInput.projectedRank. */
+  projectedRank: number | null;
   adpRoundPick: string;
 }
 

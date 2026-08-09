@@ -3,6 +3,18 @@ import type { ValueResult } from '@draftlab/domain';
 export interface ValueInput {
   fseRank?: number | null;
   espnProjectionRank?: number | null;
+  /**
+   * Mechanical fallback used only when neither fseRank nor espnProjectionRank
+   * is available: season-long projected-points rank OVERALL across all
+   * positions, from sleeperMCP's build_factors.py (Sleeper's own undocumented
+   * weekly projections, summed). An independent opinion of expected output,
+   * same role as the two licensed ranks, just sourced differently — not
+   * derived from this engine's own ceiling/archetype, which would be
+   * circular. Has no positional-scarcity adjustment (unlike an analyst
+   * big-board), so it ranks QBs earlier than fseRank/espnProjectionRank
+   * would — a known, stated limitation of the fallback, not a bug.
+   */
+  projectedRank?: number | null;
   /** ADP as round.pick, e.g. 3.04 */
   adpRoundPick: string;
   teamCount: number;
@@ -24,6 +36,7 @@ export function evaluateValue(input: ValueInput): ValueResult {
   const adpOverallPick = adpToOverallPick(input.adpRoundPick, teamCount);
   const fse = input.fseRank ?? null;
   const espn = input.espnProjectionRank ?? null;
+  const projected = input.projectedRank ?? null;
   const fseWeight = input.fseWeight ?? 0.6;
   const scalingFactor = input.scalingFactor ?? 1.5;
 
@@ -34,6 +47,8 @@ export function evaluateValue(input: ValueInput): ValueResult {
     blendedRank = fse;
   } else if (espn != null) {
     blendedRank = espn;
+  } else if (projected != null) {
+    blendedRank = projected;
   } else {
     blendedRank = adpOverallPick;
   }
@@ -47,6 +62,7 @@ export function evaluateValue(input: ValueInput): ValueResult {
     blendedRank: Math.round(blendedRank * 10) / 10,
     fseRank: fse,
     espnProjectionRank: espn,
+    projectedRank: projected,
     adpRoundPick: input.adpRoundPick,
   };
 }
