@@ -544,6 +544,7 @@ export class AppStore {
         draftScore: evaluation.draftScore,
         ceilingScore: evaluation.ceiling.ceilingScore,
         provisional: evaluation.ceiling.provisional,
+        ceilingKnownFactors: evaluation.ceiling.knownFactors,
         adpRoundPick: evaluation.value.adpRoundPick,
         target: targetSet.has(s.player.id),
         avoid: avoidSet.has(s.player.id),

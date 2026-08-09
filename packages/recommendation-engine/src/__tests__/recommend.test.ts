@@ -51,6 +51,7 @@ function stubEval(playerId: string, draftScore: number, failsGate = false): Play
       fseRank: 15,
       espnProjectionRank: 18,
       projectedRank: null,
+      usedMechanicalFallback: false,
       adpRoundPick: '2.08',
     },
     draftScore,

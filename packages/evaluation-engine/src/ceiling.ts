@@ -37,11 +37,20 @@ export function computeCeilingScore(
     .map((def) => gradeFactor(def, byId.get(def.id), config.bands));
 
   const knownFactors = factors.filter((f) => f.grade !== 'unknown').length;
-  const ceilingScore = factors.reduce((sum, f) => sum + f.weight, 0);
   // Derived from the position's own factor list, not a hardcoded constant — RB has 16
   // factors (the original 12 plus receptions/yards_per_carry/yards_per_touch/team_wins),
   // not 12, and a fixed denominator would silently miscalculate confidenceScore for it.
   const denom = factors.length;
+
+  // Zero known factors sums to a literal 0 (every weight is 0) — deliberately NOT null.
+  // null would trip computeDraftScore's ceiling-weight redistribution, which exists for a
+  // different problem (RB's old position-wide provisional gate, where NOBODY at the
+  // position had data) and backfires here: redistributing weight onto archetype+risk, which
+  // are themselves uniform/neutral defaults for everyone right now, made a zero-data player
+  // score even better than before. A real 0 lets this player be judged as "unknown" — via
+  // knownFactors/confidenceScore, which callers (cheat sheet tiering) use to exclude
+  // low-confidence players from confident ranking — without silently rewarding the gap.
+  const ceilingScore = factors.reduce((sum, f) => sum + f.weight, 0);
 
   let failsTargetShareGate = false;
   if (position === 'TE') {

@@ -41,6 +41,7 @@ export function evaluateValue(input: ValueInput): ValueResult {
   const scalingFactor = input.scalingFactor ?? 1.5;
 
   let blendedRank: number;
+  let usedMechanicalFallback = false;
   if (fse != null && espn != null) {
     blendedRank = fseWeight * fse + (1 - fseWeight) * espn;
   } else if (fse != null) {
@@ -49,11 +50,22 @@ export function evaluateValue(input: ValueInput): ValueResult {
     blendedRank = espn;
   } else if (projected != null) {
     blendedRank = projected;
+    usedMechanicalFallback = true;
   } else {
     blendedRank = adpOverallPick;
   }
 
-  const raw = (adpOverallPick - blendedRank) * scalingFactor;
+  // The mechanical fallback has no situational judgment — no aging curve, no committee/
+  // depth-chart awareness, nothing a real analyst opinion would apply. That is exactly the
+  // context behind the biggest real ADP-vs-projection gaps (an aging star correctly going
+  // late, a committee back's raw points overstating his role), so treating it with full
+  // confidence turns real-world discounting into a fake "bargain": Travis Kelce — a
+  // declining future Hall-of-Famer correctly going late in ADP — read as a massive value
+  // pick purely because raw projected points don't know he's declining. Halved rather than
+  // trusted at full strength until a licensed fseRank/espnProjectionRank exists.
+  const FALLBACK_CONFIDENCE = 0.5;
+  const rawGap = (adpOverallPick - blendedRank) * scalingFactor;
+  const raw = usedMechanicalFallback ? rawGap * FALLBACK_CONFIDENCE : rawGap;
   const valueScore = Math.max(-100, Math.min(100, raw));
 
   return {
@@ -63,6 +75,7 @@ export function evaluateValue(input: ValueInput): ValueResult {
     fseRank: fse,
     espnProjectionRank: espn,
     projectedRank: projected,
+    usedMechanicalFallback,
     adpRoundPick: input.adpRoundPick,
   };
 }

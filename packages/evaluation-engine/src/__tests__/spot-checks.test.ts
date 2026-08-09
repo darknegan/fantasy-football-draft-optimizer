@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { FactorGrade, FactorInput, Player } from '@draftlab/domain';
+import type {
+  ArchetypeResult,
+  FactorGrade,
+  FactorInput,
+  Player,
+  RiskResult,
+} from '@draftlab/domain';
 import { GRADE_WEIGHTS, DEFAULT_GRADING_BANDS } from '../config/grade-weights.js';
 import { computeCeilingScore } from '../ceiling.js';
+import { computeDraftScore } from '../draft-score.js';
 import { gradeByRatio } from '../grade-factor.js';
 import { evaluateArchetype, classifyRb, classifyWr, computeArchetypeEv } from '../archetype.js';
+import { evaluateValue } from '../value.js';
 
 /** Sum CeilingScore from a grade list — mirrors the spreadsheet legend. */
 function ceilingFromGrades(grades: FactorGrade[]): number {
@@ -83,7 +91,17 @@ describe('computeCeilingScore with engineered factor values', () => {
     expect(result.knownFactors).toBe(11);
   });
 
-  it('RB is no longer globally provisional — an empty input set still computes (all factors unknown)', () => {
+  it('RB is no longer globally provisional; zero known factors sums to a literal 0, not null', () => {
+    // Deliberately 0, not null. null would trip computeDraftScore's ceiling-weight
+    // redistribution — built for RB's old position-wide provisional gate, where NOBODY at
+    // the position had data, so shifting weight onto archetype+risk was fair. It backfires
+    // for one individual zero-data player among otherwise-graded peers: archetype/risk are
+    // themselves uniform/neutral defaults for everyone right now (see archetype.ts/risk.ts),
+    // so redistributing MORE weight onto them made a zero-data player score even higher than
+    // before — confirmed live via Fernando Mendoza's draftScore jumping from 61.9 to 72.4
+    // when this was tried. The actual fix lives in tiers.ts: buildCheatSheet excludes
+    // zero-known-factor players from the S-D percentile ranking entirely, rather than trying
+    // to make draftScore itself "fair" for a player we've measured nothing about.
     const result = computeCeilingScore('RB', []);
     expect(result.provisional).toBe(false);
     expect(result.ceilingScore).toBe(0);
@@ -113,6 +131,86 @@ describe('computeCeilingScore with engineered factor values', () => {
       GRADE_WEIGHTS.yellow + GRADE_WEIGHTS.red + GRADE_WEIGHTS.green,
     );
     expect(result.confidenceScore).toBeCloseTo(3 / 16, 5);
+  });
+
+  it('draftScore alone still separates zero-data from a real bad grade (the robust fix is in buildCheatSheet, though — see tiers.test)', () => {
+    // With ceiling counted normally at full weight (a literal 0, not redistributed), a
+    // zero-data player's neutral-ish 0 still beats a real, harshly-graded negative score —
+    // just not by as wide a margin as the broken redistribution version did. That gap isn't
+    // "fixed" at this layer and isn't meant to be: buildCheatSheet excludes zero-known-factor
+    // players from ranked tiers entirely, which is the actual fix for cheat-sheet placement.
+    // This test just confirms the raw arithmetic didn't regress in the other direction.
+    const neutralArchetype: ArchetypeResult = {
+      archetype: 'IN_THEIR_PRIME',
+      rates: { returnRate: 0.4, injuryRate: 0.15, boomRate: 0.22, bustRate: 0.2, fineRate: 0.23 },
+      archetypeEv: 0.415,
+    };
+    const neutralRisk: RiskResult = {
+      riskProfile: 7.75,
+      expectedGamesMissed: 1.7,
+      components: {
+        careerMissedRate: 0.1,
+        archetypeInjury: 0.15,
+        ageCurvePenalty: 0,
+        recentSeriousInjury: 0,
+      },
+    };
+    const neutralValue = evaluateValue({ adpRoundPick: '10.01', teamCount: 12 });
+
+    const noData = computeCeilingScore('QB', []);
+    const realBadSeason = computeCeilingScore('QB', [
+      { factorId: 'pass_attempts', value: 23.2 },
+      { factorId: 'passing_tds', value: 1.6 },
+      { factorId: 'rush_attempts', value: 5.2 },
+      { factorId: 'rushing_tds', value: 0.15 },
+      { factorId: 'off_ppg_rank', value: 11 },
+    ]);
+    expect(realBadSeason.ceilingScore).not.toBeNull();
+    expect(realBadSeason.ceilingScore!).toBeLessThan(0);
+
+    const noDataScore = computeDraftScore(noData, neutralArchetype, neutralRisk, neutralValue);
+    const realBadScore = computeDraftScore(
+      realBadSeason,
+      neutralArchetype,
+      neutralRisk,
+      neutralValue,
+    );
+    expect(realBadScore).toBeLessThan(noDataScore);
+  });
+});
+
+describe('evaluateValue', () => {
+  it('computes full-confidence value from a licensed rank', () => {
+    const result = evaluateValue({ fseRank: 5, adpRoundPick: '2.01', teamCount: 12 });
+    expect(result.usedMechanicalFallback).toBe(false);
+    // adpOverallPick 13, fseRank 5 -> (13-5)*1.5 = 12
+    expect(result.valueScore).toBe(12);
+  });
+
+  it('halves value when computed from the mechanical projectedRank fallback', () => {
+    const withFallback = evaluateValue({ projectedRank: 5, adpRoundPick: '2.01', teamCount: 12 });
+    expect(withFallback.usedMechanicalFallback).toBe(true);
+    // Same gap as the licensed-rank case above (12), but at half confidence.
+    expect(withFallback.valueScore).toBe(6);
+  });
+
+  it("dampens a Travis Kelce-style false bargain (real ADP correctly discounts age/decline; the mechanical rank doesn't know that)", () => {
+    // adpOverallPick 134 (12.02), projectedRank 81 raw stats rank -> full-strength gap would
+    // be (134-81)*1.5 = 79.5, clamped nowhere near the 100 cap. Halved to a more honest 39.75.
+    const result = evaluateValue({ projectedRank: 81, adpRoundPick: '12.02', teamCount: 12 });
+    expect(result.usedMechanicalFallback).toBe(true);
+    expect(result.valueScore).toBe(39.8);
+  });
+
+  it('does not dampen when a licensed rank is present even if projectedRank also is', () => {
+    const result = evaluateValue({
+      fseRank: 5,
+      projectedRank: 81,
+      adpRoundPick: '2.01',
+      teamCount: 12,
+    });
+    expect(result.usedMechanicalFallback).toBe(false);
+    expect(result.valueScore).toBe(12);
   });
 });
 

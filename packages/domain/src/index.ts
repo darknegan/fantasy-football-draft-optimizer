@@ -168,6 +168,8 @@ export interface ValueResult {
   espnProjectionRank: number | null;
   /** Mechanical fallback rank when neither licensed source is available. See ValueInput.projectedRank. */
   projectedRank: number | null;
+  /** True when valueScore was computed off projectedRank rather than a licensed source — see evaluateValue. */
+  usedMechanicalFallback: boolean;
   adpRoundPick: string;
 }
 
