@@ -93,6 +93,17 @@ export interface FactorInput {
   value: number | null;
   /** Override for categorical factors */
   categorical?: SecondaryTargetCompetition | InjurySeverity | ArchetypeId | null;
+  /**
+   * Where this value came from — e.g. 'measured', 'stale:team_changed',
+   * 'missing:no_prior_season', 'computed:classifyArchetype'. Optional and
+   * free-form: hand-authored fixtures have no provenance to report, and
+   * sleeperMCP's provenance vocabulary may grow without a type change here.
+   * Was the blocking gap for importing sleeperMCP's player_factors.json —
+   * without it, real gaps (a player who changed teams, a factor nobody has
+   * licensed) would land as ordinary numbers indistinguishable from a
+   * confident measurement.
+   */
+  provenance?: string;
 }
 
 export interface GradedFactor {
