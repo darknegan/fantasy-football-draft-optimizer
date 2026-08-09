@@ -45,6 +45,8 @@ interface ArtifactPlayer {
   matched: boolean;
   /** Mechanical fallback for fseRank/espnProjectionRank. schema_version 3+; absent on older artifacts. */
   projected_rank?: number | null;
+  /** WR/RB only: rank among same-team, same-position teammates. schema_version 4+. */
+  team_position_rank?: number | null;
   bio: ArtifactBio;
   factors: Record<string, ArtifactFactor>;
 }
@@ -129,6 +131,7 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
       status: mapStatus(p.bio.status),
       hasPositionalTop12Finish: p.bio.top12_finish_count > 0,
       positionalTop12FinishCount: p.bio.top12_finish_count,
+      teamPositionRank: p.team_position_rank ?? null,
     };
 
     // The artifact always emits 'archetype' and 'injury_concern' entries — both

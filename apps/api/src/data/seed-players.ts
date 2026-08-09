@@ -62,7 +62,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     // Engineered to 9G / 1Y / 2R → CeilingScore 42
     factors: [
@@ -195,7 +195,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 10.7 * 1.1 },
@@ -226,7 +226,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 11.2 },
@@ -308,7 +308,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 4,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 10.5 },

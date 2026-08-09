@@ -7,7 +7,7 @@ import type {
 } from '@draftlab/domain';
 
 const RB_RATES: Record<
-  'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'IN_THEIR_PRIME',
+  'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_RB1' | 'PRIME_RB2',
   ArchetypeRates
 > = {
   BREAKOUT_CANDIDATE: {
@@ -24,7 +24,19 @@ const RB_RATES: Record<
     bustRate: 0.1667,
     fineRate: 0.2833,
   },
-  IN_THEIR_PRIME: {
+  // No dedicated bell-cow-vs-committee historical study yet — both tiers reuse the old
+  // undifferentiated IN_THEIR_PRIME rates as an interim stand-in (same pattern as
+  // PROVEN_BREAKOUT_CANDIDATE below). The archetype LABEL is still real and useful —
+  // team_position_rank distinguishes a true lead back from a committee piece — it's only
+  // the numeric EV that doesn't yet reflect a measured difference between them.
+  PRIME_RB1: {
+    returnRate: 0.4615,
+    injuryRate: 0.1538,
+    boomRate: 0.2788,
+    bustRate: 0.2019,
+    fineRate: 0.1827,
+  },
+  PRIME_RB2: {
     returnRate: 0.4615,
     injuryRate: 0.1538,
     boomRate: 0.2788,
@@ -110,13 +122,13 @@ export function classifyRb(player: Player): ArchetypeId {
     // finishCount >= 2 falls through — already entrenched, not a breakout.
   }
   if (player.seasonsInLeague >= 7 || player.age >= 27) return 'TRUSTY_VETERAN';
-  return 'IN_THEIR_PRIME';
+  return player.teamPositionRank === 1 ? 'PRIME_RB1' : 'PRIME_RB2';
 }
 
 export function classifyWr(player: Player): ArchetypeId {
   if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
   if (player.seasonsInLeague >= 7 || player.age >= 28) return 'TRUSTY_VETERAN';
-  return player.isClearWr1 ? 'PRIME_WR1' : 'PRIME_WR2';
+  return player.teamPositionRank === 1 ? 'PRIME_WR1' : 'PRIME_WR2';
 }
 
 export function classifyTe(player: Player): ArchetypeId {

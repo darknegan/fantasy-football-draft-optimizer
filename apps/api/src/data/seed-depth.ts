@@ -372,7 +372,13 @@ function toPlayer(d: (typeof DEPTH)[number]): Player {
     status: 'active',
     hasPositionalTop12Finish: d.position !== 'TE' || d.adp.startsWith('3') || d.adp.startsWith('2'),
     positionalTop12FinishCount: d.top12FinishCount,
-    isClearWr1: d.position === 'WR' && Number(d.adp.split('.')[0]) <= 3,
+    // Crude ADP-based heuristic (early pick -> presumed team-position lead), same as the
+    // old isClearWr1 stood in for before real team_position_rank data existed. Applied to
+    // both WR and RB now that classifyRb also uses this field.
+    teamPositionRank:
+      (d.position === 'WR' || d.position === 'RB') && Number(d.adp.split('.')[0]) <= 3
+        ? 1
+        : undefined,
   };
 }
 

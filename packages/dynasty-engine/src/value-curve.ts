@@ -38,6 +38,10 @@ const ARCHETYPE_ASSET_BIAS: Record<ArchetypeId, number> = {
   IN_THEIR_PRIME: 1.05,
   PRIME_WR1: 1.12,
   PRIME_WR2: 1.05,
+  // Same premium as the WR1/WR2 split, by analogy — no dedicated dynasty study for a
+  // bell-cow-vs-committee RB split yet, same caveat as their EV rates in archetype.ts.
+  PRIME_RB1: 1.12,
+  PRIME_RB2: 1.05,
   TRUSTY_VETERAN: 0.78,
 };
 

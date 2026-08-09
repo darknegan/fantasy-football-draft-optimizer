@@ -25,7 +25,9 @@ export type ArchetypeId =
   | 'TRUSTY_VETERAN'
   | 'IN_THEIR_PRIME'
   | 'PRIME_WR1'
-  | 'PRIME_WR2';
+  | 'PRIME_WR2'
+  | 'PRIME_RB1'
+  | 'PRIME_RB2';
 
 export type LeagueType = 'redraft' | 'dynasty' | 'auction';
 
@@ -85,7 +87,16 @@ export interface Player {
    * undefined, so existing (unmigrated) data keeps its prior classification.
    */
   positionalTop12FinishCount?: number;
-  isClearWr1?: boolean;
+  /**
+   * WR/RB only: rank among same-team, same-position teammates by the position's primary
+   * volume stat (targets for WR, touches for RB). 1 = the team's clear lead option — a
+   * true alpha receiver or a bell-cow back, not a committee/complementary piece. Powers
+   * classifyWr's PRIME_WR1/PRIME_WR2 split and classifyRb's PRIME_RB1/PRIME_RB2 split.
+   * QB has no analogous "QB2" within one offense; TE's version of this distinction is
+   * captured by computeCeilingScore's failsTargetShareGate instead, a different mechanism
+   * for the same idea.
+   */
+  teamPositionRank?: number | null;
 }
 
 export interface FactorInput {

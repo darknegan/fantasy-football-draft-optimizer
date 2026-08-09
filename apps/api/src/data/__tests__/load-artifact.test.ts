@@ -59,6 +59,7 @@ describe('seedPlayersFromArtifact', () => {
           adp: 2.2,
           adp_round_pick: '1.02',
           matched: true,
+          team_position_rank: 1,
           bio: {
             age: 24,
             seasons_in_league: 3,
@@ -111,6 +112,7 @@ describe('seedPlayersFromArtifact', () => {
       status: 'active',
       hasPositionalTop12Finish: true,
       positionalTop12FinishCount: 3,
+      teamPositionRank: 1,
     });
 
     // Real values pass through with their provenance intact...
@@ -126,13 +128,14 @@ describe('seedPlayersFromArtifact', () => {
       provenance: 'unsourced',
     });
     // Archetype is computed here (classifyArchetype), never trusted from the artifact,
-    // which never supplies one. 3 top-12 finishes -> not a breakout, and young enough
-    // and not a veteran -> IN_THEIR_PRIME. Exactly one entry — the artifact's own null
-    // 'archetype' placeholder must not survive alongside the computed one.
+    // which never supplies one. 3 top-12 finishes -> not a breakout, young enough and
+    // not a veteran -> prime, and team_position_rank 1 -> PRIME_RB1 (team's lead back).
+    // Exactly one entry — the artifact's own null 'archetype' placeholder must not
+    // survive alongside the computed one.
     const archetypeEntries = sp.factors.filter((f) => f.factorId === 'archetype');
     expect(archetypeEntries).toHaveLength(1);
     expect(archetypeEntries[0]).toMatchObject({
-      categorical: 'IN_THEIR_PRIME',
+      categorical: 'PRIME_RB1',
       provenance: 'computed:classifyArchetype',
     });
     // No injury data source yet — the artifact's null placeholder is dropped
@@ -175,6 +178,48 @@ describe('seedPlayersFromArtifact', () => {
     });
     const { players } = seedPlayersFromArtifact(doc);
     expect(players[0].market.projectedRank).toBe(3);
+  });
+
+  it('passes team_position_rank through into player.teamPositionRank and drives PRIME_RB1/RB2', () => {
+    const base = {
+      sleeper_id: '9221',
+      name: 'Jahmyr Gibbs',
+      position: 'RB' as const,
+      team: 'DET',
+      adp: 2.2,
+      adp_round_pick: '1.02',
+      matched: true,
+      bio: {
+        age: 24,
+        seasons_in_league: 3,
+        draft_year: 2023,
+        status: 'Active',
+        provenance: 'measured',
+        top12_finish_count: 3,
+        top12_finish_seasons: [2023, 2024, 2025],
+      },
+      factors: {},
+    };
+
+    const lead = seedPlayersFromArtifact(
+      artifact({ players: [{ ...base, team_position_rank: 1 }] }),
+    );
+    expect(lead.players[0].player.teamPositionRank).toBe(1);
+    expect(lead.players[0].factors.find((f) => f.factorId === 'archetype')?.categorical).toBe(
+      'PRIME_RB1',
+    );
+
+    const committee = seedPlayersFromArtifact(
+      artifact({ players: [{ ...base, team_position_rank: 2 }] }),
+    );
+    expect(committee.players[0].player.teamPositionRank).toBe(2);
+    expect(committee.players[0].factors.find((f) => f.factorId === 'archetype')?.categorical).toBe(
+      'PRIME_RB2',
+    );
+
+    // Absent entirely (older schema, or genuinely unsourced) -> null, not a crash.
+    const missing = seedPlayersFromArtifact(artifact({ players: [{ ...base }] }));
+    expect(missing.players[0].player.teamPositionRank).toBeNull();
   });
 
   it.each([

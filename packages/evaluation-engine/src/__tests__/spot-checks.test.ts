@@ -140,12 +140,30 @@ describe('archetype classification', () => {
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     };
     expect(classifyWr(chase)).toBe('PRIME_WR1');
     const ev = evaluateArchetype(chase);
     expect(ev.archetypeEv).toBeCloseTo(computeArchetypeEv(ev.rates), 5);
     expect(ev.archetypeEv).toBeGreaterThan(0.8);
+  });
+
+  it("classifies a WR who is not their team's clear #1 as Prime WR2", () => {
+    const wr2: Player = {
+      id: 'wr2',
+      externalIds: {},
+      name: 'Test WR2',
+      team: 'TST',
+      position: 'WR',
+      age: 26,
+      seasonsInLeague: 4,
+      draftYear: 2022,
+      draftRound: 3,
+      status: 'active',
+      hasPositionalTop12Finish: true,
+      teamPositionRank: 2,
+    };
+    expect(classifyWr(wr2)).toBe('PRIME_WR2');
   });
 
   function rb(overrides: Partial<Player>): Player {
@@ -175,15 +193,30 @@ describe('archetype classification', () => {
     );
   });
 
-  it('classifies a young RB with 2+ top-12 finishes as already in their prime, not a breakout', () => {
+  it('classifies a young RB with 2+ top-12 finishes as a prime RB, not a breakout — RB1 or RB2 by team_position_rank', () => {
+    expect(
+      classifyRb(
+        rb({ positionalTop12FinishCount: 2, hasPositionalTop12Finish: true, teamPositionRank: 1 }),
+      ),
+    ).toBe('PRIME_RB1');
+    expect(
+      classifyRb(
+        rb({ positionalTop12FinishCount: 2, hasPositionalTop12Finish: true, teamPositionRank: 2 }),
+      ),
+    ).toBe('PRIME_RB2');
+    // No team_position_rank on record defaults to RB2 — a committee back cannot be
+    // assumed to be the lead option just because no data says otherwise.
     expect(classifyRb(rb({ positionalTop12FinishCount: 2, hasPositionalTop12Finish: true }))).toBe(
-      'IN_THEIR_PRIME',
+      'PRIME_RB2',
     );
   });
 
   it('falls back to the legacy boolean split when no finish count is on record', () => {
     expect(classifyRb(rb({ hasPositionalTop12Finish: false }))).toBe('BREAKOUT_CANDIDATE');
-    expect(classifyRb(rb({ hasPositionalTop12Finish: true }))).toBe('IN_THEIR_PRIME');
+    expect(classifyRb(rb({ hasPositionalTop12Finish: true }))).toBe('PRIME_RB2');
+    expect(classifyRb(rb({ hasPositionalTop12Finish: true, teamPositionRank: 1 }))).toBe(
+      'PRIME_RB1',
+    );
   });
 
   it('still classifies veterans as trusty regardless of finish count', () => {
@@ -199,15 +232,16 @@ describe('archetype classification', () => {
     ).toBe('TRUSTY_VETERAN');
   });
 
-  it('matches real seed data: Bijan Robinson, Jahmyr Gibbs, and Chase Brown (count>=2, from sleeperMCP build_factors.py) land in their prime, not breakout', () => {
+  it("matches real seed data: Bijan Robinson, Jahmyr Gibbs, and Chase Brown (count>=2, from sleeperMCP build_factors.py, and each their team's lead back) land as Prime RB1, not breakout", () => {
     const bijan = rb({
       name: 'Bijan Robinson',
       age: 23,
       seasonsInLeague: 3,
       hasPositionalTop12Finish: true,
       positionalTop12FinishCount: 3,
+      teamPositionRank: 1,
     });
-    expect(classifyRb(bijan)).toBe('IN_THEIR_PRIME');
+    expect(classifyRb(bijan)).toBe('PRIME_RB1');
 
     const chaseBrown = rb({
       name: 'Chase Brown',
@@ -215,7 +249,8 @@ describe('archetype classification', () => {
       seasonsInLeague: 3,
       hasPositionalTop12Finish: true,
       positionalTop12FinishCount: 2,
+      teamPositionRank: 1,
     });
-    expect(classifyRb(chaseBrown)).toBe('IN_THEIR_PRIME');
+    expect(classifyRb(chaseBrown)).toBe('PRIME_RB1');
   });
 });
