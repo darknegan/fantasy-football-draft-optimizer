@@ -73,16 +73,28 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   RB: {
     position: 'RB',
     season: 2025,
+    // Still provisional: rz_touch_share, snap_share, gl_carry_share, and neutral_run_rate
+    // remain unfilled below (0). See docs/01-player-evaluation-model.md §1.5 on why a
+    // partially-real CeilingScore isn't shown until every factor has a real benchmark.
     provisional: true,
     bands: { ...DEFAULT_GRADING_BANDS },
-    // Placeholder factor ids — benchmarks arrive later as config, not a rewrite.
+    // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
+    // (20+ PPR ppg, 12+ games, averaged across those seasons).
     factors: [
-      { id: 'touches', label: 'Touches / g', category: 'volume', direction: 'higherBetter', benchmark: 0 },
-      { id: 'rush_attempts', label: 'Rush attempts / g', category: 'volume', direction: 'higherBetter', benchmark: 0 },
-      { id: 'targets', label: 'Targets / g', category: 'volume', direction: 'higherBetter', benchmark: 0 },
-      { id: 'touchdowns', label: 'Touchdowns / g', category: 'volume', direction: 'higherBetter', benchmark: 0 },
-      { id: 'off_ppg_rank', label: 'Offensive PPG rank', category: 'situational', direction: 'lowerBetter', benchmark: 0 },
-      { id: 'ol_run_block_rank', label: 'OL run block rank', category: 'situational', direction: 'lowerBetter', benchmark: 0 },
+      { id: 'touches', label: 'Touches / g', category: 'volume', direction: 'higherBetter', benchmark: 21.5 },
+      { id: 'rush_attempts', label: 'Rush attempts / g', category: 'volume', direction: 'higherBetter', benchmark: 17.3 },
+      { id: 'targets', label: 'Targets / g', category: 'volume', direction: 'higherBetter', benchmark: 5.4 },
+      { id: 'receptions', label: 'Receptions / g', category: 'volume', direction: 'higherBetter', benchmark: 4.25 },
+      { id: 'touchdowns', label: 'Touchdowns / g', category: 'volume', direction: 'higherBetter', benchmark: 0.98 },
+      { id: 'off_ppg_rank', label: 'Offensive PPG rank', category: 'situational', direction: 'lowerBetter', benchmark: 9.5 },
+      // Video labels this "PFF Run Blocking Grade" but the values behave like a 1-32
+      // rank, not a 0-100 grade — confirm against the raw PFF field before trusting this.
+      { id: 'ol_run_block_rank', label: 'OL run block rank', category: 'situational', direction: 'lowerBetter', benchmark: 9.9 },
+      { id: 'yards_per_carry', label: 'Yards per carry', category: 'situational', direction: 'higherBetter', benchmark: 4.89 },
+      { id: 'yards_per_touch', label: 'Yards per touch', category: 'situational', direction: 'higherBetter', benchmark: 5.82 },
+      { id: 'team_wins', label: 'Team wins', category: 'situational', direction: 'higherBetter', benchmark: 9.85 },
+      // No video data — nflverse (get_player_stats / get_snap_counts per sleeperMCP
+      // HANDOFF.md) is the intended source for these, not this benchmark.
       { id: 'rz_touch_share', label: 'Red zone touch share', category: 'situational', direction: 'higherBetter', benchmark: 0 },
       { id: 'snap_share', label: 'Snap share', category: 'situational', direction: 'higherBetter', benchmark: 0 },
       { id: 'gl_carry_share', label: 'Goal-line carry share', category: 'situational', direction: 'higherBetter', benchmark: 0 },

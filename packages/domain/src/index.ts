@@ -21,6 +21,7 @@ export type DraftSlotTier = 'S' | 'A' | 'B' | 'C' | 'unrated';
 
 export type ArchetypeId =
   | 'BREAKOUT_CANDIDATE'
+  | 'PROVEN_BREAKOUT_CANDIDATE'
   | 'TRUSTY_VETERAN'
   | 'IN_THEIR_PRIME'
   | 'PRIME_WR1'

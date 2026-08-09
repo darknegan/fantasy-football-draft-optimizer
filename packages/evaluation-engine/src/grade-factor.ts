@@ -59,6 +59,8 @@ export function gradeArchetypeFactor(archetype: ArchetypeId): FactorGrade {
       return 'green';
     case 'PRIME_WR2':
       return 'yellow';
+    case 'PROVEN_BREAKOUT_CANDIDATE':
+      return 'yellow';
     case 'BREAKOUT_CANDIDATE':
       return 'orange';
     case 'TRUSTY_VETERAN':
