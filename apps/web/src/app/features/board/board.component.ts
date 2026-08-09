@@ -31,7 +31,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
       <p-table
         [value]="filtered()"
         [scrollable]="true"
-        scrollHeight="70vh"
+        scrollHeight="flex"
         styleClass="p-datatable-sm"
         [rowHover]="true"
       >
@@ -115,6 +115,12 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     </div>
   `,
   styles: `
+    :host {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
     .head {
       display: flex;
       justify-content: space-between;
@@ -122,6 +128,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
       align-items: end;
       margin-bottom: 1rem;
       flex-wrap: wrap;
+      flex: 0 0 auto;
     }
     h1 {
       margin: 0 0 0.25rem;
@@ -132,6 +139,10 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     }
     .table-wrap {
       overflow: hidden;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
     a {
       color: var(--dl-text-primary);

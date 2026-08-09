@@ -20,8 +20,7 @@ body {
 body {
   background:
     radial-gradient(1200px 600px at 10% -10%, #0f2a24 0%, transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, #151a2e 0%, transparent 50%),
-    var(--dl-surface-base);
+    radial-gradient(900px 500px at 100% 0%, #151a2e 0%, transparent 50%), var(--dl-surface-base);
 }
 
 a {
@@ -47,6 +46,16 @@ select {
   background: var(--dl-surface-raised);
   border: 1px solid var(--dl-border-subtle);
   border-radius: var(--dl-radius-md);
+}
+
+/* Lets the player board's table fill the remaining viewport height instead of a hardcoded
+   vh guess (PrimeNG's scrollHeight="flex" needs a flex ancestor chain with a bounded height
+   to size against — app-shell's .content provides that; this opts app-board into it). */
+app-board {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .grade {
