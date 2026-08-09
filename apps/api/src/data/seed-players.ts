@@ -153,6 +153,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
+      // Not top-12 as a rookie (2023); top-5-caliber in 2024 and 2025.
+      positionalTop12FinishCount: 2,
     },
     factors: [],
     market: { adpRoundPick: '1.02', fseRank: 3, espnProjectionRank: 4 },
@@ -211,7 +213,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
     player: {
       id: 'ceedee-lamb',
       externalIds: { sleeper: '6786' },
-      name: "CeeDee Lamb",
+      name: 'CeeDee Lamb',
       team: 'DAL',
       position: 'WR',
       age: 26,
@@ -281,6 +283,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
+      // Split backfield as a rookie (2023, not top-12); RB1-caliber in 2024 and 2025.
+      positionalTop12FinishCount: 2,
     },
     factors: [],
     market: { adpRoundPick: '1.06', fseRank: 7, espnProjectionRank: 8 },

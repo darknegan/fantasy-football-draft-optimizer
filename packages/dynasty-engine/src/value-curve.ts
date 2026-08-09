@@ -1,4 +1,10 @@
-import type { ArchetypeId, MultiYearCurve, Player, PlayerEvaluation, Position } from '@draftlab/domain';
+import type {
+  ArchetypeId,
+  MultiYearCurve,
+  Player,
+  PlayerEvaluation,
+  Position,
+} from '@draftlab/domain';
 
 /** Position peak-age centers used for multi-year decay/growth. */
 const PEAK_AGE: Record<Position, number> = {

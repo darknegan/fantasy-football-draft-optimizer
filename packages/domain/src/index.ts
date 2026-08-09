@@ -78,6 +78,13 @@ export interface Player {
   draftRound: number | null;
   status: PlayerStatus;
   hasPositionalTop12Finish: boolean;
+  /**
+   * RB-specific: number of prior top-12-at-position finishes, when known. Lets classifyRb
+   * distinguish a one-hit-wonder breakout (1) from an already-entrenched young RB1 (2+),
+   * which hasPositionalTop12Finish's plain boolean can't. Falls back to the boolean when
+   * undefined, so existing (unmigrated) data keeps its prior classification.
+   */
+  positionalTop12FinishCount?: number;
   isClearWr1?: boolean;
 }
 

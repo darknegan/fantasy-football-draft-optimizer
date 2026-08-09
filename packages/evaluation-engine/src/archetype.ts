@@ -1,4 +1,10 @@
-import type { ArchetypeId, ArchetypeRates, ArchetypeResult, Player, Position } from '@draftlab/domain';
+import type {
+  ArchetypeId,
+  ArchetypeRates,
+  ArchetypeResult,
+  Player,
+  Position,
+} from '@draftlab/domain';
 
 const RB_RATES: Record<
   'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'IN_THEIR_PRIME',
@@ -36,7 +42,10 @@ const RB_RATES: Record<
   },
 };
 
-const WR_RATES: Record<'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_WR1' | 'PRIME_WR2', ArchetypeRates> = {
+const WR_RATES: Record<
+  'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_WR1' | 'PRIME_WR2',
+  ArchetypeRates
+> = {
   BREAKOUT_CANDIDATE: {
     returnRate: 0.2727,
     injuryRate: 0.1591,
@@ -77,17 +86,29 @@ const NEUTRAL_RATES: ArchetypeRates = {
 };
 
 export function computeArchetypeEv(rates: ArchetypeRates): number {
-  return 2 * rates.boomRate + 1 * rates.returnRate + 0 * rates.fineRate - 1 * rates.bustRate - 1.5 * rates.injuryRate;
+  return (
+    2 * rates.boomRate +
+    1 * rates.returnRate +
+    0 * rates.fineRate -
+    1 * rates.bustRate -
+    1.5 * rates.injuryRate
+  );
 }
 
 export function classifyRb(player: Player): ArchetypeId {
-  // NOTE: PROVEN_BREAKOUT_CANDIDATE (video's "breakout with a prior RB2+ season") is not
-  // derived here. hasPositionalTop12Finish is a boolean, not a count, so it can't distinguish
-  // a one-hit-wonder breakout from an already-entrenched elite young RB1 (e.g. Bijan Robinson,
-  // Jahmyr Gibbs both have seasonsInLeague <= 3 and hasPositionalTop12Finish: true, but belong
-  // in IN_THEIR_PRIME, not the breakout tier). Wiring this up needs a richer signal than what
-  // Player currently exposes.
-  if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
+  if (player.seasonsInLeague <= 3) {
+    const finishCount = player.positionalTop12FinishCount;
+    if (finishCount === undefined) {
+      // No count on record — fall back to the boolean's coarse split (unchanged legacy
+      // behavior). true-with-no-count is treated as already established, same as before.
+      if (!player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
+    } else if (finishCount === 0) {
+      return 'BREAKOUT_CANDIDATE';
+    } else if (finishCount === 1) {
+      return 'PROVEN_BREAKOUT_CANDIDATE';
+    }
+    // finishCount >= 2 falls through — already entrenched, not a breakout.
+  }
   if (player.seasonsInLeague >= 7 || player.age >= 27) return 'TRUSTY_VETERAN';
   return 'IN_THEIR_PRIME';
 }

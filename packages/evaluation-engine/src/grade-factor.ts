@@ -75,7 +75,10 @@ export function gradeFactor(
   input: FactorInput | undefined,
   bands: GradingBands,
 ): GradedFactor {
-  if (!input || (input.value === null && (input.categorical === null || input.categorical === undefined))) {
+  if (
+    !input ||
+    (input.value === null && (input.categorical === null || input.categorical === undefined))
+  ) {
     return {
       factorId: def.id,
       label: def.label,
@@ -88,7 +91,9 @@ export function gradeFactor(
   let grade: FactorGrade = 'unknown';
 
   if (def.categorical === 'secondaryTargetCompetition') {
-    grade = gradeSecondaryCompetition((input.categorical as SecondaryTargetCompetition) ?? 'unknown');
+    grade = gradeSecondaryCompetition(
+      (input.categorical as SecondaryTargetCompetition) ?? 'unknown',
+    );
   } else if (def.categorical === 'injuryConcern') {
     grade = gradeInjuryConcern((input.categorical as InjurySeverity) ?? 'some');
   } else if (def.categorical === 'archetypeGrade') {
