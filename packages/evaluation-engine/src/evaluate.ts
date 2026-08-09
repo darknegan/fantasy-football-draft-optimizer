@@ -20,7 +20,14 @@ export function evaluatePlayer(input: EvaluatePlayerInput): PlayerEvaluation {
   const risk = evaluateRisk(input.player, archetype, input.risk);
   const value = evaluateValue(input.value);
   const weights = input.weights ?? DEFAULT_WEIGHTS;
-  const draftScore = computeDraftScore(ceiling, archetype, risk, value, weights);
+  const draftScore = computeDraftScore(
+    ceiling,
+    archetype,
+    risk,
+    value,
+    input.player.position,
+    weights,
+  );
 
   return {
     playerId: input.player.id,

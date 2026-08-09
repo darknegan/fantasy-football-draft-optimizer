@@ -54,11 +54,15 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 11.54,
       },
       {
+        // sleeperMCP now sources this from nflverse play-by-play (top-3 QB
+        // cohort, 11-season mean, relative SE 2.1% -- tight). Was a 4.31
+        // placeholder with no per-player values behind it; real values only
+        // landed once build_benchmarks.py's pbp pipeline existed.
         id: 'deep_ball_attempts',
         label: 'Deep ball attempts / g',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 4.31,
+        benchmark: 4.397,
       },
       {
         id: 'qbr_rank',
@@ -68,11 +72,13 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 6.9,
       },
       {
+        // sleeperMCP-computed, same pbp cohort method as deep_ball_attempts
+        // above (relative SE 4%).
         id: 'red_zone_attempts',
         label: 'Red zone combined attempts',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 6.3,
+        benchmark: 6.848,
       },
       {
         id: 'adp',
@@ -82,11 +88,13 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 8.22,
       },
       {
+        // sleeperMCP-computed, same pbp cohort method as deep_ball_attempts
+        // above (relative SE 6.7%).
         id: 'neutral_pace_rank',
         label: 'Neutral pace rank',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 12.86,
+        benchmark: 12.697,
       },
       {
         id: 'pass_dvoa_rank',
