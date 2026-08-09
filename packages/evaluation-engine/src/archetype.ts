@@ -2,9 +2,11 @@ import type {
   ArchetypeId,
   ArchetypeRates,
   ArchetypeResult,
+  FactorInput,
   Player,
   Position,
 } from '@draftlab/domain';
+import { getBenchmarkConfig } from './config/benchmarks.js';
 
 const RB_RATES: Record<
   'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_RB1' | 'PRIME_RB2',
@@ -97,6 +99,41 @@ const NEUTRAL_RATES: ArchetypeRates = {
   fineRate: 0.23,
 };
 
+const PRIMARY_VOLUME_FACTOR: Partial<Record<Position, string>> = {
+  WR: 'targets',
+  RB: 'touches',
+};
+
+/**
+ * How much of the WR1/RB1 "lead option" rates a player earns, scaled by their own primary
+ * volume (targets/g for WR, touches/g for RB) against the position's real benchmark.
+ * teamPositionRank === 1 only means "biggest share on his own roster" — it says nothing
+ * about how big that share is. A low-volume leading receiver on a run-heavy offense (e.g.
+ * Khalil Shakir: team's #1 WR by target share, but well under the WR benchmark) shouldn't
+ * get the same elite-alpha boom/bust profile as a true target hog just for edging out
+ * weaker teammates. At/above benchmark: full WR1/RB1 credit. Below it: blend down toward
+ * WR2/RB2. No signal (factor missing): keep the old flat full-credit behavior.
+ */
+function volumeRatio(position: Position, factors: FactorInput[]): number {
+  const factorId = PRIMARY_VOLUME_FACTOR[position];
+  if (!factorId) return 1;
+  const value = factors.find((f) => f.factorId === factorId)?.value;
+  if (value == null) return 1;
+  const benchmark = getBenchmarkConfig(position).factors.find((f) => f.id === factorId)?.benchmark;
+  if (!benchmark) return 1;
+  return Math.max(0, Math.min(1, value / benchmark));
+}
+
+function blendRates(low: ArchetypeRates, high: ArchetypeRates, t: number): ArchetypeRates {
+  return {
+    returnRate: low.returnRate + t * (high.returnRate - low.returnRate),
+    injuryRate: low.injuryRate + t * (high.injuryRate - low.injuryRate),
+    boomRate: low.boomRate + t * (high.boomRate - low.boomRate),
+    bustRate: low.bustRate + t * (high.bustRate - low.bustRate),
+    fineRate: low.fineRate + t * (high.fineRate - low.fineRate),
+  };
+}
+
 export function computeArchetypeEv(rates: ArchetypeRates): number {
   return (
     2 * rates.boomRate +
@@ -156,7 +193,17 @@ export function classifyArchetype(player: Player): ArchetypeId {
   }
 }
 
-function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
+function ratesFor(
+  position: Position,
+  archetype: ArchetypeId,
+  factors: FactorInput[],
+): ArchetypeRates {
+  if (position === 'RB' && archetype === 'PRIME_RB1') {
+    return blendRates(RB_RATES.PRIME_RB2, RB_RATES.PRIME_RB1, volumeRatio(position, factors));
+  }
+  if (position === 'WR' && archetype === 'PRIME_WR1') {
+    return blendRates(WR_RATES.PRIME_WR2, WR_RATES.PRIME_WR1, volumeRatio(position, factors));
+  }
   if (position === 'RB' && archetype in RB_RATES) {
     return RB_RATES[archetype as keyof typeof RB_RATES];
   }
@@ -166,9 +213,9 @@ function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
   return NEUTRAL_RATES;
 }
 
-export function evaluateArchetype(player: Player): ArchetypeResult {
+export function evaluateArchetype(player: Player, factors: FactorInput[] = []): ArchetypeResult {
   const archetype = classifyArchetype(player);
-  const rates = ratesFor(player.position, archetype);
+  const rates = ratesFor(player.position, archetype, factors);
   return {
     archetype,
     rates,

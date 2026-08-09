@@ -187,19 +187,19 @@ describe('evaluateValue', () => {
     expect(result.valueScore).toBe(12);
   });
 
-  it('halves value when computed from the mechanical projectedRank fallback', () => {
+  it('dampens value to 0.3 confidence when computed from the mechanical projectedRank fallback', () => {
     const withFallback = evaluateValue({ projectedRank: 5, adpRoundPick: '2.01', teamCount: 12 });
     expect(withFallback.usedMechanicalFallback).toBe(true);
-    // Same gap as the licensed-rank case above (12), but at half confidence.
-    expect(withFallback.valueScore).toBe(6);
+    // Same gap as the licensed-rank case above (12), but at 0.3 confidence.
+    expect(withFallback.valueScore).toBe(3.6);
   });
 
   it("dampens a Travis Kelce-style false bargain (real ADP correctly discounts age/decline; the mechanical rank doesn't know that)", () => {
     // adpOverallPick 134 (12.02), projectedRank 81 raw stats rank -> full-strength gap would
-    // be (134-81)*1.5 = 79.5, clamped nowhere near the 100 cap. Halved to a more honest 39.75.
+    // be (134-81)*1.5 = 79.5, clamped nowhere near the 100 cap. Dampened to a more honest ~23.85.
     const result = evaluateValue({ projectedRank: 81, adpRoundPick: '12.02', teamCount: 12 });
     expect(result.usedMechanicalFallback).toBe(true);
-    expect(result.valueScore).toBe(39.8);
+    expect(result.valueScore).toBe(23.8);
   });
 
   it('does not dampen when a licensed rank is present even if projectedRank also is', () => {

@@ -61,9 +61,13 @@ export function evaluateValue(input: ValueInput): ValueResult {
   // late, a committee back's raw points overstating his role), so treating it with full
   // confidence turns real-world discounting into a fake "bargain": Travis Kelce — a
   // declining future Hall-of-Famer correctly going late in ADP — read as a massive value
-  // pick purely because raw projected points don't know he's declining. Halved rather than
-  // trusted at full strength until a licensed fseRank/espnProjectionRank exists.
-  const FALLBACK_CONFIDENCE = 0.5;
+  // pick purely because raw projected points don't know he's declining, or Khalil Shakir — a
+  // possession receiver whose accumulated garbage-window points outran his ADP — outscoring
+  // a true alpha receiver's value component almost entirely on this signal. It is currently
+  // the ONLY source for every player's value score (fseRank/espnProjectionRank are never
+  // populated), so a 0.5 discount was still strong enough to flip close rankings that ceiling
+  // data alone got right. Dropped further until a licensed rank exists.
+  const FALLBACK_CONFIDENCE = 0.3;
   const rawGap = (adpOverallPick - blendedRank) * scalingFactor;
   const raw = usedMechanicalFallback ? rawGap * FALLBACK_CONFIDENCE : rawGap;
   const valueScore = Math.max(-100, Math.min(100, raw));
