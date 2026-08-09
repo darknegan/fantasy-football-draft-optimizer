@@ -1,5 +1,9 @@
-import type { CeilingResult, FactorInput, Position, PositionBenchmarkConfig } from '@draftlab/domain';
-import { FACTORS_PER_POSITION } from './config/grade-weights.js';
+import type {
+  CeilingResult,
+  FactorInput,
+  Position,
+  PositionBenchmarkConfig,
+} from '@draftlab/domain';
 import { getBenchmarkConfig } from './config/benchmarks.js';
 import { gradeFactor } from './grade-factor.js';
 
@@ -34,7 +38,10 @@ export function computeCeilingScore(
 
   const knownFactors = factors.filter((f) => f.grade !== 'unknown').length;
   const ceilingScore = factors.reduce((sum, f) => sum + f.weight, 0);
-  const denom = options.excludeAdp ? FACTORS_PER_POSITION - 1 : FACTORS_PER_POSITION;
+  // Derived from the position's own factor list, not a hardcoded constant — RB has 16
+  // factors (the original 12 plus receptions/yards_per_carry/yards_per_touch/team_wins),
+  // not 12, and a fixed denominator would silently miscalculate confidenceScore for it.
+  const denom = factors.length;
 
   let failsTargetShareGate = false;
   if (position === 'TE') {

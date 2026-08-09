@@ -83,11 +83,36 @@ describe('computeCeilingScore with engineered factor values', () => {
     expect(result.knownFactors).toBe(11);
   });
 
-  it('returns provisional null CeilingScore for RB', () => {
+  it('RB is no longer globally provisional — an empty input set still computes (all factors unknown)', () => {
     const result = computeCeilingScore('RB', []);
-    expect(result.provisional).toBe(true);
-    expect(result.ceilingScore).toBeNull();
+    expect(result.provisional).toBe(false);
+    expect(result.ceilingScore).toBe(0);
+    expect(result.knownFactors).toBe(0);
     expect(result.confidenceScore).toBe(0);
+  });
+
+  it('RB with real sourced values grades correctly, unsourced factors honestly unknown', () => {
+    // Bijan Robinson's real sleeperMCP-measured values against the real nflverse-derived
+    // RB benchmarks (see benchmarks.ts). rz_touch_share/gl_carry_share/neutral_run_rate,
+    // archetype and injury_concern are deliberately omitted — no source yet, same honest
+    // gap QB/WR/TE already tolerate for their own unlicensed factors.
+    const inputs: FactorInput[] = [
+      { factorId: 'touches', value: 21.529 }, // benchmark 21.5 -> ratio ~1.001 -> yellow
+      { factorId: 'off_ppg_rank', value: 24 }, // benchmark 9.5, lowerBetter -> ratio ~0.396 -> red
+      { factorId: 'snap_share', value: 0.782 }, // benchmark 0.717 -> ratio ~1.091 -> green
+    ];
+    const result = computeCeilingScore('RB', inputs);
+    expect(result.provisional).toBe(false);
+    const byId = new Map(result.factors.map((f) => [f.factorId, f.grade]));
+    expect(byId.get('touches')).toBe('yellow');
+    expect(byId.get('off_ppg_rank')).toBe('red');
+    expect(byId.get('snap_share')).toBe('green');
+    expect(byId.get('rz_touch_share')).toBe('unknown');
+    expect(result.knownFactors).toBe(3);
+    expect(result.ceilingScore).toBe(
+      GRADE_WEIGHTS.yellow + GRADE_WEIGHTS.red + GRADE_WEIGHTS.green,
+    );
+    expect(result.confidenceScore).toBeCloseTo(3 / 16, 5);
   });
 });
 

@@ -286,10 +286,16 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   RB: {
     position: 'RB',
     season: 2025,
-    // Still provisional: rz_touch_share, snap_share, gl_carry_share, and neutral_run_rate
-    // remain unfilled below (0). See docs/01-player-evaluation-model.md §1.5 on why a
-    // partially-real CeilingScore isn't shown until every factor has a real benchmark.
-    provisional: true,
+    // No longer provisional. rz_touch_share, gl_carry_share, and neutral_run_rate are
+    // still unsourced (benchmark 0, gradeByRatio's honest 'unknown' — same graceful
+    // degradation QB/WR/TE already rely on for their own unlicensed factors: QB has
+    // 3 unsourced nflverse:pbp factors, WR has 4 licensed:PFF ones, TE has 3. RB is no
+    // longer a special case — 6/12 factors are real nflverse data (the best-sourced
+    // position of the four; QB and WR are 5/12), so it gets the same partial-coverage
+    // treatment they've always had rather than an all-or-nothing gate. See
+    // docs/01-player-evaluation-model.md §1.5 for why that gate existed in the first
+    // place: it was never about RB specifically, it was that every RB factor was
+    // fabricated. That stopped being true once real benchmarks landed.
     bands: { ...DEFAULT_GRADING_BANDS },
     // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
     // (20+ PPR ppg, 12+ games, averaged across those seasons).
@@ -380,7 +386,7 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         label: 'Snap share',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 0,
+        benchmark: 0.717,
       },
       {
         id: 'gl_carry_share',

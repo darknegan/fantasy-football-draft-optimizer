@@ -8,7 +8,6 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
   unknown: 0,
 };
 
-export const FACTORS_PER_POSITION = 12;
 export const CEILING_MAX = 60;
 export const CEILING_MIN = -36;
 
