@@ -174,25 +174,23 @@ describe('archetype classification', () => {
     ).toBe('TRUSTY_VETERAN');
   });
 
-  it('matches real seed data: Bijan Robinson and Jahmyr Gibbs (count=2) land in their prime, not breakout', () => {
+  it('matches real seed data: Bijan Robinson, Jahmyr Gibbs, and Chase Brown (count>=2, from sleeperMCP build_factors.py) land in their prime, not breakout', () => {
     const bijan = rb({
       name: 'Bijan Robinson',
       age: 23,
       seasonsInLeague: 3,
       hasPositionalTop12Finish: true,
-      positionalTop12FinishCount: 2,
+      positionalTop12FinishCount: 3,
     });
     expect(classifyRb(bijan)).toBe('IN_THEIR_PRIME');
-  });
 
-  it('matches real seed data: Chase Brown (RB14 in 2024, RB7 in 2025 → count=1) is a proven breakout', () => {
     const chaseBrown = rb({
       name: 'Chase Brown',
       age: 25,
       seasonsInLeague: 3,
       hasPositionalTop12Finish: true,
-      positionalTop12FinishCount: 1,
+      positionalTop12FinishCount: 2,
     });
-    expect(classifyRb(chaseBrown)).toBe('PROVEN_BREAKOUT_CANDIDATE');
+    expect(classifyRb(chaseBrown)).toBe('IN_THEIR_PRIME');
   });
 });

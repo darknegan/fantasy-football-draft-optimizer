@@ -191,8 +191,10 @@ const DEPTH: Array<{
     adp: '4.08',
     fse: 44,
     espn: 46,
-    top12FinishCount: 1,
-  }, // RB14 in 2024 (not top-12), RB7 in 2025
+    top12FinishCount: 2,
+  }, // sleeperMCP build_factors.py: top-12 by PPR season total in both 2024 and 2025
+  // (corrects an earlier estimate of 1 based on the video's PPG-rank framing rather
+  // than season-total rank)
   {
     id: 'jayden-daniels',
     name: 'Jayden Daniels',
