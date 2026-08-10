@@ -45,11 +45,13 @@ Production/shared Postgres lives in Supabase project **draftlab** (`mvuwjtlcvsoa
 Schema matches `db/schema.sql`. Set:
 
 ```
-DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@db.mvuwjtlcvsoamasbuirf.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:5432/postgres
 ```
 
-Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database).
-The Node API connects as the Postgres role (not the Supabase JS anon client).
+Use the **session pooler** (IPv4). Direct `db.*.supabase.co` is IPv6-only on the free tier.
+Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
+and URL-encode special characters (`!` → `%21`). The Node API connects as the Postgres role
+(not the Supabase JS anon client).
 
 ### Auth
 

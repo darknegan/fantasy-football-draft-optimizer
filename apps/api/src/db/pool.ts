@@ -10,9 +10,11 @@ export function getPool(): pg.Pool {
   if (!connectionString) {
     throw new Error('DATABASE_URL is required');
   }
+  // Supabase direct + pooler hosts require TLS. Avoid sslmode=require in the URI:
+  // newer `pg` treats it like verify-full and fails on the pooler cert chain.
   const useSsl =
-    connectionString.includes('sslmode=require') ||
-    connectionString.includes('supabase.co');
+    /supabase\.com|supabase\.co/.test(connectionString) ||
+    connectionString.includes('sslmode=require');
   pool = new Pool({
     connectionString,
     ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
