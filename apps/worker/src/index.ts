@@ -12,10 +12,26 @@ import {
   sharedSleeperLimiter,
 } from '@draftlab/integrations';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
-import { SEED_PLAYERS } from '../../api/src/data/seed-players.js';
+import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
+import {
+  seedPlayersFromArtifact,
+  type PlayerFactorsArtifact,
+} from '../../api/src/data/load-artifact.js';
 import { AppStore } from '../../api/src/services/store.js';
 
-const store = new AppStore(SEED_PLAYERS);
+const { players: ARTIFACT_PLAYERS, skipped: artifactSkipped } = seedPlayersFromArtifact(
+  playerFactors as unknown as PlayerFactorsArtifact,
+);
+if (ARTIFACT_PLAYERS.length === 0) {
+  throw new Error('[worker] loaded 0 players from bundled player_factors.json');
+}
+if (artifactSkipped.length) {
+  console.warn(
+    `[worker] ${artifactSkipped.length} artifact player(s) skipped (incomplete bio)`,
+  );
+}
+
+const store = new AppStore(ARTIFACT_PLAYERS);
 
 const app = new Hono<{ Bindings: Env }>();
 

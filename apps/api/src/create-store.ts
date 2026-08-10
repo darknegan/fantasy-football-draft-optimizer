@@ -1,14 +1,17 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadSeedPlayersFromArtifactFile } from './data/load-artifact.js';
+import {
+  seedPlayersFromArtifact,
+  type PlayerFactorsArtifact,
+} from './data/load-artifact.js';
 import { SEED_PLAYERS } from './data/seed-players.js';
 import { AppStore } from './services/store.js';
 
 /**
  * Node-only bootstrap: prefer sleeperMCP player_factors.json, else the bundled
  * snapshot under data/, else in-repo hand seeds.
- * Workers must construct AppStore with an imported seed list (no filesystem).
+ * Workers must import the JSON artifact (no filesystem) — see apps/worker.
  */
 export function createAppStore(): AppStore {
   const moduleDir = fileURLToPath(new URL('.', import.meta.url));
@@ -26,7 +29,8 @@ export function createAppStore(): AppStore {
     (existsSync(checkoutArtifactPath) ? checkoutArtifactPath : bundledArtifactPath);
 
   if (existsSync(artifactPath)) {
-    const { players, skipped } = loadSeedPlayersFromArtifactFile(artifactPath);
+    const doc = JSON.parse(readFileSync(artifactPath, 'utf-8')) as PlayerFactorsArtifact;
+    const { players, skipped } = seedPlayersFromArtifact(doc);
     if (players.length === 0) {
       throw new Error(`[store] loaded 0 players from ${artifactPath} — every entry was skipped`);
     }

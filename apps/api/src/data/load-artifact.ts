@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { classifyArchetype } from '@draftlab/evaluation-engine';
 import type { FactorInput, Player, PlayerStatus, Position } from '@draftlab/domain';
 import type { SeedPlayer } from './seed-players.js';
@@ -168,9 +167,4 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
   }
 
   return { players, skipped };
-}
-
-export function loadSeedPlayersFromArtifactFile(path: string): LoadArtifactResult {
-  const doc = JSON.parse(readFileSync(path, 'utf-8')) as PlayerFactorsArtifact;
-  return seedPlayersFromArtifact(doc);
 }
