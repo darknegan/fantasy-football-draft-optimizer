@@ -50,20 +50,20 @@ Schema matches `db/schema.sql`.
 DATABASE_URL=postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:5432/postgres
 ```
 
-**Cloudflare Workers** (`draftlab-api`) — set secrets (transaction pooler preferred on the edge):
+**Cloudflare Workers** (`draftlab-api`) — on Workers Free, use the Supabase **service role**
+over HTTPS (raw Postgres TCP hits the 50-subrequest limit without Hyperdrive):
 
 ```bash
 cd apps/worker
-npx wrangler secret put DATABASE_URL
-# postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:6543/postgres
-npx wrangler secret put JWT_ACCESS_SECRET   # same value as apps/api/.env
-npx wrangler secret put JWT_REFRESH_SECRET  # same value as apps/api/.env
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # Settings → API → service_role
+npx wrangler secret put JWT_ACCESS_SECRET           # same value as apps/api/.env
+npx wrangler secret put JWT_REFRESH_SECRET
 npm run deploy
 npm run deploy -w @draftlab/web   # UI Worker already service-binds to draftlab-api
 ```
 
-`/api/health` on the edge reports `"database":"up"` when Supabase is reachable.
-Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
+`/api/health` reports `"database":"up"` and `"dbBinding":"supabase_http"` when connected.
+Copy the DB password for local Node from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
 and URL-encode special characters (`!` → `%21`).
 
 ### Auth
