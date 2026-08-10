@@ -624,13 +624,10 @@ export class DraftComponent implements OnInit, OnDestroy {
         if (slot === this.userSlot()) break;
 
         const taken = new Set(d.picks.filter((p) => p.playerId).map((p) => p.playerId!));
+          const teams = l.teamCount;
         const nextPlayer = [...this.board()]
           .filter((b) => !b.drafted && !taken.has(b.player.id))
-          .sort((a, b) => {
-            const aa = a.evaluation.value.adpOverallPick || 999;
-            const ba = b.evaluation.value.adpOverallPick || 999;
-            return aa - ba;
-          })[0];
+          .sort((a, b) => adpRank(a, teams) - adpRank(b, teams))[0];
         if (!nextPlayer) break;
 
         const round = Math.floor((pickNumber - 1) / l.teamCount) + 1;
@@ -708,4 +705,13 @@ function shortName(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return name;
   return parts[parts.length - 1]!;
+}
+
+function adpRank(row: BoardPlayer, teamCount: number): number {
+  const blended = row.evaluation.value.blendedRank;
+  if (Number.isFinite(blended) && blended > 0) return blended;
+  const label = row.evaluation.value.adpRoundPick;
+  const m = /^(\d+)\.(\d+)$/.exec(label ?? '');
+  if (!m) return 999;
+  return (Number(m[1]) - 1) * teamCount + Number(m[2]);
 }
