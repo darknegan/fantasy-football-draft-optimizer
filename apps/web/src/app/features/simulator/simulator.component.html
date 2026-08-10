@@ -1,0 +1,175 @@
+@if (loading()) {
+  <p class="sim-muted">Loading simulator…</p>
+} @else if (error() && !result()) {
+  <p class="sim-error">{{ error() }}</p>
+} @else {
+  <div class="sim">
+    <p class="sim-intro">{{ intro() }}</p>
+
+    <section class="controls" aria-label="Simulation controls">
+      <label class="control">
+        <span class="control-label">Strategy</span>
+        <select [value]="strategyId()" (change)="onStrategyChange($event)">
+          @for (s of strategies(); track s.id) {
+            <option [value]="s.id">{{ s.name }} ({{ tierGlyph(s.tier) }})</option>
+          }
+        </select>
+      </label>
+
+      <label class="control">
+        <span class="control-label">Draft slot</span>
+        <select [value]="slot()" (change)="onSlotChange($event)">
+          @for (n of slotOptions(); track n) {
+            <option [value]="n">Pick {{ formatSlot(n) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="control">
+        <span class="control-label">Iterations</span>
+        <select [value]="iterations()" (change)="onIterationsChange($event)">
+          @for (n of iterationOptions; track n) {
+            <option [value]="n">{{ n.toLocaleString() }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="control">
+        <span class="control-label">ADP variance</span>
+        <select [value]="varianceId()" (change)="onVarianceChange($event)">
+          @for (v of varianceOptions; track v.id) {
+            <option [value]="v.id">{{ v.label }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="controls-spacer"></div>
+
+      <button type="button" class="run-btn" [disabled]="running()" (click)="runSimulation()">
+        {{ running() ? 'Running…' : 'Re-run simulation' }}
+      </button>
+    </section>
+
+    @if (error()) {
+      <p class="sim-error">{{ error() }}</p>
+    }
+
+    <div class="columns">
+      <section class="panel distribution" aria-labelledby="dist-title">
+        <div class="panel-head">
+          <h2 id="dist-title">Projected roster strength</h2>
+          @if (result(); as r) {
+            <span class="chip accent">Median {{ formatScore(r.medianRosterScore) }} pts</span>
+          }
+          <span class="panel-hint">
+            Distribution across {{ (result()?.iterations ?? iterations()).toLocaleString() }} drafts
+          </span>
+        </div>
+
+        @if (histogram().length) {
+          <div class="histogram" role="img" aria-label="Score distribution histogram">
+            @for (bin of histogram(); track $index) {
+              <div class="bin">
+                <div class="bar" [class]="bin.band" [style.height.px]="barHeight(bin)"></div>
+                <span class="bin-pct mono">{{ formatPct(bin.rate) }}</span>
+                <span class="bin-score mono">{{ bin.score }}</span>
+              </div>
+            }
+          </div>
+          <div class="legend">
+            <span class="leg"><i class="swatch top3"></i> Top-3 finish</span>
+            <span class="leg"><i class="swatch playoff"></i> Playoff range</span>
+            <span class="leg"><i class="swatch bubble"></i> Bubble</span>
+            <span class="leg"><i class="swatch miss"></i> Miss</span>
+          </div>
+        } @else if (running()) {
+          <p class="sim-muted">Building distribution…</p>
+        } @else {
+          <p class="sim-muted">Run a simulation to see the outcome distribution.</p>
+        }
+
+        <aside class="assumptions">
+          <h3>Variance assumptions</h3>
+          <p>
+            {{
+              result()?.assumptions?.note ||
+                'Each simulated pick draws from a normal distribution around multi-site ADP. The assumptions are shown here because the whole result depends on them.'
+            }}
+          </p>
+        </aside>
+      </section>
+
+      <section class="panel comparison" aria-labelledby="cmp-title">
+        <div class="panel-head tight">
+          <h2 id="cmp-title">All strategies</h2>
+          <span class="panel-hint">from {{ formatSlot(slot()) }}</span>
+        </div>
+
+        <div class="cmp-head" aria-hidden="true">
+          <span class="c-name">Strategy</span>
+          <span class="c-num">Top-3</span>
+          <span class="c-num">Median</span>
+          <span class="c-num">Bust</span>
+        </div>
+
+        @if (compareRows().length) {
+          <div class="cmp-list" role="list">
+            @for (row of compareRows(); track row.strategyId) {
+              <button
+                type="button"
+                class="cmp-row"
+                role="listitem"
+                [class.selected]="row.selected"
+                (click)="selectCompareRow(row.strategyId)"
+              >
+                <span class="c-name">
+                  <span class="tier" [class]="tierClass(row.tier)">{{ tierGlyph(row.tier) }}</span>
+                  <span class="name">{{ row.name }}</span>
+                </span>
+                <span class="c-num mono" [class.hi]="row.selected">{{
+                  formatPct(row.topThirdRate)
+                }}</span>
+                <span class="c-num mono">{{ formatScore(row.medianRosterScore) }}</span>
+                <span class="c-num mono" [class]="bustTone(row.bustRate)">{{
+                  formatPct(row.bustRate)
+                }}</span>
+              </button>
+            }
+          </div>
+        } @else {
+          <p class="sim-muted">{{ running() ? 'Comparing strategies…' : 'No comparison yet.' }}</p>
+        }
+
+        <p class="cmp-note">
+          Zero RB and Elite QB simulate respectably but carry no tier grade when that part of the
+          source research is cropped. They are shown unrated rather than assigned a grade we cannot
+          support.
+        </p>
+      </section>
+    </div>
+
+    <section class="panel roster" aria-labelledby="roster-title">
+      <div class="panel-head tight">
+        <h2 id="roster-title">
+          The roster {{ selectedStrategy()?.name ?? 'this strategy' }} most often produces from
+          {{ formatSlot(slot()) }}
+        </h2>
+        <span class="panel-hint">% of simulations in which you land this player</span>
+      </div>
+
+      @if (commonRoster().length) {
+        <div class="roster-grid">
+          @for (slot of commonRoster(); track slot.slot + slot.playerId) {
+            <div class="roster-card">
+              <span class="slot-badge" [class]="slot.slot">{{ slot.slot }}</span>
+              <span class="player">{{ slot.playerName }}</span>
+              <span class="rate mono">{{ formatPct(slot.rate) }} of drafts</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="sim-muted">{{ running() ? 'Sampling rosters…' : 'No common roster yet.' }}</p>
+      }
+    </section>
+  </div>
+}

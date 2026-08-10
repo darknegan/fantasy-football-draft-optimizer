@@ -39,6 +39,10 @@ describe('simulateStrategy', () => {
     });
     expect(a.meanRosterScore).toBe(b.meanRosterScore);
     expect(a.assumptions.note.length).toBeGreaterThan(20);
+    expect(a.bustRate).toBeGreaterThanOrEqual(0);
+    expect(a.scoreHistogram.length).toBeGreaterThan(0);
+    expect(a.commonRoster.length).toBeGreaterThan(0);
+    expect(a.scoreHistogram.reduce((s, b) => s + b.rate, 0)).toBeGreaterThan(0.9);
   });
 
   it('Elite TE takes more TEs early than Balanced on average', () => {

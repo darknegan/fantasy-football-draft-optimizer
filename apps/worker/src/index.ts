@@ -445,6 +445,9 @@ app.post('/api/leagues/:id/simulate', async (c) => {
     iterations?: number;
     rounds?: number;
     seed?: number;
+    draftSlot?: number;
+    adpVarianceRatio?: number;
+    adpVarianceFloor?: number;
   }>();
   try {
     const league = await withDb(c.env, c.executionCtx, (db) =>
@@ -467,6 +470,8 @@ app.post('/api/leagues/:id/compare-strategies', async (c) => {
     rounds?: number;
     seed?: number;
     draftSlot?: number;
+    adpVarianceRatio?: number;
+    adpVarianceFloor?: number;
   }>();
   try {
     const league = await withDb(c.env, c.executionCtx, (db) =>

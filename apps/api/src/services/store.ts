@@ -503,18 +503,29 @@ export class AppStore {
 
   simulate(
     leagueId: string,
-    opts: { strategyId?: StrategyId; iterations?: number; rounds?: number; seed?: number },
+    opts: {
+      strategyId?: StrategyId;
+      iterations?: number;
+      rounds?: number;
+      seed?: number;
+      draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
+    },
   ) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
     const strategyId = (opts.strategyId ?? league.strategyId ?? 'balanced') as StrategyId;
+    const iterations = clampIterations(opts.iterations ?? 500);
     return simulateStrategy({
       strategyId,
-      slot: league.draftSlot ?? 1,
+      slot: opts.draftSlot ?? league.draftSlot ?? 1,
       teamCount: league.teamCount,
       rounds: opts.rounds ?? 8,
-      iterations: opts.iterations ?? 200,
+      iterations,
       seed: opts.seed ?? 42,
+      adpVarianceRatio: opts.adpVarianceRatio,
+      adpVarianceFloor: opts.adpVarianceFloor,
       players: this.simPool(leagueId, league.teamCount),
     });
   }
@@ -527,6 +538,8 @@ export class AppStore {
       rounds?: number;
       seed?: number;
       draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
     },
   ) {
     const league = this.leagues.get(leagueId);
@@ -537,15 +550,21 @@ export class AppStore {
         'hero_wr',
         'double_hero_rb',
         'elite_te',
+        'hero_rb',
+        'robust_rb',
+        'double_hero_wr',
         'zero_rb',
+        'elite_qb',
       ] as StrategyId[])) as StrategyId[];
     return compareStrategies({
       strategyIds,
       slot: opts.draftSlot ?? league.draftSlot ?? 1,
       teamCount: league.teamCount,
       rounds: opts.rounds ?? 8,
-      iterations: opts.iterations ?? 150,
+      iterations: clampIterations(opts.iterations ?? 200),
       seed: opts.seed ?? 42,
+      adpVarianceRatio: opts.adpVarianceRatio,
+      adpVarianceFloor: opts.adpVarianceFloor,
       players: this.simPool(leagueId, league.teamCount),
     });
   }
@@ -871,4 +890,10 @@ export class AppStore {
       picksUntilUser: null,
     };
   }
+}
+
+/** Keep Monte Carlo runs inside Worker CPU budgets while still supporting Figma-scale controls. */
+function clampIterations(n: number): number {
+  if (!Number.isFinite(n)) return 200;
+  return Math.max(20, Math.min(2000, Math.floor(n)));
 }

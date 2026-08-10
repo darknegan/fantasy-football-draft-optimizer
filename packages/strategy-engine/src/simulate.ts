@@ -26,6 +26,25 @@ export interface SimulateOptions {
   players: SimPlayer[];
 }
 
+export type ScoreBand = 'miss' | 'bubble' | 'playoff' | 'top3';
+
+export interface ScoreHistogramBin {
+  /** Representative score label for the bin (rounded). */
+  score: number;
+  /** Share of iterations in this bin, 0–1. */
+  rate: number;
+  band: ScoreBand;
+}
+
+export interface CommonRosterSlot {
+  slot: 'QB' | 'RB' | 'WR' | 'TE' | 'FLEX';
+  playerId: string;
+  playerName: string;
+  position: Position;
+  /** Share of iterations that drafted this player, 0–1. */
+  rate: number;
+}
+
 export interface StrategySimResult {
   strategyId: StrategyId;
   slot: number;
@@ -40,8 +59,14 @@ export interface StrategySimResult {
   meanRosterScore: number;
   medianRosterScore: number;
   topThirdRate: number;
+  /** Share of iterations below the 33rd percentile of this run's scores. */
+  bustRate: number;
   positionMix: Record<Position, number>;
   sampleRosters: Array<{ score: number; playerIds: string[]; playerNames: string[] }>;
+  /** Outcome distribution for the projected-roster-strength chart. */
+  scoreHistogram: ScoreHistogramBin[];
+  /** Modal starter-ish lineup by draft frequency. */
+  commonRoster: CommonRosterSlot[];
 }
 
 /** Mulberry32 — tiny seeded PRNG so sims are reproducible in tests/UI. */
@@ -117,6 +142,7 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
   const scores: number[] = [];
   const mixTotals: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
   const samples: StrategySimResult['sampleRosters'] = [];
+  const playerHits = new Map<string, { name: string; position: Position; count: number }>();
 
   for (let i = 0; i < iterations; i++) {
     const boardOrder = new Map<string, number>();
@@ -141,7 +167,12 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
 
     const score = roster.reduce((s, p) => s + p.draftScore, 0);
     scores.push(score);
-    for (const p of roster) mixTotals[p.position] += 1;
+    for (const p of roster) {
+      mixTotals[p.position] += 1;
+      const hit = playerHits.get(p.id);
+      if (hit) hit.count += 1;
+      else playerHits.set(p.id, { name: p.name, position: p.position, count: 1 });
+    }
 
     if (samples.length < 3) {
       samples.push({
@@ -159,7 +190,9 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
   // compare we re-rank externally; here we report share above the global-ish bar
   // of mean of all scores in this run's upper tercile threshold.
   const topThirdThreshold = percentile(scores, 2 / 3);
+  const bustThreshold = percentile(scores, 1 / 3);
   const topThirdRate = scores.filter((s) => s >= topThirdThreshold).length / scores.length;
+  const bustRate = scores.filter((s) => s <= bustThreshold).length / scores.length;
 
   const totalPosPicks = mixTotals.QB + mixTotals.RB + mixTotals.WR + mixTotals.TE;
   const denom = Math.max(totalPosPicks, 1);
@@ -169,6 +202,11 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
     WR: round2(mixTotals.WR / denom),
     TE: round2(mixTotals.TE / denom),
   };
+
+  const sigmaLabel = Math.max(
+    adpVarianceFloor,
+    Math.round(adpVarianceRatio * 60), // illustrative mid-board ADP scale
+  );
 
   return {
     strategyId: opts.strategyId,
@@ -180,14 +218,19 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
       rounds: opts.rounds,
       teamCount: opts.teamCount,
       note:
-        'Opponents draft by ADP with Gaussian noise (σ = max(floor, ADP × ratio)). ' +
-        'You draft by strategyFit × DraftScore. Results are relative, not absolute win odds.',
+        `Each simulated pick draws from a normal distribution around the player’s multi-site ADP ` +
+        `with a standard deviation of about ${sigmaLabel} picks (σ = max(${adpVarianceFloor}, ADP × ${adpVarianceRatio})), ` +
+        `plus a positional run term. Opponents draft by that noisy ADP board; you draft by strategyFit × DraftScore. ` +
+        `Too little variance and every simulation returns the same roster; too much and the output is noise.`,
     },
     meanRosterScore: round2(mean),
     medianRosterScore: round2(median),
     topThirdRate: round2(topThirdRate),
+    bustRate: round2(bustRate),
     positionMix,
     sampleRosters: samples,
+    scoreHistogram: buildHistogram(scores, topThirdThreshold, bustThreshold),
+    commonRoster: buildCommonRoster(playerHits, iterations),
   };
 }
 
@@ -224,6 +267,95 @@ export function compareStrategies(opts: CompareStrategiesOptions): CompareStrate
     }));
 
   return { slot: opts.slot, iterations: opts.iterations, results, ranking };
+}
+
+function buildHistogram(
+  sortedScores: number[],
+  topThirdThreshold: number,
+  bustThreshold: number,
+): ScoreHistogramBin[] {
+  if (sortedScores.length === 0) return [];
+  const min = sortedScores[0]!;
+  const max = sortedScores[sortedScores.length - 1]!;
+  const binCount = 14;
+  if (max <= min) {
+    return [
+      {
+        score: round2(min),
+        rate: 1,
+        band: 'playoff',
+      },
+    ];
+  }
+
+  const width = (max - min) / binCount;
+  const counts = new Array<number>(binCount).fill(0);
+  for (const s of sortedScores) {
+    let idx = Math.floor((s - min) / width);
+    if (idx >= binCount) idx = binCount - 1;
+    if (idx < 0) idx = 0;
+    counts[idx]! += 1;
+  }
+
+  const midPlayoff = (bustThreshold + topThirdThreshold) / 2;
+  return counts.map((count, i) => {
+    const lo = min + i * width;
+    const hi = lo + width;
+    const mid = (lo + hi) / 2;
+    let band: ScoreBand = 'playoff';
+    if (mid <= bustThreshold) band = 'miss';
+    else if (mid < midPlayoff) band = 'bubble';
+    else if (mid < topThirdThreshold) band = 'playoff';
+    else band = 'top3';
+    return {
+      score: Math.round(mid),
+      rate: round2(count / sortedScores.length),
+      band,
+    };
+  });
+}
+
+function buildCommonRoster(
+  playerHits: Map<string, { name: string; position: Position; count: number }>,
+  iterations: number,
+): CommonRosterSlot[] {
+  const ranked = [...playerHits.entries()]
+    .map(([playerId, info]) => ({
+      playerId,
+      playerName: info.name,
+      position: info.position,
+      rate: info.count / Math.max(iterations, 1),
+    }))
+    .sort((a, b) => b.rate - a.rate);
+
+  const takeBest = (pos: Position, used: Set<string>) =>
+    ranked.find((p) => p.position === pos && !used.has(p.playerId)) ?? null;
+
+  const used = new Set<string>();
+  const slots: CommonRosterSlot[] = [];
+  const push = (slot: CommonRosterSlot['slot'], player: (typeof ranked)[number] | null) => {
+    if (!player) return;
+    used.add(player.playerId);
+    slots.push({
+      slot,
+      playerId: player.playerId,
+      playerName: player.playerName,
+      position: player.position,
+      rate: round2(player.rate),
+    });
+  };
+
+  push('QB', takeBest('QB', used));
+  push('RB', takeBest('RB', used));
+  push('RB', takeBest('RB', used));
+  push('WR', takeBest('WR', used));
+  push('WR', takeBest('WR', used));
+  push('TE', takeBest('TE', used));
+  const flex =
+    ranked.find((p) => !used.has(p.playerId) && (p.position === 'RB' || p.position === 'WR' || p.position === 'TE')) ??
+    null;
+  push('FLEX', flex);
+  return slots;
 }
 
 function round2(n: number): number {

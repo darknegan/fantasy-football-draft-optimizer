@@ -177,6 +177,22 @@ export interface DraftSlotInfo {
   pickNumbers: number[];
 }
 
+export type ScoreBand = 'miss' | 'bubble' | 'playoff' | 'top3';
+
+export interface ScoreHistogramBin {
+  score: number;
+  rate: number;
+  band: ScoreBand;
+}
+
+export interface CommonRosterSlot {
+  slot: 'QB' | 'RB' | 'WR' | 'TE' | 'FLEX';
+  playerId: string;
+  playerName: string;
+  position: Position;
+  rate: number;
+}
+
 export interface StrategySimResult {
   strategyId: string;
   slot: number;
@@ -191,8 +207,11 @@ export interface StrategySimResult {
   meanRosterScore: number;
   medianRosterScore: number;
   topThirdRate: number;
+  bustRate?: number;
   positionMix: Record<Position, number>;
   sampleRosters: Array<{ score: number; playerIds: string[]; playerNames: string[] }>;
+  scoreHistogram?: ScoreHistogramBin[];
+  commonRoster?: CommonRosterSlot[];
 }
 
 export interface CompareStrategiesResult {
