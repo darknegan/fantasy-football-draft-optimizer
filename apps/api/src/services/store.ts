@@ -667,24 +667,48 @@ export class AppStore {
       .filter(Boolean);
 
     // If no picks yet, seed a plausible starter set from top dynasty scores for the age curve demo.
-    const rosterForAge =
-      userRoster.length > 0 ? userRoster : this.seeds.slice(0, 12).map((s) => s.player);
+    const rosterPlayers =
+      userRoster.length > 0 ? userRoster : this.seeds.slice(0, 10).map((s) => s.player);
 
-    const curves = this.seeds.map((s) => {
-      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
-      const curve = buildMultiYearCurve(s.player, evaluation, league.season);
+    const toRow = (playerId: string) => {
+      const player = this.getPlayer(playerId)!;
+      const evaluation = this.getLeagueEvaluation(leagueId, playerId)!;
+      const curve = buildMultiYearCurve(player, evaluation, league.season);
+      const first = curve.points[0]?.value ?? 0;
+      const last = curve.points[curve.points.length - 1]?.value ?? 0;
+      const ratio = first > 0 ? last / first : 1;
+      const trend: 'rising' | 'hold' | 'watch' | 'sell' =
+        ratio >= 1.08 ? 'rising' : ratio >= 0.92 ? 'hold' : ratio >= 0.7 ? 'watch' : 'sell';
       return {
-        playerId: s.player.id,
-        name: s.player.name,
-        position: s.player.position,
-        age: s.player.age,
+        playerId: player.id,
+        name: player.name,
+        position: player.position,
+        age: player.age,
+        seasonsInLeague: player.seasonsInLeague,
         archetype: evaluation.archetype.archetype,
         draftScore: evaluation.draftScore,
         npv: curve.npv,
         dynastyScore: dynastyCompositeScore(evaluation.draftScore, curve.npv, mode),
-        curve,
+        trend,
+        peakYearOffset: curve.peakYearOffset,
+        contendWindow: curve.contendWindow,
+        curve: {
+          points: curve.points.map((p) => ({
+            yearOffset: p.yearOffset,
+            season: p.season,
+            value: p.value,
+          })),
+          npv: curve.npv,
+        },
       };
-    }).sort((a, b) => b.dynastyScore - a.dynastyScore);
+    };
+
+    const rosterBoard = rosterPlayers.map((p) => toRow(p.id)).sort((a, b) => b.dynastyScore - a.dynastyScore);
+
+    const board = this.seeds
+      .map((s) => toRow(s.player.id))
+      .sort((a, b) => b.dynastyScore - a.dynastyScore)
+      .slice(0, 40);
 
     if (!this.formats.pickAssets.has(leagueId)) {
       this.formats.pickAssets.set(
@@ -693,14 +717,31 @@ export class AppStore {
       );
     }
     const pickAssets = this.formats.pickAssets.get(leagueId)!;
+    const ownedPicks = pickAssets.filter((p) => p.ownerRosterId === draft.userRosterId);
+    const firsts = ownedPicks.filter((p) => p.round === 1).length;
+    const seconds = ownedPicks.filter((p) => p.round === 2).length;
+
+    // Roster contending window: intersection-ish of player windows weighted to mean.
+    const windows = rosterBoard
+      .map((r) => r.contendWindow)
+      .filter((w): w is { start: number; end: number } => Boolean(w));
+    const windowStart = windows.length
+      ? Math.round(windows.reduce((s, w) => s + w.start, 0) / windows.length)
+      : 0;
+    const windowEnd = windows.length
+      ? Math.round(windows.reduce((s, w) => s + w.end, 0) / windows.length)
+      : Math.min(3, 3);
+    const agingRisk = rosterPlayers.filter((p) => p.age >= 30).length;
+    const ageCurve = buildRosterAgeCurve(rosterPlayers);
 
     return {
       leagueId,
       mode,
-      ageCurve: buildRosterAgeCurve(rosterForAge),
+      ageCurve,
       pickAssets,
       ownedPickValue: ownedPickValue(pickAssets, draft.userRosterId),
-      board: curves.slice(0, 40),
+      board,
+      rosterBoard,
       rookieBoard: buildRookieBoard(
         this.seeds.map((s) => ({
           player: s.player,
@@ -709,6 +750,23 @@ export class AppStore {
         league.season,
         mode === 'contend' ? 'contend' : 'rebuild',
       ),
+      summary: {
+        rosterCount: rosterPlayers.length,
+        meanAge: ageCurve.meanAge,
+        agingRisk,
+        contendWindow: {
+          startSeason: league.season + windowStart,
+          endSeason: league.season + windowEnd,
+          seasons: Math.max(1, windowEnd - windowStart + 1),
+        },
+        horizon: {
+          startSeason: league.season + 1,
+          endSeason: league.season + 4,
+        },
+        pickCount: ownedPicks.length,
+        firsts,
+        seconds,
+      },
     };
   }
 

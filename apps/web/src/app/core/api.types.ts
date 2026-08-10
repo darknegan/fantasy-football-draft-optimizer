@@ -268,6 +268,27 @@ export interface CheatSheetGroup {
 
 export type DynastyMode = 'contend' | 'rebuild' | 'neutral';
 
+export type DynastyTrend = 'rising' | 'hold' | 'watch' | 'sell';
+
+export interface DynastyBoardRow {
+  playerId: string;
+  name: string;
+  position: Position;
+  age: number;
+  seasonsInLeague?: number;
+  archetype: string;
+  draftScore: number;
+  npv: number;
+  dynastyScore: number;
+  trend?: DynastyTrend;
+  peakYearOffset?: number;
+  contendWindow?: { start: number; end: number } | null;
+  curve: {
+    points: Array<{ yearOffset: number; season: number; value: number }>;
+    npv: number;
+  };
+}
+
 export interface DynastyOverview {
   leagueId: string;
   mode: DynastyMode;
@@ -283,24 +304,14 @@ export interface DynastyOverview {
     season: number;
     round: number;
     ownerRosterId: string;
+    originalRosterId?: string;
     estimatedValue: number;
     label: string;
   }>;
   ownedPickValue: number;
-  board: Array<{
-    playerId: string;
-    name: string;
-    position: Position;
-    age: number;
-    archetype: string;
-    draftScore: number;
-    npv: number;
-    dynastyScore: number;
-    curve: {
-      points: Array<{ yearOffset: number; season: number; value: number }>;
-      npv: number;
-    };
-  }>;
+  board: DynastyBoardRow[];
+  /** User roster (or demo seed) for the Roster & Dynasty table. */
+  rosterBoard?: DynastyBoardRow[];
   rookieBoard: Array<{
     playerId: string;
     name: string;
@@ -312,6 +323,16 @@ export interface DynastyOverview {
     dynastyScore: number;
     note: string;
   }>;
+  summary?: {
+    rosterCount: number;
+    meanAge: number;
+    agingRisk: number;
+    contendWindow: { startSeason: number; endSeason: number; seasons: number };
+    horizon: { startSeason: number; endSeason: number };
+    pickCount: number;
+    firsts: number;
+    seconds: number;
+  };
 }
 
 export interface AuctionSignedPlayer {

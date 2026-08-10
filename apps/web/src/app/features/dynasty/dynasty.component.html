@@ -1,0 +1,212 @@
+@if (loading()) {
+  <p class="lede dl-muted">Loading roster & dynasty…</p>
+} @else if (!overview()) {
+  <p class="err">{{ error() ?? 'Dynasty overview unavailable.' }}</p>
+} @else {
+  <div class="dynasty-room">
+    <header class="page-head">
+      <div>
+        <h1>Roster & dynasty</h1>
+        <p class="subtitle">{{ headlineMeta() }}</p>
+      </div>
+      <div class="spacer"></div>
+      <label class="search">
+        <img src="/dynasty/search.svg" width="16" height="16" alt="" />
+        <input
+          type="search"
+          placeholder="Search players…"
+          [value]="query()"
+          (input)="onSearch($event)"
+        />
+      </label>
+      <div class="sync-chip">
+        <span class="live-dot" aria-hidden="true"></span>
+        {{ platformLabel() }}
+      </div>
+    </header>
+
+    <div class="mode-strip">
+      <div class="mode-toggle" role="group" aria-label="Dynasty mode">
+        <button
+          type="button"
+          class="mode"
+          [class.active]="overview()!.mode === 'contend'"
+          (click)="setMode('contend')"
+        >
+          Contend now
+        </button>
+        <button
+          type="button"
+          class="mode"
+          [class.active]="overview()!.mode === 'rebuild'"
+          (click)="setMode('rebuild')"
+        >
+          Rebuild
+        </button>
+      </div>
+
+      <div class="stat">
+        <div class="cap">AVERAGE AGE</div>
+        <div class="stat-val dl-mono">{{ summary().meanAge.toFixed(1) }}</div>
+        <div class="stat-sub" [class.good]="summary().meanAge < 27">{{ ageNote() }}</div>
+      </div>
+
+      <div class="stat">
+        <div class="cap">CONTENDING WINDOW</div>
+        <div class="stat-val dl-mono">
+          {{ summary().contendWindow.startSeason }}–{{ shortYear(summary().contendWindow.endSeason) }}
+        </div>
+        <div class="stat-sub good">{{ summary().contendWindow.seasons }} seasons</div>
+      </div>
+
+      <div class="stat">
+        <div class="cap">PICK ASSETS</div>
+        <div class="stat-val dl-mono">{{ summary().pickCount }}</div>
+        <div class="stat-sub">
+          {{ summary().firsts }} first{{ summary().firsts === 1 ? '' : 's' }},
+          {{ summary().seconds }} second{{ summary().seconds === 1 ? '' : 's' }}
+        </div>
+      </div>
+
+      <div class="stat">
+        <div class="cap">AGING RISK</div>
+        <div class="stat-val dl-mono" [class.warn]="summary().agingRisk > 0">
+          {{ summary().agingRisk }}
+        </div>
+        <div class="stat-sub" [class.warn]="summary().agingRisk > 0">players 30+</div>
+      </div>
+
+      <a class="trade-btn" [routerLink]="['/leagues', leagueId, 'board']">Trade finder</a>
+    </div>
+
+    <div class="body">
+      <section class="curves-panel">
+        <div class="section-head">
+          <h2>Roster value curves</h2>
+          <p>Projected value by season — not a single number.</p>
+        </div>
+
+        <div class="table-wrap">
+          <table class="curves-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Age</th>
+                <th>Yr</th>
+                <th>Archetype</th>
+                <th>
+                  {{ summary().horizon.startSeason }}–{{ summary().horizon.endSeason }} value
+                </th>
+                <th>Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredRoster(); track row.playerId) {
+                <tr>
+                  <td>
+                    <a class="player-cell" [routerLink]="['/leagues', leagueId, 'board', row.playerId]">
+                      <span class="pos" [class]="row.position">{{ row.position }}</span>
+                      <span class="pname">{{ row.name }}</span>
+                    </a>
+                  </td>
+                  <td class="dl-mono">{{ row.age }}</td>
+                  <td class="dl-mono">{{ row.seasonsInLeague ?? '—' }}</td>
+                  <td>
+                    <span class="arch" [class]="archetypeTone(row.archetype)">{{
+                      formatArchetype(row.archetype)
+                    }}</span>
+                  </td>
+                  <td>
+                    <div class="year-bars" aria-label="Multi-year value">
+                      @for (pt of row.curve.points.slice(0, 4); track pt.yearOffset) {
+                        <div class="year-bar">
+                          <span
+                            class="fill"
+                            [class]="barTone(pt.value, row.curve)"
+                            [style.width.%]="barWidth(pt.value, row.curve)"
+                            [title]="pt.season + ': ' + pt.value"
+                          ></span>
+                        </div>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="trend" [class]="row.trend ?? 'hold'">{{ row.trend ?? 'hold' }}</span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="empty">No rostered players match this search.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="side-rail">
+        <section class="rail-card">
+          <h3>Roster age curve</h3>
+          <div class="age-chart">
+            @for (b of ageBars(); track b.label) {
+              <div class="age-col">
+                <div class="age-track">
+                  <span
+                    class="age-fill"
+                    [class]="b.tone"
+                    [style.height.%]="b.height"
+                    [title]="b.label + ': ' + b.count"
+                  ></span>
+                </div>
+                <span class="age-label">{{ b.short }}</span>
+              </div>
+            }
+          </div>
+          <p class="age-copy">{{ ageCurveCopy() }}</p>
+        </section>
+
+        <section class="rail-card">
+          <div class="section-head row">
+            <h3>Pick assets</h3>
+            <span class="chip">tradeable</span>
+          </div>
+          <ul class="picks">
+            @for (p of ownedPicks(); track p.id) {
+              <li>
+                <div>
+                  <strong>{{ pickTitle(p) }}</strong>
+                  <div class="pick-sub">{{ pickSubtitle(p) }}</div>
+                </div>
+                <span class="dl-mono pick-val">{{ p.estimatedValue }}</span>
+              </li>
+            } @empty {
+              <li class="empty">No owned picks on the ledger.</li>
+            }
+          </ul>
+          <div class="pick-total">
+            <span>Owned pick value</span>
+            <strong class="dl-mono accent">{{ overview()!.ownedPickValue }}</strong>
+          </div>
+        </section>
+
+        @if (overview()!.rookieBoard.length) {
+          <section class="rail-card">
+            <h3>Rookie board</h3>
+            <ul class="rookies">
+              @for (r of overview()!.rookieBoard.slice(0, 5); track r.playerId) {
+                <li>
+                  <span class="pos tiny" [class]="r.position">{{ r.position }}</span>
+                  <div>
+                    <strong>{{ r.name }}</strong>
+                    <div class="pick-sub">Rd {{ r.draftRound ?? '—' }} · {{ r.note }}</div>
+                  </div>
+                  <span class="dl-mono accent">{{ r.dynastyScore }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    </div>
+  </div>
+}
