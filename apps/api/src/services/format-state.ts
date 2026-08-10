@@ -21,8 +21,18 @@ export class FormatState {
   contractRules = new Map<string, ContractRules>();
   outcomes = new Map<string, DraftOutcome[]>();
   calibration = new Map<string, CalibrationProposal | null>();
-  activeBands: GradingBands = { ...DEFAULT_BANDS };
-  activeWeights: DraftScoreWeights = { ...DEFAULT_WEIGHTS };
+  /** Per-league grading bands (defaults until calibration apply). */
+  activeBandsByLeague = new Map<string, GradingBands>();
+  /** Per-league DraftScore weights. */
+  activeWeightsByLeague = new Map<string, DraftScoreWeights>();
+
+  getActiveBands(leagueId: string): GradingBands {
+    return this.activeBandsByLeague.get(leagueId) ?? { ...DEFAULT_BANDS };
+  }
+
+  getActiveWeights(leagueId: string): DraftScoreWeights {
+    return this.activeWeightsByLeague.get(leagueId) ?? { ...DEFAULT_WEIGHTS };
+  }
 
   ensureAuction(leagueId: string, teamCount: number, budget: number, rosterSlots: number, userRosterId: string) {
     if (!this.auctionBudgets.has(leagueId)) {
@@ -51,8 +61,8 @@ export class FormatState {
     if (!this.dynastyMode.has(leagueId)) this.dynastyMode.set(leagueId, mode);
   }
 
-  applyCalibration(proposal: CalibrationProposal) {
-    this.activeBands = { ...proposal.proposedBands };
-    this.activeWeights = { ...proposal.proposedWeights };
+  applyCalibration(leagueId: string, proposal: CalibrationProposal) {
+    this.activeBandsByLeague.set(leagueId, { ...proposal.proposedBands });
+    this.activeWeightsByLeague.set(leagueId, { ...proposal.proposedWeights });
   }
 }

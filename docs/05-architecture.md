@@ -238,17 +238,25 @@ Angular 21 with standalone components and signals throughout — already the pat
 `src/app/app.ts`. Feature-lazy routes:
 
 ```
-/                         dashboard
+/login                    account sign-in
+/signup                   account registration
+/                         dashboard (auth required; user’s leagues)
 /leagues/connect          platform connection flow
-/leagues/:id              league hub
+/leagues/manual-setup     manual league setup
 /leagues/:id/strategy     strategy planner
 /leagues/:id/board        player board
 /leagues/:id/board/:pid   player detail
 /leagues/:id/draft        live draft room  (snake | auction | rookie by draft type)
 /leagues/:id/roster       roster / dynasty view
 /leagues/:id/recap        post-draft recap
+/leagues/:id/auction      auction room
+/leagues/:id/calibration  calibration
 /research                 cross-league research: archetype and round-rate explorers
 ```
+
+League-scoped routes return **404** when the league is missing or not owned by the
+authenticated user (no existence leak via 403).
+
 
 State via signal stores per feature, with `computed` for derived board ordering so re-ranking
 on a pick event is a signal update rather than a manual refresh cycle. The draft store is the

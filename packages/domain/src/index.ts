@@ -240,8 +240,17 @@ export interface RosterShape {
   totalStarters: number;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: string;
+}
+
 export interface League {
   id: string;
+  /** DraftLab account that owns this league connection. */
+  userId: string;
   name: string;
   platform: Platform;
   externalId?: string;

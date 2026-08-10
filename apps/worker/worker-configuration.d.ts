@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	DRAFTLAB_KV: KVNamespace;
 	SERVICE_NAME: "draftlab-api";
+	JWT_ACCESS_SECRET?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

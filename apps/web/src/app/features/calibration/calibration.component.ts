@@ -121,12 +121,12 @@ import type { CalibrationProposal, CalibrationSummary } from '../../core/api.typ
 export class CalibrationComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly summary = signal<CalibrationSummary | null>(null);
   readonly proposal = signal<CalibrationProposal | null>(null);
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.reload();
   }
 

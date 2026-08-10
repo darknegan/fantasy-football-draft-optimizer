@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ActiveLeagueService } from '../core/active-league.service';
+import { ApiService } from '../core/api.service';
+import { AuthService } from '../core/auth.service';
 
 @Component({
   selector: 'app-shell',
@@ -14,28 +17,53 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
             <div class="tag">Draft Optimizer</div>
           </div>
         </div>
+
+        @if (active.leagues().length) {
+          <label class="switcher">
+            <span>ACTIVE LEAGUE</span>
+            <select
+              [value]="active.selectedId() ?? ''"
+              (change)="onSelectLeague($event)"
+            >
+              @for (league of active.leagues(); track league.id) {
+                <option [value]="league.id">{{ league.name }}</option>
+              }
+            </select>
+          </label>
+        }
+
         <nav>
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
             >Dashboard</a
           >
           <a routerLink="/leagues/connect" routerLinkActive="active">Connect</a>
           <a routerLink="/leagues/manual-setup" routerLinkActive="active">Manual Setup</a>
-          <a routerLink="/leagues/demo-league/board" routerLinkActive="active">Player Board</a>
-          <a routerLink="/leagues/demo-league/cheat-sheet" routerLinkActive="active">Cheat Sheet</a>
-          <a routerLink="/leagues/demo-league/strategy" routerLinkActive="active">Strategy</a>
-          <a routerLink="/leagues/demo-league/draft" routerLinkActive="active">Live Draft</a>
-          <a routerLink="/leagues/demo-dynasty/roster" routerLinkActive="active">Dynasty</a>
-          <a routerLink="/leagues/demo-auction/auction" routerLinkActive="active">Auction</a>
-          <a routerLink="/leagues/demo-league/recap" routerLinkActive="active">Recap</a>
-          <a routerLink="/leagues/demo-league/calibration" routerLinkActive="active">Calibration</a>
-          <a routerLink="/leagues/demo-league/scoring" routerLinkActive="active">Scoring</a>
+          @if (active.selectedId(); as id) {
+            <a [routerLink]="['/leagues', id, 'board']" routerLinkActive="active">Player Board</a>
+            <a [routerLink]="['/leagues', id, 'cheat-sheet']" routerLinkActive="active">Cheat Sheet</a>
+            <a [routerLink]="['/leagues', id, 'strategy']" routerLinkActive="active">Strategy</a>
+            <a [routerLink]="['/leagues', id, 'draft']" routerLinkActive="active">Live Draft</a>
+            <a [routerLink]="['/leagues', id, 'roster']" routerLinkActive="active">Dynasty</a>
+            <a [routerLink]="['/leagues', id, 'auction']" routerLinkActive="active">Auction</a>
+            <a [routerLink]="['/leagues', id, 'recap']" routerLinkActive="active">Recap</a>
+            <a [routerLink]="['/leagues', id, 'calibration']" routerLinkActive="active">Calibration</a>
+            <a [routerLink]="['/leagues', id, 'scoring']" routerLinkActive="active">Scoring</a>
+          }
         </nav>
-        <div class="side-foot dl-muted">Phases 6–7 · dynasty · auction · calibration</div>
+        <div class="side-foot">
+          <div class="account">{{ auth.user()?.displayName }}</div>
+          <button type="button" class="logout" (click)="logout()">Log out</button>
+        </div>
       </aside>
       <div class="main">
         <header class="top">
-          <div class="crumb">Fantasy Football · Redraft</div>
-          <div class="live"><span class="dot"></span> Demo league ready</div>
+          <div class="crumb">
+            {{ active.selected()?.name ?? 'No league selected' }}
+          </div>
+          <div class="live">
+            <span class="dot"></span>
+            {{ active.leagues().length ? active.leagues().length + ' leagues' : 'Connect a league' }}
+          </div>
         </header>
         <main class="content">
           <router-outlet />
@@ -56,7 +84,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       padding: 1.25rem 1rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
     .brand {
       display: flex;
@@ -81,6 +109,22 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       color: var(--dl-text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.08em;
+    }
+    .switcher {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--dl-text-tertiary);
+    }
+    .switcher select {
+      border: 1px solid var(--dl-border-strong);
+      background: var(--dl-surface-overlay);
+      color: var(--dl-text-primary);
+      border-radius: var(--dl-radius-sm);
+      padding: 0.55rem 0.6rem;
     }
     nav {
       display: flex;
@@ -107,7 +151,26 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     }
     .side-foot {
       margin-top: auto;
-      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .account {
+      font-size: 0.85rem;
+      color: var(--dl-text-secondary);
+    }
+    .logout {
+      border: 1px solid var(--dl-border-subtle);
+      background: transparent;
+      color: var(--dl-text-secondary);
+      border-radius: var(--dl-radius-sm);
+      padding: 0.45rem 0.6rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .logout:hover {
+      color: var(--dl-text-primary);
+      border-color: var(--dl-border-strong);
     }
     .main {
       display: flex;
@@ -118,51 +181,33 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.9rem 1.5rem;
+      padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--dl-border-subtle);
-      background: color-mix(in srgb, var(--dl-surface-base) 70%, transparent);
-      backdrop-filter: blur(6px);
-      position: sticky;
-      top: 0;
-      z-index: 5;
     }
     .crumb {
-      color: var(--dl-text-secondary);
-      font-size: 0.85rem;
+      font-weight: 600;
     }
     .live {
       display: flex;
       align-items: center;
       gap: 0.45rem;
-      font-size: 0.8rem;
       color: var(--dl-text-secondary);
+      font-size: 0.85rem;
     }
     .dot {
       width: 0.5rem;
       height: 0.5rem;
-      border-radius: 50%;
-      background: var(--dl-live);
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-live) 60%, transparent);
-      animation: pulse 2s infinite;
+      border-radius: 999px;
+      background: var(--dl-accent);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-accent) 50%, transparent);
+      animation: pulse 1.8s ease infinite;
     }
     .content {
-      padding: 1.5rem;
-      animation: fade-up 0.45s ease both;
-      flex: 1 1 auto;
-      min-height: 0;
+      padding: 1.25rem 1.5rem 2rem;
       display: flex;
       flex-direction: column;
-    }
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-live) 55%, transparent);
-      }
-      70% {
-        box-shadow: 0 0 0 8px transparent;
-      }
-      100% {
-        box-shadow: 0 0 0 0 transparent;
-      }
+      flex: 1;
+      min-height: 0;
     }
     @keyframes fade-up {
       from {
@@ -171,22 +216,37 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
+      }
+    }
+    @keyframes pulse {
+      50% {
+        box-shadow: 0 0 0 6px transparent;
       }
     }
     @media (max-width: 900px) {
       .shell {
         grid-template-columns: 1fr;
       }
-      .sidebar {
-        border-right: 0;
-        border-bottom: 1px solid var(--dl-border-subtle);
-      }
-      nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-      }
     }
   `,
 })
-export class ShellComponent {}
+export class ShellComponent implements OnInit {
+  readonly auth = inject(AuthService);
+  readonly active = inject(ActiveLeagueService);
+  private readonly api = inject(ApiService);
+
+  ngOnInit() {
+    this.api.leagues().subscribe((leagues) => this.active.setLeagues(leagues));
+  }
+
+  onSelectLeague(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value) this.active.select(value);
+  }
+
+  logout() {
+    void this.auth.logout();
+    this.active.clear();
+  }
+}

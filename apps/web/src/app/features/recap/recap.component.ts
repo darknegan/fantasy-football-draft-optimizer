@@ -81,12 +81,12 @@ import type { DraftRecap } from '../../core/api.types';
 export class RecapComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly recap = signal<DraftRecap | null>(null);
   readonly positions = ['QB', 'RB', 'WR', 'TE'];
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.api.recap(this.leagueId).subscribe((r) => this.recap.set(r));
   }
 }

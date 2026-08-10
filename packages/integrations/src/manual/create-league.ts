@@ -10,6 +10,8 @@ import type {
 } from '@draftlab/domain';
 
 export interface ManualLeagueInput {
+  /** DraftLab account owner. Required for persisted leagues. */
+  userId?: string;
   name: string;
   type?: LeagueType;
   draftType?: DraftType;
@@ -25,7 +27,7 @@ export interface ManualLeagueInput {
 }
 
 export function createManualLeague(input: ManualLeagueInput): League {
-  const id = `manual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const id = crypto.randomUUID();
   const roster = {
     ...input.roster,
     totalStarters:
@@ -38,6 +40,7 @@ export function createManualLeague(input: ManualLeagueInput): League {
   };
   return {
     id,
+    userId: input.userId ?? '',
     name: input.name,
     platform: 'manual',
     type: input.type ?? 'redraft',

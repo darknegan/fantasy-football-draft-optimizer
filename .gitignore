@@ -16,6 +16,13 @@
 npm-debug.log
 yarn-error.log
 
+# Local secrets / env
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
 # Cloudflare / Wrangler
 **/.wrangler
 .dev.vars

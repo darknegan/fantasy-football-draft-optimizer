@@ -23,15 +23,53 @@ db/schema.sql                   Postgres target schema
 ```bash
 npm install
 npm run build:packages
+# Postgres (accounts + league ownership) — either:
+#   A) Supabase project "draftlab" (recommended): set DATABASE_URL in apps/api/.env
+#      Host: db.mvuwjtlcvsoamasbuirf.supabase.co
+#      Dashboard: https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf
+#   B) Local: docker compose up -d postgres
+cp apps/api/.env.example apps/api/.env   # DATABASE_URL + JWT_* live here
+# The API loads apps/api/.env automatically (no manual export needed)
 npm run test:engines
-npm run dev:api    # http://localhost:3001
-npm run dev:web    # http://localhost:4200 (proxies /api)
-npm run dev:worker # http://localhost:8787 (API Worker)
+npm run test -w @draftlab/api
+npm run dev:api    # http://localhost:3001  (auth + durable leagues)
+npm run dev:web    # http://localhost:4200 (proxies /api, /auth, /me, /ws)
+npm run dev:worker # edge mirror — JWT required for leagues; mutations return 503 without Node DB
 npm run deploy:worker
-npm run deploy:web    # Angular SPA Worker → proxies /api to draftlab-api
+npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftlab-api
 ```
 
-Demo league id: `demo-league`.
+### Supabase
+
+Production/shared Postgres lives in Supabase project **draftlab** (`mvuwjtlcvsoamasbuirf`, `us-west-1`).
+Schema matches `db/schema.sql`. Set:
+
+```
+DATABASE_URL=postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+```
+
+Use the **session pooler** (IPv4). Direct `db.*.supabase.co` is IPv6-only on the free tier.
+Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
+and URL-encode special characters (`!` → `%21`). The Node API connects as the Postgres role
+(not the Supabase JS anon client).
+
+### Auth
+
+- Register / login: `/signup`, `/login`
+- API: `POST /auth/register|login|refresh|logout`, `GET /me`
+- Access JWT (Bearer) + httpOnly refresh cookie (`draftlab_refresh`)
+- Leagues, strategy, live draft, auction, dynasty, and calibration are scoped to the signed-in user
+- Optional demos: `SEED_DEMO_USER=true` seeds `demo@draftlab.local` with three owned leagues
+
+### Troubleshooting register (`ECONNREFUSED`)
+
+You need **both** processes running, plus Postgres:
+
+1. Postgres up — Supabase `DATABASE_URL` **or** `docker compose up -d postgres`
+2. `npm run dev:api` — must listen on `:3001` (web proxies `/auth` here)
+3. `npm run dev:web` — `:4200`
+
+If Postgres is down, `/api/health` reports `"database":"down"` and auth returns **503** with a clear message instead of a bare `ECONNREFUSED`.
 
 ## Verified model fixtures
 

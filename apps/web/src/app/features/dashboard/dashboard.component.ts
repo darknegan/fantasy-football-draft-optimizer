@@ -1,5 +1,6 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ActiveLeagueService } from '../../core/active-league.service';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, League } from '../../core/api.types';
 
@@ -13,12 +14,16 @@ import type { BoardPlayer, League } from '../../core/api.types';
         <h1>Build the board. Stick the plan. Win the draft.</h1>
         <p class="lede">
           Factor-graded player evaluation, nine research-backed strategies, and a live draft room
-          that re-ranks as picks land.
+          that re-ranks as picks land — all scoped to your account.
         </p>
         <div class="cta">
-          <a class="btn primary" routerLink="/leagues/demo-league/board">Open player board</a>
-          <a class="btn ghost" routerLink="/leagues/demo-dynasty/roster">Dynasty</a>
-          <a class="btn ghost" routerLink="/leagues/demo-auction/auction">Auction</a>
+          @if (active.selectedId(); as id) {
+            <a class="btn primary" [routerLink]="['/leagues', id, 'board']">Open player board</a>
+            <a class="btn ghost" [routerLink]="['/leagues', id, 'draft']">Live draft</a>
+          } @else {
+            <a class="btn primary" routerLink="/leagues/connect">Connect a league</a>
+            <a class="btn ghost" routerLink="/leagues/manual-setup">Manual setup</a>
+          }
         </div>
       </div>
       <div class="hero-panel dl-panel">
@@ -27,8 +32,8 @@ import type { BoardPlayer, League } from '../../core/api.types';
           <span class="value dl-mono">Allen 41 · Chase 42 · Bowers 36</span>
         </div>
         <div class="stat">
-          <span class="label">Default strategy</span>
-          <span class="value">Balanced <span class="tier S">S</span></span>
+          <span class="label">Your leagues</span>
+          <span class="value">{{ leagues().length }}</span>
         </div>
         <div class="stat">
           <span class="label">RB CeilingScore</span>
@@ -40,13 +45,21 @@ import type { BoardPlayer, League } from '../../core/api.types';
     <section class="grid">
       <article class="dl-panel card">
         <h2>Your leagues</h2>
+        @if (!leagues().length) {
+          <p class="empty dl-muted">
+            No leagues yet.
+            <a routerLink="/leagues/connect">Connect Sleeper</a>
+            or
+            <a routerLink="/leagues/manual-setup">set one up manually</a>.
+          </p>
+        }
         @for (league of leagues(); track league.id) {
-          <a class="league" [routerLink]="['/leagues', league.id, 'board']">
+          <a class="league" [routerLink]="['/leagues', league.id, 'board']" (click)="active.select(league.id)">
             <div>
               <strong>{{ league.name }}</strong>
               <div class="dl-muted">
-                {{ league.teamCount }}-team · {{ league.platform }} · slot
-                {{ league.draftSlot ?? '—' }}
+                {{ league.teamCount }}-team · {{ league.platform }} ·
+                {{ league.type }} · slot {{ league.draftSlot ?? '—' }}
               </div>
             </div>
             <span class="chev">→</span>
@@ -56,9 +69,12 @@ import type { BoardPlayer, League } from '../../core/api.types';
 
       <article class="dl-panel card">
         <h2>Top of the board</h2>
+        @if (!active.selectedId()) {
+          <p class="empty dl-muted">Select or connect a league to see ranked players.</p>
+        }
         <div class="rows">
           @for (row of top(); track row.player.id) {
-            <a class="row" [routerLink]="['/leagues/demo-league/board', row.player.id]">
+            <a class="row" [routerLink]="['/leagues', active.selectedId(), 'board', row.player.id]">
               <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
               <span class="name">{{ row.player.name }}</span>
               <span class="score dl-mono">
@@ -155,6 +171,14 @@ import type { BoardPlayer, League } from '../../core/api.types';
       margin: 0 0 0.75rem;
       font-size: 1rem;
     }
+    .empty {
+      margin: 0;
+      line-height: 1.5;
+    }
+    .empty a {
+      color: var(--dl-accent);
+      font-weight: 600;
+    }
     .league,
     .row {
       display: flex;
@@ -195,13 +219,18 @@ import type { BoardPlayer, League } from '../../core/api.types';
 })
 export class DashboardComponent implements OnInit {
   private readonly api = inject(ApiService);
+  readonly active = inject(ActiveLeagueService);
   readonly leagues = signal<League[]>([]);
   readonly top = signal<BoardPlayer[]>([]);
 
   ngOnInit() {
-    this.api.leagues().subscribe((l) => this.leagues.set(l));
-    this.api
-      .board('demo-league')
-      .subscribe((b) => this.top.set(b.filter((x) => !x.drafted).slice(0, 6)));
+    this.api.leagues().subscribe((l) => {
+      this.leagues.set(l);
+      this.active.setLeagues(l);
+      const id = this.active.selectedId();
+      if (id) {
+        this.api.board(id).subscribe((b) => this.top.set(b.filter((x) => !x.drafted).slice(0, 6)));
+      }
+    });
   }
 }

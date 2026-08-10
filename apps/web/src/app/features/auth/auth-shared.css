@@ -1,0 +1,128 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #0f2a24 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #151a2e 0%, transparent 50%), var(--dl-surface-base);
+}
+
+.panel {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 2.5rem;
+  background: var(--dl-surface-raised);
+  border: 1px solid var(--dl-border-strong);
+  border-radius: var(--dl-radius-xl, 16px);
+  animation: auth-in 0.45s ease both;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: var(--dl-accent);
+  color: var(--dl-text-inverse, #0a0e14);
+  font-weight: 700;
+}
+
+.name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.support {
+  margin: 0;
+  color: var(--dl-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+label span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--dl-text-tertiary);
+}
+
+input {
+  border: 1px solid var(--dl-border-strong);
+  background: var(--dl-surface-overlay);
+  color: var(--dl-text-primary);
+  border-radius: var(--dl-radius-md, 8px);
+  padding: 0.75rem 0.9rem;
+}
+
+input:focus {
+  outline: 2px solid color-mix(in srgb, var(--dl-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.cta {
+  border: 0;
+  border-radius: var(--dl-radius-md, 8px);
+  background: var(--dl-accent);
+  color: var(--dl-text-inverse, #0a0e14);
+  font-weight: 600;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+}
+
+.cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.footer {
+  margin: 0;
+  text-align: center;
+  color: var(--dl-text-secondary);
+}
+
+.footer a {
+  color: var(--dl-accent);
+  font-weight: 600;
+}
+
+.error {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dl-danger, #f43f5e) 12%, transparent);
+  color: var(--dl-danger, #f43f5e);
+  font-size: 0.85rem;
+}
+
+@keyframes auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
