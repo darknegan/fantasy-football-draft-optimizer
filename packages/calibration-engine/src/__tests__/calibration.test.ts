@@ -16,6 +16,8 @@ const recs = (ids: string[]): PlayerRecommendation[] =>
     strategyFit: 1,
     rosterNeed: 1,
     scarcityUrgency: 1,
+    formatScarcity: 1,
+    survivalProbability: 0.5,
     reasons: [],
     rank: i + 1,
   }));

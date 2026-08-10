@@ -330,6 +330,8 @@ export interface PlayerRecommendation {
    * three positions. A different, longer-lived signal than scarcityUrgency — doesn't change
    * as the draft progresses, only as the league's format does. */
   formatScarcity: number;
+  /** Estimated P(still available at the user's next pick), 0–1. */
+  survivalProbability: number;
   reasons: RecommendationReason[];
   rank: number;
 }

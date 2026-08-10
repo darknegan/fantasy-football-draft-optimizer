@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Player, PlayerEvaluation, RosterShape } from '@draftlab/domain';
 import { recommendPlayers } from '../recommend.js';
+import { estimateSurvivalProbability } from '../scarcity.js';
 
 function stubPlayer(id: string, position: Player['position'], name = id): Player {
   return {
@@ -106,5 +107,37 @@ describe('recommendPlayers', () => {
     });
     expect(recs[0]?.reasons.some((r) => r.code === 'te_target_share_gate')).toBe(true);
     expect(recs[0]!.contextualScore).toBeLessThan(80 * 1.25);
+  });
+
+  it('attaches survivalProbability to recommendations', () => {
+    const wr = stubPlayer('wr1', 'WR');
+    const recs = recommendPlayers({
+      strategyId: 'balanced',
+      round: 2,
+      picksUntilNext: 1,
+      nextUserPickOverall: 16,
+      userRoster: [],
+      rosterShape: shape,
+      teamCount: 12,
+      available: [{ player: wr, evaluation: stubEval('wr1', 90) }],
+    });
+    expect(recs[0]?.survivalProbability).toBeGreaterThan(0);
+    expect(recs[0]?.survivalProbability).toBeLessThanOrEqual(0.92);
+  });
+});
+
+describe('estimateSurvivalProbability', () => {
+  it('rates later-ADP players as more likely to survive', () => {
+    const early = estimateSurvivalProbability({
+      adpOverall: 12,
+      nextUserPickOverall: 16,
+      picksUntilNext: 1,
+    });
+    const late = estimateSurvivalProbability({
+      adpOverall: 40,
+      nextUserPickOverall: 16,
+      picksUntilNext: 1,
+    });
+    expect(late).toBeGreaterThan(early);
   });
 });

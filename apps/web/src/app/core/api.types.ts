@@ -78,8 +78,22 @@ export interface PlayerRecommendation {
   strategyFit: number;
   rosterNeed: number;
   scarcityUrgency: number;
+  formatScarcity?: number;
+  /** Estimated P(still available at the user's next pick), 0–1. */
+  survivalProbability?: number;
   reasons: RecommendationReason[];
   rank: number;
+}
+
+export interface RosterShape {
+  qb: number;
+  rb: number;
+  wr: number;
+  te: number;
+  flex: number;
+  superflex: number;
+  bench: number;
+  totalStarters: number;
 }
 
 export interface BoardPlayer {
@@ -114,6 +128,7 @@ export interface League {
   strategyId?: string;
   sleeperDraftId?: string;
   scoringSummary?: ScoringSummary;
+  roster?: RosterShape;
 }
 
 export interface StrategyDefinition {

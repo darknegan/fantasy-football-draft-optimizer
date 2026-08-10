@@ -15,12 +15,14 @@ import {
 } from '@draftlab/strategy-engine';
 import { positionalFormatScarcity } from './format-scarcity.js';
 import { computePositionNeeds, rosterNeedMultiplier } from './roster-need.js';
-import { scarcityUrgencyMultiplier } from './scarcity.js';
+import { estimateSurvivalProbability, scarcityUrgencyMultiplier } from './scarcity.js';
 
 export interface RecommendContext {
   strategyId: StrategyId;
   round: number;
   picksUntilNext: number;
+  /** Overall pick number of the user's next selection (for survival estimates). */
+  nextUserPickOverall?: number;
   userRoster: Player[];
   rosterShape: RosterShape;
   /** Number of teams in the league — feeds positionalFormatScarcity's demand calculation.
@@ -34,6 +36,8 @@ export interface RecommendContext {
   scoring?: ScoringProfile;
   targets?: Set<string> | string[];
   avoids?: Set<string> | string[];
+  /** 0–1 when a live position run is detected for the player's position. */
+  positionRunByPosition?: Partial<Record<Position, number>>;
 }
 
 function asSet(input?: Set<string> | string[]): Set<string> {
@@ -51,6 +55,9 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
   for (const { player } of ctx.available) {
     poolSizeByPosition[player.position] += 1;
   }
+
+  const nextUserPickOverall =
+    ctx.nextUserPickOverall ?? Math.max(1, ctx.picksUntilNext + 1);
 
   const scored = ctx.available.map(({ player, evaluation }) => {
     const strategyFit = strategyFitMultiplier(ctx.strategyId, ctx.round, player.position);
@@ -119,6 +126,14 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
       reasons.push({ code: 'plan_note', message: target.note, severity: 'info' });
     }
 
+    const adpOverall = evaluation.value.adpOverallPick || evaluation.value.blendedRank || 999;
+    const survivalProbability = estimateSurvivalProbability({
+      adpOverall,
+      nextUserPickOverall,
+      picksUntilNext: ctx.picksUntilNext,
+      positionRunFactor: ctx.positionRunByPosition?.[player.position] ?? 0,
+    });
+
     return {
       playerId: player.id,
       contextualScore: Math.round(contextualScore * 10) / 10,
@@ -127,6 +142,7 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
       rosterNeed,
       scarcityUrgency,
       formatScarcity,
+      survivalProbability,
       reasons,
       rank: 0,
     } satisfies PlayerRecommendation;

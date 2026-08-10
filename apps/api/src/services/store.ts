@@ -6,6 +6,7 @@ import type {
   League,
   PickEvent,
   PlayerEvaluation,
+  Position,
   StrategyId,
 } from '@draftlab/domain';
 import {
@@ -377,6 +378,7 @@ export class AppStore {
     const nextUserPick =
       slotInfo.pickNumbers.find((n) => n >= draft.currentPick) ?? draft.currentPick;
     const picksUntilNext = Math.max(0, nextUserPick - draft.currentPick);
+    const positionRunByPosition = this.detectPositionRuns(draft.picks, 10);
 
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
     const targetSet = this.targets.get(leagueId) ?? new Set();
@@ -385,6 +387,7 @@ export class AppStore {
       strategyId,
       round,
       picksUntilNext,
+      nextUserPickOverall: nextUserPick,
       userRoster,
       rosterShape: league.roster,
       teamCount: league.teamCount,
@@ -392,6 +395,7 @@ export class AppStore {
       available,
       targets: targetSet,
       avoids: avoidSet,
+      positionRunByPosition,
     });
 
     if (league.type === 'dynasty') {
@@ -939,6 +943,30 @@ export class AppStore {
       lastPickedUpstream: null,
       picksUntilUser: null,
     };
+  }
+
+  /** Share of recent picks at each position — used to amplify survival urgency during runs. */
+  private detectPositionRuns(
+    picks: PickEvent[],
+    window: number,
+  ): Partial<Record<Position, number>> {
+    const recent = picks
+      .filter((p) => p.playerId)
+      .sort((a, b) => b.pickNumber - a.pickNumber)
+      .slice(0, window);
+    if (recent.length < 4) return {};
+    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    for (const p of recent) {
+      const pos = this.getPlayer(p.playerId!)?.position;
+      if (pos) counts[pos] += 1;
+    }
+    const out: Partial<Record<Position, number>> = {};
+    for (const pos of ['QB', 'RB', 'WR', 'TE'] as Position[]) {
+      const share = counts[pos] / recent.length;
+      // Flag a run when a position is clearly over-represented vs equal mix (~25%).
+      if (share >= 0.45) out[pos] = Math.min(1, (share - 0.25) / 0.5);
+    }
+    return out;
   }
 }
 
