@@ -784,6 +784,20 @@ export class AppStore {
         };
       });
 
+    const signedRoster = pool.bids
+      .filter((b) => b.rosterId === user.rosterId)
+      .map((b) => {
+        const player = this.getPlayer(b.playerId);
+        return {
+          playerId: b.playerId,
+          name: player?.name ?? b.playerId,
+          position: player?.position ?? ('WR' as const),
+          amount: b.amount,
+          contractYears: b.contractYears ?? 1,
+          team: player?.team ?? '',
+        };
+      });
+
     return {
       leagueId,
       inflationRate: pool.inflationRate,
@@ -796,6 +810,10 @@ export class AppStore {
         name: this.getPlayer(n.playerId)?.name ?? n.playerId,
       })),
       userBudget: user,
+      signedRoster,
+      lotNumber: pool.bids.length + 1,
+      lotTotal: budgets.reduce((n, b) => n + b.rosterSlotsTotal, 0),
+      cap: user.startingBudget,
     };
   }
 

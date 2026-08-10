@@ -129,6 +129,7 @@ export interface League {
   sleeperDraftId?: string;
   scoringSummary?: ScoringSummary;
   roster?: RosterShape;
+  auctionBudget?: number;
 }
 
 export interface StrategyDefinition {
@@ -313,6 +314,15 @@ export interface DynastyOverview {
   }>;
 }
 
+export interface AuctionSignedPlayer {
+  playerId: string;
+  name: string;
+  position: Position;
+  amount: number;
+  contractYears: number;
+  team: string;
+}
+
 export interface AuctionState {
   leagueId: string;
   inflationRate: number;
@@ -352,6 +362,10 @@ export interface AuctionState {
     kind: string;
   }>;
   userBudget: AuctionState['budgets'][number];
+  signedRoster?: AuctionSignedPlayer[];
+  lotNumber?: number;
+  lotTotal?: number;
+  cap?: number;
 }
 
 export interface MaxBidResult {

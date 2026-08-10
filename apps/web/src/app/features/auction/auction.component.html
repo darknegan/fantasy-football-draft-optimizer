@@ -1,0 +1,249 @@
+@if (loading()) {
+  <p class="lede dl-muted">Loading auction room…</p>
+} @else if (!state()) {
+  <p class="err">{{ error() ?? 'Auction state unavailable for this league.' }}</p>
+} @else {
+  <div class="auction-room">
+    <header class="status-bar">
+      <div class="title-block">
+        <div class="title">{{ league()?.name ?? 'League' }} · auction</div>
+        <div class="subtitle">{{ roomMeta() }}</div>
+      </div>
+      <div class="spacer"></div>
+
+      <div class="stat accent">
+        <div class="cap">YOUR BUDGET</div>
+        <div class="stat-val dl-mono">${{ state()!.userBudget.remaining }}</div>
+        <div class="stat-sub">{{ spotsLeft() }} spots to fill</div>
+      </div>
+
+      <div class="stat green">
+        <div class="cap">MAX BID</div>
+        <div class="stat-val dl-mono">${{ maxBidAmount() }}</div>
+        <div class="stat-sub">for this lot</div>
+      </div>
+
+      <div class="stat warn">
+        <div class="cap">INFLATION</div>
+        <div class="stat-val dl-mono">{{ inflationLabel() }}</div>
+        <div class="stat-sub">{{ inflationNote() }}</div>
+      </div>
+    </header>
+
+    <div class="body">
+      <div class="main-col">
+        @if (onBlock(); as player) {
+          <section class="on-block">
+            <div class="on-block-head">
+              <div class="live-label">
+                <img class="live-dot" src="/auction/live-dot.svg" width="8" height="8" alt="" />
+                <span>ON THE BLOCK</span>
+              </div>
+              <span class="timer dl-mono">Open lot</span>
+            </div>
+
+            <div class="on-block-body">
+              <div class="player-col">
+                <div class="player-id">
+                  <span class="pos" [class]="player.position">{{ player.position }}</span>
+                  <strong>{{ player.name }}</strong>
+                </div>
+                <p class="player-meta">{{ playerMeta(player) }}</p>
+
+                <div class="bid-actions">
+                  <button
+                    type="button"
+                    class="bid-primary"
+                    [disabled]="bidding()"
+                    (click)="placeBid(suggestedBid())"
+                  >
+                    Bid ${{ suggestedBid() }}
+                  </button>
+                  <button type="button" class="bid-chip" (click)="bumpBid(5)" [disabled]="bidding()">
+                    +$5
+                  </button>
+                  <button type="button" class="bid-chip" (click)="bumpBid(10)" [disabled]="bidding()">
+                    +$10
+                  </button>
+                  <button
+                    type="button"
+                    class="bid-chip"
+                    (click)="placeBid(maxBidAmount())"
+                    [disabled]="bidding() || maxBidAmount() < 1"
+                  >
+                    Bid max ${{ maxBidAmount() }}
+                  </button>
+                </div>
+                <p class="pass-note">
+                  Passing keeps ${{ state()!.userBudget.remaining }} for {{ spotsLeft() }} spots
+                </p>
+              </div>
+
+              <div class="bid-stats">
+                <div class="bid-stat">
+                  <div class="cap">CURRENT BID</div>
+                  <div class="bid-stat-val dl-mono">${{ currentBid() }}</div>
+                  <div class="stat-sub">{{ highBidderLabel() }}</div>
+                </div>
+                <div class="bid-stat">
+                  <div class="cap">OUR VALUE</div>
+                  <div class="bid-stat-val dl-mono accent">${{ player.fairValue }}</div>
+                  <div class="stat-sub">VORP-derived</div>
+                </div>
+                <div class="bid-stat">
+                  <div class="cap">WITH INFLATION</div>
+                  <div class="bid-stat-val dl-mono warn">${{ player.inflatedValue }}</div>
+                  <div class="stat-sub">fair price now</div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="ceiling-note">
+              <strong>Why ${{ maxBidAmount() }} is your ceiling</strong>
+              <p>{{ ceilingCopy() }}</p>
+            </aside>
+          </section>
+        } @else {
+          <section class="on-block empty">
+            <p>No players left on the board. Auction complete or values still loading.</p>
+          </section>
+        }
+
+        <section class="budgets-block">
+          <div class="section-head">
+            <h2>Budgets</h2>
+            <p>Dollars per remaining slot is the number that decides who can still outbid you</p>
+          </div>
+          <div class="budget-grid">
+            @for (team of budgetCards(); track team.rosterId) {
+              <article class="budget-card" [class.you]="team.isYou">
+                <div class="budget-name">{{ team.label }}</div>
+                <div class="budget-amt dl-mono">${{ team.remaining }}</div>
+                <div class="budget-meta">
+                  <span>{{ team.spotsLeft }} spots</span>
+                  <span class="dl-mono">${{ team.perSlot }}/slot</span>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+
+        <section class="roster-block">
+          <div class="section-head row">
+            <h2>Your signed roster</h2>
+            <span class="chip">${{ state()!.userBudget.spent }} of ${{ cap() }} committed</span>
+          </div>
+          <div class="spend-bar" aria-hidden="true">
+            @for (seg of spendSegments(); track seg.position) {
+              <span [style.width.%]="seg.pct" [class]="seg.position"></span>
+            }
+          </div>
+          <div class="signed-row">
+            @for (p of signedRoster(); track p.playerId) {
+              <article class="signed-card">
+                <span class="pos" [class]="p.position">{{ p.position }}</span>
+                <div>
+                  <strong>{{ p.name }}</strong>
+                  <div class="signed-meta">
+                    <span class="dl-mono">${{ p.amount }}/yr</span>
+                    <span
+                      >{{ p.contractYears }} yr · through
+                      {{ season() + p.contractYears }}</span
+                    >
+                  </div>
+                </div>
+              </article>
+            } @empty {
+              <p class="empty-note">No contracts signed yet. Win a nomination to fill the roster.</p>
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="side-rail">
+        <section class="rail-card">
+          <h3>Contract length</h3>
+          <div class="year-tabs" role="tablist" aria-label="Contract length">
+            @for (y of yearOptions(); track y) {
+              <button
+                type="button"
+                role="tab"
+                class="year-tab"
+                [class.active]="contractYears() === y"
+                [attr.aria-selected]="contractYears() === y"
+                (click)="setContractYears(y)"
+              >
+                {{ y }} yr
+              </button>
+            }
+          </div>
+
+          @if (contract(); as c) {
+            <table class="curve-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Value</th>
+                  <th>Surplus</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (y of c.yearProjections; track y.yearOffset) {
+                  <tr [class.hot]="y.surplus < 0">
+                    <td>{{ season() + y.yearOffset + 1 }}</td>
+                    <td class="dl-mono">${{ y.projectedValue }}</td>
+                    <td class="dl-mono">{{ y.surplus > 0 ? '+' : '' }}{{ y.surplus }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <p class="curve-note">{{ c.note }}</p>
+          } @else {
+            <p class="curve-note">Select a player on the block to project multi-year surplus.</p>
+          }
+        </section>
+
+        <section class="rail-card">
+          <h3>Remaining values</h3>
+          <ul class="value-list">
+            @for (v of remainingValues(); track v.playerId) {
+              <li [class.active]="v.playerId === selectedId()" (click)="selectPlayer(v.playerId)">
+                <span class="pos tiny" [class]="v.position">{{ v.position }}</span>
+                <span class="v-name">{{ v.name }}</span>
+                <span class="dl-mono muted">${{ v.fairValue }}</span>
+                <span class="dl-mono warn">${{ v.inflatedValue }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section class="rail-card">
+          <h3>Nominate next</h3>
+          <p class="nom-lede">
+            Put up players you do not want while rivals still hold budget — or your targets when
+            they are cash-poor.
+          </p>
+          <ul class="nom-list">
+            @for (n of nominations(); track n.playerId) {
+              <li>
+                <button type="button" class="nom-card" (click)="selectPlayer(n.playerId)">
+                  <div class="nom-top">
+                    <strong>{{ n.name }}</strong>
+                    <span class="tag">{{ n.kind.replaceAll('_', ' ') }}</span>
+                  </div>
+                  <p>{{ n.reason }}</p>
+                </button>
+              </li>
+            } @empty {
+              <li class="empty-note">No nomination suggestions yet.</li>
+            }
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }
+  </div>
+}
