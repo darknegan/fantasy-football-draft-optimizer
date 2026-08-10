@@ -187,6 +187,15 @@ export function listStrategies(): StrategyDefinition[] {
 
 export function getRoundTarget(strategyId: StrategyId, round: number): RoundTarget {
   const strategy = getStrategy(strategyId);
+  if (!strategy) {
+    return {
+      round,
+      primary: ['RB', 'WR', 'TE', 'QB'],
+      secondary: [],
+      avoid: [],
+      note: 'Best available',
+    };
+  }
   return (
     strategy.rounds.find((r) => r.round === round) ?? {
       round,

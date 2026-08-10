@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
   CommonRosterSlot,
@@ -177,16 +177,18 @@ export class SimulatorComponent implements OnInit {
 
     forkJoin({
       result: this.api.simulate(this.leagueId, body),
-      compare: this.api.compareStrategies(this.leagueId, {
-        ...body,
-        strategyIds: compareIds.length ? compareIds : undefined,
-        // Compare uses a lighter iteration budget for Worker CPU.
-        iterations: Math.min(this.iterations(), 400),
-      }),
+      compare: this.api
+        .compareStrategies(this.leagueId, {
+          ...body,
+          strategyIds: compareIds.length ? compareIds : undefined,
+          // Compare is multi-strategy — keep this light for Worker CPU budgets.
+          iterations: Math.min(this.iterations(), 120),
+        })
+        .pipe(catchError(() => of(null))),
     }).subscribe({
       next: ({ result, compare }) => {
         this.result.set(result);
-        this.compare.set(compare);
+        if (compare) this.compare.set(compare);
         this.running.set(false);
       },
       error: (err: Error) => {

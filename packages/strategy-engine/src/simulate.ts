@@ -1,6 +1,11 @@
 import type { Position, StrategyId } from '@draftlab/domain';
 import { strategyFitMultiplier } from './fit.js';
 import { snakePickNumbers } from './slots.js';
+import { getStrategy } from './strategies.js';
+
+function getStrategySafe(id: StrategyId) {
+  return getStrategy(id);
+}
 
 export interface SimPlayer {
   id: string;
@@ -24,6 +29,11 @@ export interface SimulateOptions {
   /** Deterministic seed for reproducible demos. */
   seed?: number;
   players: SimPlayer[];
+  /**
+   * When false, skip histogram + common-roster bookkeeping (used by compare-strategies
+   * so multi-strategy runs stay inside Worker CPU budgets).
+   */
+  includeDetails?: boolean;
 }
 
 export type ScoreBand = 'miss' | 'bubble' | 'playoff' | 'top3';
@@ -139,6 +149,7 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
   const userPicks = new Set(snakePickNumbers(opts.slot, opts.teamCount, opts.rounds));
   const totalPicks = opts.teamCount * opts.rounds;
 
+  const includeDetails = opts.includeDetails !== false;
   const scores: number[] = [];
   const mixTotals: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
   const samples: StrategySimResult['sampleRosters'] = [];
@@ -169,12 +180,14 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
     scores.push(score);
     for (const p of roster) {
       mixTotals[p.position] += 1;
-      const hit = playerHits.get(p.id);
-      if (hit) hit.count += 1;
-      else playerHits.set(p.id, { name: p.name, position: p.position, count: 1 });
+      if (includeDetails) {
+        const hit = playerHits.get(p.id);
+        if (hit) hit.count += 1;
+        else playerHits.set(p.id, { name: p.name, position: p.position, count: 1 });
+      }
     }
 
-    if (samples.length < 3) {
+    if (includeDetails && samples.length < 3) {
       samples.push({
         score: Math.round(score * 10) / 10,
         playerIds: roster.map((p) => p.id),
@@ -229,8 +242,10 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
     bustRate: round2(bustRate),
     positionMix,
     sampleRosters: samples,
-    scoreHistogram: buildHistogram(scores, topThirdThreshold, bustThreshold),
-    commonRoster: buildCommonRoster(playerHits, iterations),
+    scoreHistogram: includeDetails
+      ? buildHistogram(scores, topThirdThreshold, bustThreshold)
+      : [],
+    commonRoster: includeDetails ? buildCommonRoster(playerHits, iterations) : [],
   };
 }
 
@@ -246,10 +261,13 @@ export interface CompareStrategiesResult {
 }
 
 export function compareStrategies(opts: CompareStrategiesOptions): CompareStrategiesResult {
-  const results = opts.strategyIds.map((strategyId, i) =>
+  const strategyIds = opts.strategyIds.filter((id) => Boolean(getStrategySafe(id)));
+  const results = strategyIds.map((strategyId, i) =>
     simulateStrategy({
       ...opts,
       strategyId,
+      // Compare only needs summary metrics — skip per-strategy roster detail.
+      includeDetails: false,
       // Offset seeds so strategies don't share identical opponent boards.
       seed: (opts.seed ?? 42) + i * 997,
     }),

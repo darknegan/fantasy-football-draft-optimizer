@@ -440,7 +440,7 @@ app.get('/api/draft-slots', (c) => {
 
 app.post('/api/leagues/:id/simulate', async (c) => {
   const user = c.get('user');
-  const body = await c.req.json<{
+  let body: {
     strategyId?: StrategyId;
     iterations?: number;
     rounds?: number;
@@ -448,23 +448,30 @@ app.post('/api/leagues/:id/simulate', async (c) => {
     draftSlot?: number;
     adpVarianceRatio?: number;
     adpVarianceFloor?: number;
-  }>();
+  } = {};
+  try {
+    body = (await c.req.json()) ?? {};
+  } catch {
+    body = {};
+  }
   try {
     const league = await withDb(c.env, c.executionCtx, (db) =>
       ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
-    const result = store.simulate(league.id, body ?? {});
+    const result = store.simulate(league.id, body);
     if (!result) return c.json({ error: 'League not found' }, 404);
     return c.json(result);
   } catch (err) {
-    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ level: 'error', route: 'simulate', detail }));
+    return c.json({ error: 'Simulation failed', detail }, 500);
   }
 });
 
 app.post('/api/leagues/:id/compare-strategies', async (c) => {
   const user = c.get('user');
-  const body = await c.req.json<{
+  let body: {
     strategyIds?: StrategyId[];
     iterations?: number;
     rounds?: number;
@@ -472,17 +479,25 @@ app.post('/api/leagues/:id/compare-strategies', async (c) => {
     draftSlot?: number;
     adpVarianceRatio?: number;
     adpVarianceFloor?: number;
-  }>();
+  } = {};
+  try {
+    body = (await c.req.json()) ?? {};
+  } catch {
+    body = {};
+  }
   try {
     const league = await withDb(c.env, c.executionCtx, (db) =>
       ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
-    const result = store.compare(league.id, body ?? {});
+    const result = store.compare(league.id, body);
     if (!result) return c.json({ error: 'League not found' }, 404);
     return c.json(result);
   } catch (err) {
-    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ level: 'error', route: 'compare-strategies', detail }));
+    // Simulation failures are not DB outages — return a clear 500 with detail.
+    return c.json({ error: 'Simulation failed', detail }, 500);
   }
 });
 
