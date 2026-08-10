@@ -466,6 +466,7 @@ app.post('/api/leagues/:id/compare-strategies', async (c) => {
     iterations?: number;
     rounds?: number;
     seed?: number;
+    draftSlot?: number;
   }>();
   try {
     const league = await withDb(c.env, c.executionCtx, (db) =>
