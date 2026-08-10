@@ -6,14 +6,24 @@ import { SEED_PLAYERS } from './data/seed-players.js';
 import { AppStore } from './services/store.js';
 
 /**
- * Node-only bootstrap: prefer sleeperMCP player_factors.json, else in-repo seeds.
+ * Node-only bootstrap: prefer sleeperMCP player_factors.json, else the bundled
+ * snapshot under data/, else in-repo hand seeds.
  * Workers must construct AppStore with an imported seed list (no filesystem).
  */
 export function createAppStore(): AppStore {
   const moduleDir = fileURLToPath(new URL('.', import.meta.url));
+
+  // Local dev: sleeperMCP checked out as a sibling of this repo.
+  const checkoutArtifactPath = resolve(
+    moduleDir,
+    '../../../../../sleeperMCP/artifacts/player_factors.json',
+  );
+  // Deploy hosts only check out THIS repo — committed snapshot for that case.
+  const bundledArtifactPath = resolve(moduleDir, '../data/player_factors.json');
+
   const artifactPath =
     process.env['SLEEPER_MCP_ARTIFACT_PATH'] ??
-    resolve(moduleDir, '../../../../../sleeperMCP/artifacts/player_factors.json');
+    (existsSync(checkoutArtifactPath) ? checkoutArtifactPath : bundledArtifactPath);
 
   if (existsSync(artifactPath)) {
     const { players, skipped } = loadSeedPlayersFromArtifactFile(artifactPath);
