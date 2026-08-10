@@ -40,6 +40,11 @@
       </div>
     </div>
 
+    @if (!isUserTurn() && canDraft()) {
+      <button type="button" class="manual-btn accent-btn" (click)="fillToMyPick()" [disabled]="picking()">
+        Sim to my pick
+      </button>
+    }
     <button type="button" class="manual-btn" (click)="manualMode()">Enter pick manually</button>
   </header>
 
@@ -110,7 +115,8 @@
                 type="button"
                 class="draft-btn"
                 [class.primary]="i === 0"
-                [disabled]="picking() || !canDraft()"
+                [disabled]="picking() || !canUserDraft()"
+                [title]="canUserDraft() ? 'Draft this player' : 'Not your pick yet — use Sim to my pick'"
                 (click)="pick(card)"
               >
                 {{ i === 0 ? 'Draft ' + card.player.name : 'Draft' }}

@@ -159,8 +159,18 @@
   cursor: pointer;
 }
 
-.manual-btn:hover {
+.manual-btn:hover:not(:disabled) {
   border-color: var(--dl-accent);
+}
+
+.manual-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.manual-btn.accent-btn {
+  border-color: color-mix(in srgb, var(--dl-accent) 45%, var(--dl-border-strong));
+  color: var(--dl-accent);
 }
 
 .body {

@@ -440,6 +440,10 @@ export class DraftComponent implements OnInit, OnDestroy {
     return Boolean(d && d.status !== 'complete');
   }
 
+  canUserDraft() {
+    return this.canDraft() && this.isUserTurn();
+  }
+
   formatPick(overall: number): string {
     const n = this.teamCount();
     const round = Math.floor((overall - 1) / n) + 1;
@@ -553,11 +557,17 @@ export class DraftComponent implements OnInit, OnDestroy {
   async pick(row: BoardPlayer) {
     const d = this.draft();
     const l = this.league();
-    if (!d || !l) return;
+    if (!d || !l || !this.canUserDraft()) return;
     const pickNumber = d.currentPick;
     const round = Math.floor((pickNumber - 1) / l.teamCount) + 1;
-    const slot = slotForPick(pickNumber, l.teamCount);
-    const body = { pickNumber, round, slot, playerId: row.player.id };
+    const slot = this.userSlot();
+    const body = {
+      pickNumber,
+      round,
+      slot,
+      playerId: row.player.id,
+      rosterId: d.userRosterId,
+    };
 
     const userId = this.auth.user()?.id;
     if (!userId) return;
@@ -595,6 +605,65 @@ export class DraftComponent implements OnInit, OnDestroy {
         });
       },
     });
+  }
+
+  /** Advance opponent picks by ADP until the user's next selection (manual leagues). */
+  async fillToMyPick() {
+    const l = this.league();
+    let d = this.draft();
+    if (!l || !d || this.picking() || this.isUserTurn()) return;
+
+    this.picking.set(true);
+    try {
+      let guard = 0;
+      while (guard++ < l.teamCount * 2) {
+        d = this.draft();
+        if (!d || this.isUserTurn() || d.status === 'complete') break;
+        const pickNumber = d.currentPick;
+        const slot = slotForPick(pickNumber, l.teamCount);
+        if (slot === this.userSlot()) break;
+
+        const taken = new Set(d.picks.filter((p) => p.playerId).map((p) => p.playerId!));
+        const nextPlayer = [...this.board()]
+          .filter((b) => !b.drafted && !taken.has(b.player.id))
+          .sort((a, b) => {
+            const aa = a.evaluation.value.adpOverallPick || 999;
+            const ba = b.evaluation.value.adpOverallPick || 999;
+            return aa - ba;
+          })[0];
+        if (!nextPlayer) break;
+
+        const round = Math.floor((pickNumber - 1) / l.teamCount) + 1;
+        const res = await new Promise<{
+          draft: DraftState;
+          board: BoardPlayer[];
+          adherence: AdherenceResult;
+        }>((resolve, reject) => {
+          this.api
+            .applyPick(this.leagueId, {
+              pickNumber,
+              round,
+              slot,
+              playerId: nextPlayer.player.id,
+              rosterId: `roster-${slot}`,
+            })
+            .subscribe({ next: resolve, error: reject });
+        });
+        this.draft.set(res.draft);
+        this.board.set(res.board);
+        this.adherence.set(res.adherence);
+      }
+    } catch {
+      const cur = this.draft();
+      if (cur) {
+        this.draft.set({
+          ...cur,
+          syncBanner: 'Could not simulate all the way to your pick — try again.',
+        });
+      }
+    } finally {
+      this.picking.set(false);
+    }
   }
 
   private async flushQueue() {

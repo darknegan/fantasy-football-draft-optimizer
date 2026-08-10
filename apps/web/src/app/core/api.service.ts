@@ -85,7 +85,7 @@ export class ApiService {
 
   applyPick(
     leagueId: string,
-    body: { pickNumber: number; round: number; slot: number; playerId: string },
+    body: { pickNumber: number; round: number; slot: number; playerId: string; rosterId?: string },
   ) {
     return this.http.post<{ draft: DraftState; board: BoardPlayer[]; adherence: AdherenceResult }>(
       `/api/leagues/${leagueId}/draft/picks`,
