@@ -369,6 +369,8 @@ export class AppStore {
       picksUntilNext,
       userRoster,
       rosterShape: league.roster,
+      teamCount: league.teamCount,
+      scoring: league.scoring,
       available,
       targets: targetSet,
       avoids: avoidSet,

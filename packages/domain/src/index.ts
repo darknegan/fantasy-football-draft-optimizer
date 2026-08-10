@@ -311,7 +311,13 @@ export interface PlayerRecommendation {
   draftScore: number;
   strategyFit: number;
   rosterNeed: number;
+  /** Draft-pick-timing urgency: how few quality options remain before the user's next pick. */
   scarcityUrgency: number;
+  /** League-format positional scarcity: this position's starting-slot demand vs. its
+   * draftable pool in this league's actual roster/scoring settings, relative to the other
+   * three positions. A different, longer-lived signal than scarcityUrgency — doesn't change
+   * as the draft progresses, only as the league's format does. */
+  formatScarcity: number;
   reasons: RecommendationReason[];
   rank: number;
 }

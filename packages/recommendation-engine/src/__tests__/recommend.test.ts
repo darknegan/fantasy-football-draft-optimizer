@@ -80,6 +80,7 @@ describe('recommendPlayers', () => {
       picksUntilNext: 11,
       userRoster: [],
       rosterShape: shape,
+      teamCount: 12,
       available: [
         { player: te, evaluation: stubEval('te1', 70) },
         { player: wr, evaluation: stubEval('wr1', 70) },
@@ -100,6 +101,7 @@ describe('recommendPlayers', () => {
       picksUntilNext: 5,
       userRoster: [],
       rosterShape: shape,
+      teamCount: 12,
       available: [{ player: te, evaluation: stubEval('te_gate', 80, true) }],
     });
     expect(recs[0]?.reasons.some((r) => r.code === 'te_target_share_gate')).toBe(true);
