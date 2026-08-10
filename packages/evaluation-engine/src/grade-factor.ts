@@ -87,6 +87,8 @@ export function gradeFactor(
       value: null,
       grade: 'unknown',
       weight: GRADE_WEIGHTS.unknown,
+      benchmark: def.benchmark,
+      category: def.category,
     };
   }
 
@@ -110,5 +112,7 @@ export function gradeFactor(
     value: input.value,
     grade,
     weight: GRADE_WEIGHTS[grade],
+    benchmark: def.benchmark,
+    category: def.category,
   };
 }

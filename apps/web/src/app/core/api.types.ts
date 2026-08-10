@@ -18,6 +18,8 @@ export interface GradedFactor {
   value: number | null;
   grade: FactorGrade;
   weight: number;
+  benchmark?: number | null;
+  category?: 'volume' | 'situational' | 'profile';
 }
 
 export interface PlayerEvaluation {
@@ -33,9 +35,33 @@ export interface PlayerEvaluation {
   archetype: {
     archetype: string;
     archetypeEv: number;
+    rates?: {
+      returnRate: number;
+      injuryRate: number;
+      boomRate: number;
+      bustRate: number;
+      fineRate: number;
+    };
   };
-  risk: { riskProfile: number; expectedGamesMissed: number };
-  value: { valueScore: number; adpRoundPick: string; blendedRank: number };
+  risk: {
+    riskProfile: number;
+    expectedGamesMissed: number;
+    components?: {
+      careerMissedRate: number;
+      archetypeInjury: number;
+      ageCurvePenalty: number;
+      recentSeriousInjury: number;
+    };
+  };
+  value: {
+    valueScore: number;
+    adpRoundPick: string;
+    blendedRank: number;
+    fseRank?: number | null;
+    espnProjectionRank?: number | null;
+    projectedRank?: number | null;
+    usedMechanicalFallback?: boolean;
+  };
   draftScore: number;
 }
 
