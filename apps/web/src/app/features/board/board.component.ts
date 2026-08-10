@@ -32,6 +32,8 @@ import type { BoardPlayer, Position } from '../../core/api.types';
         [value]="filtered()"
         [scrollable]="true"
         scrollHeight="flex"
+        [virtualScroll]="true"
+        [virtualScrollItemSize]="37"
         styleClass="p-datatable-sm"
         [rowHover]="true"
       >
