@@ -48,45 +48,12 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { loadSeedPlayersFromArtifactFile } from '../data/load-artifact.js';
+import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
 
-// Real player data from sleeperMCP's build_factors.py artifact (218 players as
-// of this writing), replacing the 12-player hand-authored fixture that used to
-// live here. seed-players.ts / seed-depth.ts are left in place — the golden
-// spot-check tests construct their own fixtures inline and never imported
-// SEED_PLAYERS — but nothing in the live app reads them anymore.
-const moduleDir = fileURLToPath(new URL('.', import.meta.url));
-const ARTIFACT_PATH =
-  process.env['SLEEPER_MCP_ARTIFACT_PATH'] ??
-  resolve(moduleDir, '../../../../../../sleeperMCP/artifacts/player_factors.json');
-
-if (!existsSync(ARTIFACT_PATH)) {
-  throw new Error(
-    `[store] sleeperMCP artifact not found at ${ARTIFACT_PATH}. Set SLEEPER_MCP_ARTIFACT_PATH ` +
-      `to point at it, or regenerate it: cd sleeperMCP && python tools/build_factors.py`,
-  );
-}
-
-const { players: SEED_PLAYERS, skipped: artifactSkipped } =
-  loadSeedPlayersFromArtifactFile(ARTIFACT_PATH);
-
-if (SEED_PLAYERS.length === 0) {
-  throw new Error(`[store] loaded 0 players from ${ARTIFACT_PATH} — every entry was skipped`);
-}
-if (artifactSkipped.length) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    `[store] ${artifactSkipped.length} artifact player(s) skipped (incomplete bio): ` +
-      artifactSkipped.map((s) => s.name).join(', '),
-  );
-}
-
 export class AppStore {
+  private readonly seeds: SeedPlayer[];
   private readonly evaluations = new Map<string, PlayerEvaluation>();
   private readonly leagues = new Map<string, League>();
   private readonly drafts = new Map<string, DraftState>();
@@ -94,8 +61,9 @@ export class AppStore {
   private readonly avoids = new Map<string, Set<string>>();
   readonly formats = new FormatState();
 
-  constructor() {
-    for (const seed of SEED_PLAYERS) {
+  constructor(seeds: SeedPlayer[]) {
+    this.seeds = seeds;
+    for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
         player: seed.player,
         factors: seed.factors,
@@ -231,11 +199,11 @@ export class AppStore {
   }
 
   listPlayers() {
-    return SEED_PLAYERS.map((s) => s.player);
+    return this.seeds.map((s) => s.player);
   }
 
   getPlayer(id: string) {
-    return SEED_PLAYERS.find((s) => s.player.id === id)?.player;
+    return this.seeds.find((s) => s.player.id === id)?.player;
   }
 
   getEvaluation(id: string) {
@@ -292,7 +260,7 @@ export class AppStore {
   recalculateForLeague(leagueId: string) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
-    for (const seed of SEED_PLAYERS) {
+    for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
         player: seed.player,
         factors: seed.factors,
@@ -309,7 +277,7 @@ export class AppStore {
     }
     return {
       leagueId,
-      playerCount: SEED_PLAYERS.length,
+      playerCount: this.seeds.length,
       scoring: scoringConfirmation(league),
     };
   }
@@ -349,7 +317,7 @@ export class AppStore {
       .map((p) => this.getPlayer(p.playerId!)!)
       .filter(Boolean);
 
-    const available = SEED_PLAYERS.filter((s) => !draftedIds.has(s.player.id)).map((s) => ({
+    const available = this.seeds.filter((s) => !draftedIds.has(s.player.id)).map((s) => ({
       player: s.player,
       evaluation: this.evaluations.get(s.player.id)!,
     }));
@@ -379,7 +347,7 @@ export class AppStore {
     if (league.type === 'dynasty') {
       const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
       const npvByPlayer = new Map<string, number>();
-      for (const s of SEED_PLAYERS) {
+      for (const s of this.seeds) {
         const evaluation = this.evaluations.get(s.player.id)!;
         npvByPlayer.set(s.player.id, buildMultiYearCurve(s.player, evaluation, league.season).npv);
       }
@@ -388,7 +356,7 @@ export class AppStore {
 
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
-    return SEED_PLAYERS.map((s) => ({
+    return this.seeds.map((s) => ({
       player: s.player,
       evaluation: this.evaluations.get(s.player.id)!,
       recommendation: recById.get(s.player.id),
@@ -477,7 +445,7 @@ export class AppStore {
   }
 
   private simPool(teamCount: number): SimPlayer[] {
-    return SEED_PLAYERS.map((s) => {
+    return this.seeds.map((s) => {
       const evaluation = this.evaluations.get(s.player.id)!;
       return {
         id: s.player.id,
@@ -537,7 +505,7 @@ export class AppStore {
     if (!league) return null;
     const targetSet = this.targets.get(leagueId) ?? new Set();
     const avoidSet = this.avoids.get(leagueId) ?? new Set();
-    const players = SEED_PLAYERS.map((s) => {
+    const players = this.seeds.map((s) => {
       const evaluation = this.evaluations.get(s.player.id)!;
       return {
         id: s.player.id,
@@ -577,9 +545,9 @@ export class AppStore {
 
     // If no picks yet, seed a plausible starter set from top dynasty scores for the age curve demo.
     const rosterForAge =
-      userRoster.length > 0 ? userRoster : SEED_PLAYERS.slice(0, 12).map((s) => s.player);
+      userRoster.length > 0 ? userRoster : this.seeds.slice(0, 12).map((s) => s.player);
 
-    const curves = SEED_PLAYERS.map((s) => {
+    const curves = this.seeds.map((s) => {
       const evaluation = this.evaluations.get(s.player.id)!;
       const curve = buildMultiYearCurve(s.player, evaluation, league.season);
       return {
@@ -611,7 +579,7 @@ export class AppStore {
       ownedPickValue: ownedPickValue(pickAssets, draft.userRosterId),
       board: curves.slice(0, 40),
       rookieBoard: buildRookieBoard(
-        SEED_PLAYERS.map((s) => ({
+        this.seeds.map((s) => ({
           player: s.player,
           evaluation: this.evaluations.get(s.player.id)!,
         })),
@@ -641,7 +609,7 @@ export class AppStore {
     const bids = this.formats.auctionBids.get(leagueId) ?? [];
     const purchased = new Set(bids.map((b) => b.playerId));
     const baseValues = computeDollarValues(
-      SEED_PLAYERS.map((s) => ({
+      this.seeds.map((s) => ({
         playerId: s.player.id,
         position: s.player.position,
         draftScore: this.evaluations.get(s.player.id)!.draftScore,
@@ -834,7 +802,7 @@ export class AppStore {
     const applied = { ...proposal, applied: true };
     this.formats.calibration.set(leagueId, applied);
     // Re-score board with new weights.
-    for (const seed of SEED_PLAYERS) {
+    for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
         player: seed.player,
         factors: seed.factors,
@@ -860,7 +828,7 @@ export class AppStore {
       status: 'pre_draft',
       currentPick: 1,
       picks: [],
-      availablePlayerIds: SEED_PLAYERS.map((s) => s.player.id),
+      availablePlayerIds: this.seeds.map((s) => s.player.id),
       userRosterId: 'roster-user',
       lastSyncedAt: null,
       syncMode: 'manual',
@@ -870,5 +838,3 @@ export class AppStore {
     };
   }
 }
-
-export const store = new AppStore();

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import { store } from './services/store.js';
+import { createAppStore } from './create-store.js';
 import { DraftPoller } from './services/draft-poller.js';
 import { playerRoutes } from './routes/players.js';
 import { leagueRoutes } from './routes/leagues.js';
@@ -12,6 +12,7 @@ const PORT = Number(process.env['PORT'] ?? 3001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 
 async function main() {
+  const store = createAppStore();
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
   await app.register(websocket);

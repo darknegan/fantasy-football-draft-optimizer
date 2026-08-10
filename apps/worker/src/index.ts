@@ -12,9 +12,10 @@ import {
   sharedSleeperLimiter,
 } from '@draftlab/integrations';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
+import { SEED_PLAYERS } from '../../api/src/data/seed-players.js';
 import { AppStore } from '../../api/src/services/store.js';
 
-const store = new AppStore();
+const store = new AppStore(SEED_PLAYERS);
 
 const app = new Hono<{ Bindings: Env }>();
 
