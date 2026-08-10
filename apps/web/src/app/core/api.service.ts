@@ -110,7 +110,10 @@ export class ApiService {
     return this.http.post<StrategySimResult>(`/api/leagues/${leagueId}/simulate`, body);
   }
 
-  compareStrategies(leagueId: string, body: { strategyIds?: string[]; iterations?: number; rounds?: number } = {}) {
+  compareStrategies(
+    leagueId: string,
+    body: { strategyIds?: string[]; iterations?: number; rounds?: number; draftSlot?: number } = {},
+  ) {
     return this.http.post<CompareStrategiesResult>(`/api/leagues/${leagueId}/compare-strategies`, body);
   }
 

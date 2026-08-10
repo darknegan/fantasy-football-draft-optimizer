@@ -33,7 +33,13 @@ export async function strategyRoutes(app: FastifyInstance, store: AppStore, pool
 
   app.post<{
     Params: { id: string };
-    Body: { strategyIds?: StrategyId[]; iterations?: number; rounds?: number; seed?: number };
+    Body: {
+      strategyIds?: StrategyId[];
+      iterations?: number;
+      rounds?: number;
+      seed?: number;
+      draftSlot?: number;
+    };
   }>('/api/leagues/:id/compare-strategies', { preHandler: authenticate }, async (req, reply) => {
     if (!(await requireOwnedLeague(req, reply, store, pool))) return;
     const result = store.compare(req.params.id, req.body ?? {});
