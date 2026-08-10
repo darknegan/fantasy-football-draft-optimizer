@@ -384,10 +384,45 @@ app.post('/api/leagues/:id/dynasty/mode', async (c) => {
   }
 });
 
-app.post('/api/leagues/:id/auction/bid', async (c) => c.json({ error: 'Not implemented on edge' }, 501));
-app.put('/api/leagues/:id/auction/contract-rules', async (c) =>
-  c.json({ error: 'Not implemented on edge' }, 501),
-);
+app.post('/api/leagues/:id/auction/bid', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{
+    playerId: string;
+    amount: number;
+    rosterId?: string;
+    contractYears?: number;
+  }>();
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.placeAuctionBid(league.id, body);
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    if ('error' in result) return c.json({ error: result.error }, 400);
+    return c.json(result);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return c.json({ error: 'Bid failed', detail }, 500);
+  }
+});
+
+app.put('/api/leagues/:id/auction/contract-rules', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<Record<string, unknown>>();
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const saved = store.setContractRules(league.id, body as never);
+    if (!saved) return c.json({ error: 'League not found' }, 404);
+    return c.json(saved);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return c.json({ error: 'Could not update contract rules', detail }, 500);
+  }
+});
 app.post('/api/leagues/:id/calibration/propose', (c) =>
   c.json({ error: 'Not implemented on edge' }, 501),
 );
