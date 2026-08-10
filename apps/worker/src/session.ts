@@ -1,7 +1,7 @@
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { SignJWT } from 'jose';
 import type { DbUser } from './db/users.js';
-import type { Sql } from './db/client.js';
+import type { Db } from './db/client.js';
 import {
   findValidRefreshToken,
   generateRefreshToken,
@@ -54,14 +54,14 @@ function cookieSecure(env: Env): boolean {
   return env.AUTH_COOKIE_SECURE !== 'false';
 }
 
-export async function issueSession(c: CookieContext, sql: Sql, user: DbUser) {
+export async function issueSession(c: CookieContext, db: Db, user: DbUser) {
   const accessToken = await signAccessToken(c.env, {
     sub: user.id,
     email: user.email,
     displayName: user.displayName,
   });
   const refreshToken = generateRefreshToken();
-  await storeRefreshToken(sql, {
+  await storeRefreshToken(db, {
     userId: user.id,
     token: refreshToken,
     expiresAt: refreshExpiresAt(),
@@ -79,19 +79,19 @@ export async function issueSession(c: CookieContext, sql: Sql, user: DbUser) {
   };
 }
 
-export async function rotateRefreshSession(c: CookieContext, sql: Sql) {
+export async function rotateRefreshSession(c: CookieContext, db: Db) {
   const token = getCookie(c as never, REFRESH_COOKIE);
   if (!token) return null;
-  const existing = await findValidRefreshToken(sql, token);
+  const existing = await findValidRefreshToken(db, token);
   if (!existing) return null;
-  await revokeRefreshTokenById(sql, existing.id);
-  const user = await findUserById(sql, existing.userId);
+  await revokeRefreshTokenById(db, existing.id);
+  const user = await findUserById(db, existing.userId);
   if (!user) return null;
-  return issueSession(c, sql, user);
+  return issueSession(c, db, user);
 }
 
-export async function clearRefreshSession(c: CookieContext, sql: Sql) {
+export async function clearRefreshSession(c: CookieContext, db: Db) {
   const token = getCookie(c as never, REFRESH_COOKIE);
-  if (token) await revokeRefreshToken(sql, token);
+  if (token) await revokeRefreshToken(db, token);
   deleteCookie(c as never, REFRESH_COOKIE, { path: '/auth' });
 }

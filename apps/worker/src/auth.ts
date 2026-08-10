@@ -40,6 +40,6 @@ export function dbUnavailable(detail?: string) {
     error: 'Database unavailable',
     detail:
       detail ??
-      'Configure DATABASE_URL (Supabase pooler) or Hyperdrive binding HYPERDRIVE on draftlab-api.',
+      'Configure SUPABASE_SERVICE_ROLE_KEY (preferred on Workers Free) or Hyperdrive / DATABASE_URL on draftlab-api.',
   };
 }

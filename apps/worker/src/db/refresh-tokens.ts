@@ -1,4 +1,4 @@
-import type { Sql } from './client.js';
+import type { Db } from './client.js';
 
 function toHex(bytes: Uint8Array): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -19,22 +19,45 @@ export function generateRefreshToken(): string {
 }
 
 export async function storeRefreshToken(
-  sql: Sql,
+  db: Db,
   input: { userId: string; token: string; expiresAt: Date },
 ): Promise<void> {
   const tokenHash = await hashRefreshToken(input.token);
-  await sql`
+  if (db.kind === 'supabase') {
+    const { error } = await db.sb.from('refresh_tokens').insert({
+      user_id: input.userId,
+      token_hash: tokenHash,
+      expires_at: input.expiresAt.toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  await db.sql`
     INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
     VALUES (${input.userId}, ${tokenHash}, ${input.expiresAt.toISOString()})
   `;
 }
 
 export async function findValidRefreshToken(
-  sql: Sql,
+  db: Db,
   token: string,
 ): Promise<{ id: string; userId: string } | null> {
   const tokenHash = await hashRefreshToken(token);
-  const rows = await sql`
+  if (db.kind === 'supabase') {
+    const { data, error } = await db.sb
+      .from('refresh_tokens')
+      .select('id, user_id, expires_at, revoked_at')
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    if (new Date(String(data['expires_at'])).getTime() <= Date.now()) return null;
+    return { id: String(data['id']), userId: String(data['user_id']) };
+  }
+
+  const rows = await db.sql`
     SELECT id, user_id
     FROM refresh_tokens
     WHERE token_hash = ${tokenHash}
@@ -46,16 +69,36 @@ export async function findValidRefreshToken(
   return { id: String(row['id']), userId: String(row['user_id']) };
 }
 
-export async function revokeRefreshToken(sql: Sql, token: string): Promise<void> {
+export async function revokeRefreshToken(db: Db, token: string): Promise<void> {
   const tokenHash = await hashRefreshToken(token);
-  await sql`
+  if (db.kind === 'supabase') {
+    const { error } = await db.sb
+      .from('refresh_tokens')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  await db.sql`
     UPDATE refresh_tokens SET revoked_at = now()
     WHERE token_hash = ${tokenHash} AND revoked_at IS NULL
   `;
 }
 
-export async function revokeRefreshTokenById(sql: Sql, id: string): Promise<void> {
-  await sql`
+export async function revokeRefreshTokenById(db: Db, id: string): Promise<void> {
+  if (db.kind === 'supabase') {
+    const { error } = await db.sb
+      .from('refresh_tokens')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('revoked_at', null);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  await db.sql`
     UPDATE refresh_tokens SET revoked_at = now()
     WHERE id = ${id} AND revoked_at IS NULL
   `;

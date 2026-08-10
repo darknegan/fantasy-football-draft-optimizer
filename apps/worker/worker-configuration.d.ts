@@ -6,7 +6,9 @@ interface __BaseEnv_Env {
 	SERVICE_NAME: "draftlab-api";
 	JWT_ACCESS_SECRET?: string;
 	JWT_REFRESH_SECRET?: string;
-	/** Supabase transaction/session pooler URL when Hyperdrive is not bound. */
+	/** Preferred on Workers Free — Supabase PostgREST via service role (HTTPS fetch). */
+	SUPABASE_SERVICE_ROLE_KEY?: string;
+	/** Supabase pooler URL when Hyperdrive is not bound (often hits free subrequest limits). */
 	DATABASE_URL?: string;
 	/** Optional Cloudflare Hyperdrive binding to Supabase Postgres. */
 	HYPERDRIVE?: Hyperdrive;

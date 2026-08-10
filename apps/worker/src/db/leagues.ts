@@ -1,5 +1,5 @@
 import type { League, Platform, RosterShape, ScoringProfile, StrategyId } from '@draftlab/domain';
-import type { Sql } from './client.js';
+import type { Db } from './client.js';
 
 function mapLeague(row: Record<string, unknown>): League {
   return {
@@ -23,27 +23,100 @@ function mapLeague(row: Record<string, unknown>): League {
   };
 }
 
-export async function listLeaguesForUser(sql: Sql, userId: string): Promise<League[]> {
-  const rows = await sql`
+function leagueInsert(league: League) {
+  return {
+    id: league.id || undefined,
+    user_id: league.userId,
+    name: league.name,
+    platform: league.platform,
+    external_id: league.externalId ?? null,
+    type: league.type,
+    draft_type: league.draftType,
+    team_count: league.teamCount,
+    season: league.season,
+    scoring: league.scoring,
+    roster: league.roster,
+    draft_slot: league.draftSlot ?? null,
+    strategy_id: league.strategyId ?? null,
+    sleeper_draft_id: league.sleeperDraftId ?? null,
+    sleeper_user_id: league.sleeperUserId ?? null,
+    dynasty_mode: league.dynastyMode ?? null,
+    auction_budget: league.auctionBudget ?? null,
+  };
+}
+
+export async function listLeaguesForUser(db: Db, userId: string): Promise<League[]> {
+  if (db.kind === 'supabase') {
+    const { data, error } = await db.sb
+      .from('leagues')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => mapLeague(row as Record<string, unknown>));
+  }
+
+  const rows = await db.sql`
     SELECT * FROM leagues WHERE user_id = ${userId} ORDER BY created_at ASC
   `;
   return rows.map((row) => mapLeague(row as Record<string, unknown>));
 }
 
 export async function getLeagueForUser(
-  sql: Sql,
+  db: Db,
   userId: string,
   leagueId: string,
 ): Promise<League | null> {
-  const rows = await sql`
+  if (db.kind === 'supabase') {
+    const { data, error } = await db.sb
+      .from('leagues')
+      .select('*')
+      .eq('id', leagueId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapLeague(data as Record<string, unknown>) : null;
+  }
+
+  const rows = await db.sql`
     SELECT * FROM leagues WHERE id = ${leagueId} AND user_id = ${userId}
   `;
   return rows[0] ? mapLeague(rows[0] as Record<string, unknown>) : null;
 }
 
-export async function upsertLeagueRow(sql: Sql, league: League): Promise<League> {
+export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
   if (!league.userId) throw new Error('League.userId is required');
 
+  if (db.kind === 'supabase') {
+    if (league.platform === 'sleeper' && league.externalId) {
+      const { data: existing, error: findErr } = await db.sb
+        .from('leagues')
+        .select('id')
+        .eq('user_id', league.userId)
+        .eq('platform', 'sleeper')
+        .eq('external_id', league.externalId)
+        .maybeSingle();
+      if (findErr) throw new Error(findErr.message);
+      if (existing) {
+        const { data, error } = await db.sb
+          .from('leagues')
+          .update(leagueInsert({ ...league, id: String(existing['id']) }))
+          .eq('id', String(existing['id']))
+          .select('*')
+          .single();
+        if (error) throw new Error(error.message);
+        return mapLeague(data as Record<string, unknown>);
+      }
+    }
+
+    const payload = leagueInsert(league);
+    if (!payload.id) delete (payload as { id?: string }).id;
+    const { data, error } = await db.sb.from('leagues').insert(payload).select('*').single();
+    if (error) throw new Error(error.message);
+    return mapLeague(data as Record<string, unknown>);
+  }
+
+  const sql = db.sql;
   if (league.platform === 'sleeper' && league.externalId) {
     const existing = await sql`
       SELECT id FROM leagues
@@ -105,15 +178,35 @@ export async function upsertLeagueRow(sql: Sql, league: League): Promise<League>
 }
 
 export async function updateLeagueRow(
-  sql: Sql,
+  db: Db,
   userId: string,
   leagueId: string,
   patch: Partial<League>,
 ): Promise<League | null> {
-  const existing = await getLeagueForUser(sql, userId, leagueId);
+  const existing = await getLeagueForUser(db, userId, leagueId);
   if (!existing) return null;
   const next: League = { ...existing, ...patch, id: existing.id, userId: existing.userId };
-  const rows = await sql`
+
+  if (db.kind === 'supabase') {
+    const { data, error } = await db.sb
+      .from('leagues')
+      .update({
+        name: next.name,
+        strategy_id: next.strategyId ?? null,
+        draft_slot: next.draftSlot ?? null,
+        sleeper_draft_id: next.sleeperDraftId ?? null,
+        dynasty_mode: next.dynastyMode ?? null,
+        auction_budget: next.auctionBudget ?? null,
+      })
+      .eq('id', leagueId)
+      .eq('user_id', userId)
+      .select('*')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapLeague(data as Record<string, unknown>) : null;
+  }
+
+  const rows = await db.sql`
     UPDATE leagues SET
       name = ${next.name},
       strategy_id = ${next.strategyId ?? null},

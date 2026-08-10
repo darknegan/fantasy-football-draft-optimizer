@@ -20,8 +20,9 @@ import {
 } from '../../api/src/data/load-artifact.js';
 import { AppStore } from '../../api/src/services/store.js';
 import { dbUnavailable, requireAccessJwt, type WorkerUser } from './auth.js';
+import { dbHealthCheck } from './db/client.js';
 import { updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
-import { loadUserLeagues, ownedLeague, withSql } from './leagues.js';
+import { loadUserLeagues, ownedLeague, withDb } from './leagues.js';
 import { authRoutes } from './routes/auth.js';
 
 const { players: ARTIFACT_PLAYERS, skipped: artifactSkipped } = seedPlayersFromArtifact(
@@ -61,14 +62,18 @@ app.get('/api/health', async (c) => {
   }
 
   let database: 'up' | 'down' | 'unconfigured' = 'unconfigured';
-  if (c.env.HYPERDRIVE || c.env.DATABASE_URL) {
+  let databaseError: string | undefined;
+  const hasDb =
+    !!c.env.SUPABASE_SERVICE_ROLE_KEY || !!c.env.HYPERDRIVE || !!c.env.DATABASE_URL;
+  if (hasDb) {
     try {
-      await withSql(c.env, c.executionCtx, async (sql) => {
-        await sql`SELECT 1`;
+      await withDb(c.env, c.executionCtx, async (db) => {
+        await dbHealthCheck(db);
       });
       database = 'up';
-    } catch {
+    } catch (err) {
       database = 'down';
+      databaseError = err instanceof Error ? err.message : String(err);
     }
   }
 
@@ -78,6 +83,14 @@ app.get('/api/health', async (c) => {
     runtime: 'cloudflare-workers',
     deployedAt,
     database,
+    ...(databaseError ? { databaseError } : {}),
+    dbBinding: c.env.SUPABASE_SERVICE_ROLE_KEY
+      ? 'supabase_http'
+      : c.env.HYPERDRIVE
+        ? 'hyperdrive'
+        : c.env.DATABASE_URL
+          ? 'database_url'
+          : 'none',
   });
 });
 
@@ -99,8 +112,8 @@ app.get('/api/players/:id', (c) => {
 app.get('/api/leagues', async (c) => {
   const user = c.get('user');
   try {
-    const leagues = await withSql(c.env, c.executionCtx, (sql) =>
-      loadUserLeagues(store, sql, user.sub),
+    const leagues = await withDb(c.env, c.executionCtx, (db) =>
+      loadUserLeagues(store, db, user.sub),
     );
     return c.json(leagues);
   } catch (err) {
@@ -113,8 +126,8 @@ app.get('/api/sleeper/limiter', (c) => c.json(sharedSleeperLimiter.snapshot()));
 app.get('/api/leagues/:id', async (c) => {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     return c.json({ ...league, scoringSummary: scoringConfirmation(league) });
@@ -165,8 +178,8 @@ app.post('/api/leagues/manual', async (c) => {
   });
 
   try {
-    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
-      const persisted = await upsertLeagueRow(sql, league);
+    const saved = await withDb(c.env, c.executionCtx, async (db) => {
+      const persisted = await upsertLeagueRow(db, league);
       const inMemory = store.upsertLeague(persisted);
       store.recalculateForLeague(inMemory.id);
       return inMemory;
@@ -197,7 +210,7 @@ app.post('/api/leagues/sleeper/connect', async (c) => {
     const sleeperUser = await client.getUser(body.username);
     const season = body.season ?? new Date().getFullYear();
     const leagues = await client.getUserLeagues(sleeperUser.user_id, season);
-    const mapped = await withSql(c.env, c.executionCtx, async (sql) => {
+    const mapped = await withDb(c.env, c.executionCtx, async (db) => {
       const out = [];
       for (const l of leagues) {
         let draft = null;
@@ -212,7 +225,7 @@ app.post('/api/leagues/sleeper/connect', async (c) => {
         if (draft && sleeperUser.user_id) {
           league.draftSlot = resolveDraftSlot(draft, sleeperUser.user_id) ?? league.draftSlot;
         }
-        const persisted = await upsertLeagueRow(sql, league);
+        const persisted = await upsertLeagueRow(db, league);
         const saved = store.upsertLeague(persisted);
         store.recalculateForLeague(saved.id);
         out.push({
@@ -238,8 +251,8 @@ app.post('/api/leagues/sleeper/connect', async (c) => {
 app.post('/api/leagues/:id/recalculate', async (c) => {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const result = store.recalculateForLeague(league.id);
@@ -256,9 +269,9 @@ app.patch('/api/leagues/:id', async (c) => {
     Partial<{ strategyId: StrategyId; draftSlot: number; sleeperDraftId: string; name: string }>
   >();
   try {
-    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
-      if (!(await ownedLeague(store, sql, user.sub, c.req.param('id')))) return null;
-      const persisted = await updateLeagueRow(sql, user.sub, c.req.param('id'), body);
+    const saved = await withDb(c.env, c.executionCtx, async (db) => {
+      if (!(await ownedLeague(store, db, user.sub, c.req.param('id')))) return null;
+      const persisted = await updateLeagueRow(db, user.sub, c.req.param('id'), body);
       if (!persisted) return null;
       return store.updateLeague(c.req.param('id'), persisted);
     });
@@ -279,8 +292,8 @@ app.post('/api/leagues/:id/draft/picks', async (c) => {
     rosterId?: string;
   }>();
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'Draft not found' }, 404);
     const draft = store.getDraft(league.id);
@@ -306,8 +319,8 @@ app.post('/api/leagues/:id/draft/picks', async (c) => {
 app.post('/api/leagues/:id/draft/start-polling', async (c) => {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league?.sleeperDraftId) {
       return c.json({ error: 'League has no Sleeper draft id — use manual picks' }, 400);
@@ -322,8 +335,8 @@ app.post('/api/leagues/:id/draft/start-polling', async (c) => {
 app.post('/api/leagues/:id/draft/manual-mode', async (c) => {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'Draft not found' }, 404);
     const draft = store.patchDraft(league.id, {
@@ -341,8 +354,8 @@ app.post('/api/leagues/:id/flags', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{ playerId: string; kind: 'target' | 'avoid'; value?: boolean }>();
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     store.setFlag(league.id, body.playerId, body.kind, body.value ?? true);
@@ -356,9 +369,9 @@ app.post('/api/leagues/:id/dynasty/mode', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{ mode?: string }>();
   try {
-    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
-      if (!(await ownedLeague(store, sql, user.sub, c.req.param('id')))) return null;
-      const persisted = await updateLeagueRow(sql, user.sub, c.req.param('id'), {
+    const saved = await withDb(c.env, c.executionCtx, async (db) => {
+      if (!(await ownedLeague(store, db, user.sub, c.req.param('id')))) return null;
+      const persisted = await updateLeagueRow(db, user.sub, c.req.param('id'), {
         dynastyMode: body.mode as never,
       });
       if (!persisted) return null;
@@ -394,8 +407,8 @@ async function guardedGet(
 ) {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const result = handler(league.id);
@@ -434,8 +447,8 @@ app.post('/api/leagues/:id/simulate', async (c) => {
     seed?: number;
   }>();
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const result = store.simulate(league.id, body ?? {});
@@ -455,8 +468,8 @@ app.post('/api/leagues/:id/compare-strategies', async (c) => {
     seed?: number;
   }>();
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const result = store.compare(league.id, body ?? {});
@@ -475,8 +488,8 @@ app.get('/api/leagues/:id/auction/max-bid', async (c) => {
   const playerId = c.req.query('playerId');
   if (!playerId) return c.json({ error: 'playerId required' }, 400);
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const result = store.auctionMaxBid(league.id, playerId);
@@ -489,8 +502,8 @@ app.get('/api/leagues/:id/auction/max-bid', async (c) => {
 app.get('/api/leagues/:id/auction/nominations', async (c) => {
   const user = c.get('user');
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'League not found' }, 404);
     const state = store.auctionState(league.id);
@@ -505,8 +518,8 @@ app.post('/api/leagues/:id/auction/contract-preview', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{ playerId: string; annualSalary: number; years: number }>();
   try {
-    const league = await withSql(c.env, c.executionCtx, (sql) =>
-      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
     );
     if (!league) return c.json({ error: 'Player or league not found' }, 404);
     const result = store.auctionContractPreview(league.id, body);
