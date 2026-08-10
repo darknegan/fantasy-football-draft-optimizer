@@ -13,7 +13,8 @@ export function loadEnv(): void {
   ];
   for (const path of candidates) {
     if (existsSync(path)) {
-      config({ path, override: false });
+      // Prefer apps/api/.env over a stale exported shell DATABASE_URL.
+      config({ path, override: true });
       return;
     }
   }
