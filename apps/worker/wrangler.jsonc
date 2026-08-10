@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "draftlab-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "SERVICE_NAME": "draftlab-api"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "DRAFTLAB_KV",
+      "id": "c17fff5dd30b4102a61d2e4c11f5d101"
+    }
+  ]
+}

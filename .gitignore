@@ -16,6 +16,11 @@
 npm-debug.log
 yarn-error.log
 
+# Cloudflare / Wrangler
+**/.wrangler
+.dev.vars
+.mf
+
 # IDEs and editors
 .idea/
 .project

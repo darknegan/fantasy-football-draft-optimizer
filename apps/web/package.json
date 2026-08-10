@@ -5,9 +5,12 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 4200",
-    "build": "ng build",
+    "build": "node --use-system-ca ../../node_modules/@angular/cli/bin/ng.js build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "types": "wrangler types",
+    "dev:worker": "npm run build && wrangler dev",
+    "deploy": "npm run build && node --use-system-ca ../../node_modules/wrangler/bin/wrangler.js deploy"
   },
   "dependencies": {
     "@angular/common": "^21.2.0",
@@ -29,6 +32,7 @@
     "@angular/compiler-cli": "^21.2.0",
     "jsdom": "^28.0.0",
     "typescript": "~5.9.2",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "wrangler": "^4.90.1"
   }
 }
