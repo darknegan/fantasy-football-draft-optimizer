@@ -406,6 +406,7 @@ export class AppStore {
       drafted: draftedIds.has(s.player.id),
       target: targetSet.has(s.player.id),
       avoid: avoidSet.has(s.player.id),
+      projectedPoints: s.market.projectedPoints ?? null,
     })).sort((a, b) => {
       const ar = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
       const br = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
