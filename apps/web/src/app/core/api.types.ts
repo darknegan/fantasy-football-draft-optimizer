@@ -63,6 +63,8 @@ export interface BoardPlayer {
   drafted: boolean;
   target?: boolean;
   avoid?: boolean;
+  /** Season-long projected fantasy points when present on the seed artifact. */
+  projectedPoints?: number | null;
 }
 
 export interface ScoringSummary {

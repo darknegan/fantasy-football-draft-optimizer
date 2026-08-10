@@ -44,6 +44,8 @@ interface ArtifactPlayer {
   matched: boolean;
   /** Mechanical fallback for fseRank/espnProjectionRank. schema_version 3+; absent on older artifacts. */
   projected_rank?: number | null;
+  /** Season-long projected fantasy points. Present on current sleeperMCP artifacts. */
+  projected_points?: number | null;
   /** WR/RB only: rank among same-team, same-position teammates. schema_version 4+. */
   team_position_rank?: number | null;
   bio: ArtifactBio;
@@ -162,6 +164,7 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
         fseRank: null,
         espnProjectionRank: null,
         projectedRank: p.projected_rank ?? null,
+        projectedPoints: p.projected_points ?? null,
       },
     });
   }

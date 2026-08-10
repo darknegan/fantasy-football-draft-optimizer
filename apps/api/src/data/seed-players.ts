@@ -10,6 +10,8 @@ export interface SeedPlayer {
     espnProjectionRank: number | null;
     /** Mechanical fallback for fseRank/espnProjectionRank. See ValueInput.projectedRank. */
     projectedRank?: number | null;
+    /** Season-long projected fantasy points from the artifact, when available. */
+    projectedPoints?: number | null;
   };
   risk?: {
     careerGamesMissedRate?: number;
