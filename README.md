@@ -25,8 +25,8 @@ npm install
 npm run build:packages
 # Postgres (accounts + league ownership)
 docker compose up -d postgres   # or local Postgres with db/schema.sql applied
-cp apps/api/.env.example apps/api/.env   # set DATABASE_URL + JWT secrets
-export $(grep -v '^#' apps/api/.env | xargs)
+cp apps/api/.env.example apps/api/.env   # DATABASE_URL + JWT_* live here
+# The API loads apps/api/.env automatically (no manual export needed)
 npm run test:engines
 npm run test -w @draftlab/api
 npm run dev:api    # http://localhost:3001  (auth + durable leagues)

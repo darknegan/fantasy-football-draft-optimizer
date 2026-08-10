@@ -16,9 +16,7 @@ import { leagueRoutes } from './routes/leagues.js';
 import { strategyRoutes } from './routes/strategies.js';
 import { formatRoutes } from './routes/formats.js';
 import { authRoutes } from './routes/auth.js';
-
-const PORT = Number(process.env['PORT'] ?? 3001);
-const HOST = process.env['HOST'] ?? '0.0.0.0';
+import { loadEnv } from './load-env.js';
 
 function corsOrigins(): boolean | string[] {
   const raw = process.env['CORS_ORIGINS'] ?? 'http://localhost:4200';
@@ -45,9 +43,13 @@ async function maybeSeedDemoUser(pool: ReturnType<typeof getPool>, store: Return
 }
 
 async function main() {
+  loadEnv();
   requireEnv('DATABASE_URL');
   requireEnv('JWT_ACCESS_SECRET');
   requireEnv('JWT_REFRESH_SECRET');
+
+  const PORT = Number(process.env['PORT'] ?? 3001);
+  const HOST = process.env['HOST'] ?? '0.0.0.0';
 
   const pool = getPool();
   const store = createAppStore();
