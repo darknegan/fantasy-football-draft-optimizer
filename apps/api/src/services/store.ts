@@ -19,11 +19,7 @@ import {
   valueContract,
   vorpFromEvaluation,
 } from '@draftlab/auction-engine';
-import {
-  buildRecVsActual,
-  proposeCalibration,
-  recordOutcome,
-} from '@draftlab/calibration-engine';
+import { buildRecVsActual, proposeCalibration, recordOutcome } from '@draftlab/calibration-engine';
 import {
   applyDynastyModeToRecommendations,
   buildMultiYearCurve,
@@ -52,9 +48,43 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { SEED_PLAYERS } from '../data/seed-players.js';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadSeedPlayersFromArtifactFile } from '../data/load-artifact.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
+
+// Real player data from sleeperMCP's build_factors.py artifact (218 players as
+// of this writing), replacing the 12-player hand-authored fixture that used to
+// live here. seed-players.ts / seed-depth.ts are left in place — the golden
+// spot-check tests construct their own fixtures inline and never imported
+// SEED_PLAYERS — but nothing in the live app reads them anymore.
+const moduleDir = fileURLToPath(new URL('.', import.meta.url));
+const ARTIFACT_PATH =
+  process.env['SLEEPER_MCP_ARTIFACT_PATH'] ??
+  resolve(moduleDir, '../../../../../../sleeperMCP/artifacts/player_factors.json');
+
+if (!existsSync(ARTIFACT_PATH)) {
+  throw new Error(
+    `[store] sleeperMCP artifact not found at ${ARTIFACT_PATH}. Set SLEEPER_MCP_ARTIFACT_PATH ` +
+      `to point at it, or regenerate it: cd sleeperMCP && python tools/build_factors.py`,
+  );
+}
+
+const { players: SEED_PLAYERS, skipped: artifactSkipped } =
+  loadSeedPlayersFromArtifactFile(ARTIFACT_PATH);
+
+if (SEED_PLAYERS.length === 0) {
+  throw new Error(`[store] loaded 0 players from ${ARTIFACT_PATH} — every entry was skipped`);
+}
+if (artifactSkipped.length) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[store] ${artifactSkipped.length} artifact player(s) skipped (incomplete bio): ` +
+      artifactSkipped.map((s) => s.name).join(', '),
+  );
+}
 
 export class AppStore {
   private readonly evaluations = new Map<string, PlayerEvaluation>();
@@ -73,6 +103,7 @@ export class AppStore {
           adpRoundPick: seed.market.adpRoundPick,
           fseRank: seed.market.fseRank,
           espnProjectionRank: seed.market.espnProjectionRank,
+          projectedRank: seed.market.projectedRank,
           teamCount: 12,
         },
         risk: seed.risk,
@@ -269,6 +300,7 @@ export class AppStore {
           adpRoundPick: seed.market.adpRoundPick,
           fseRank: seed.market.fseRank,
           espnProjectionRank: seed.market.espnProjectionRank,
+          projectedRank: seed.market.projectedRank,
           teamCount: league.teamCount,
         },
         risk: seed.risk,
@@ -286,7 +318,11 @@ export class AppStore {
     const league = this.leagues.get(leagueId);
     const draft = this.drafts.get(leagueId);
     if (!league || !draft) return null;
-    const picks = picksFromEvents(draft.picks, draft.userRosterId, (id) => this.getPlayer(id)?.position ?? null);
+    const picks = picksFromEvents(
+      draft.picks,
+      draft.userRosterId,
+      (id) => this.getPlayer(id)?.position ?? null,
+    );
     return scoreAdherence(league.strategyId ?? 'balanced', picks);
   }
 
@@ -320,7 +356,8 @@ export class AppStore {
 
     const round = Math.floor((draft.currentPick - 1) / league.teamCount) + 1;
     const slotInfo = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
-    const nextUserPick = slotInfo.pickNumbers.find((n) => n >= draft.currentPick) ?? draft.currentPick;
+    const nextUserPick =
+      slotInfo.pickNumbers.find((n) => n >= draft.currentPick) ?? draft.currentPick;
     const picksUntilNext = Math.max(0, nextUserPick - draft.currentPick);
 
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
@@ -332,6 +369,8 @@ export class AppStore {
       picksUntilNext,
       userRoster,
       rosterShape: league.roster,
+      teamCount: league.teamCount,
+      scoring: league.scoring,
       available,
       targets: targetSet,
       avoids: avoidSet,
@@ -475,7 +514,13 @@ export class AppStore {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
     const strategyIds = (opts.strategyIds ??
-      (['balanced', 'hero_wr', 'double_hero_rb', 'elite_te', 'zero_rb'] as StrategyId[])) as StrategyId[];
+      ([
+        'balanced',
+        'hero_wr',
+        'double_hero_rb',
+        'elite_te',
+        'zero_rb',
+      ] as StrategyId[])) as StrategyId[];
     return compareStrategies({
       strategyIds,
       slot: league.draftSlot ?? 1,
@@ -501,6 +546,7 @@ export class AppStore {
         draftScore: evaluation.draftScore,
         ceilingScore: evaluation.ceiling.ceilingScore,
         provisional: evaluation.ceiling.provisional,
+        ceilingKnownFactors: evaluation.ceiling.knownFactors,
         adpRoundPick: evaluation.value.adpRoundPick,
         target: targetSet.has(s.player.id),
         avoid: avoidSet.has(s.player.id),
@@ -531,9 +577,7 @@ export class AppStore {
 
     // If no picks yet, seed a plausible starter set from top dynasty scores for the age curve demo.
     const rosterForAge =
-      userRoster.length > 0
-        ? userRoster
-        : SEED_PLAYERS.slice(0, 12).map((s) => s.player);
+      userRoster.length > 0 ? userRoster : SEED_PLAYERS.slice(0, 12).map((s) => s.player);
 
     const curves = SEED_PLAYERS.map((s) => {
       const evaluation = this.evaluations.get(s.player.id)!;
@@ -618,9 +662,14 @@ export class AppStore {
     const pool = this.auctionPool(leagueId);
     if (!pool) return null;
     const budgets = this.formats.auctionBudgets.get(leagueId)!;
-    const rules = this.formats.contractRules.get(leagueId) ?? pool.league.contractRules ?? DEFAULT_CONTRACT_RULES;
+    const rules =
+      this.formats.contractRules.get(leagueId) ??
+      pool.league.contractRules ??
+      DEFAULT_CONTRACT_RULES;
     const user = budgets.find((b) => b.rosterId === pool.draft.userRosterId)!;
-    const availableIds = new Set(pool.values.filter((v) => !pool.purchased.has(v.playerId)).map((v) => v.playerId));
+    const availableIds = new Set(
+      pool.values.filter((v) => !pool.purchased.has(v.playerId)).map((v) => v.playerId),
+    );
     const nominations = suggestNominations({
       values: pool.values,
       availableIds,
@@ -752,7 +801,9 @@ export class AppStore {
     const rows = buildRecVsActual(outcomes, (id) => this.getPlayer(id)?.name ?? null);
     const proposal =
       this.formats.calibration.get(leagueId) ??
-      (outcomes.length ? proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights) : null);
+      (outcomes.length
+        ? proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights)
+        : null);
     return {
       leagueId,
       outcomes,
@@ -766,13 +817,18 @@ export class AppStore {
   proposeLeagueCalibration(leagueId: string) {
     if (!this.leagues.get(leagueId)) return null;
     const outcomes = this.formats.outcomes.get(leagueId) ?? [];
-    const proposal = proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights);
+    const proposal = proposeCalibration(
+      outcomes,
+      this.formats.activeBands,
+      this.formats.activeWeights,
+    );
     this.formats.calibration.set(leagueId, proposal);
     return proposal;
   }
 
   applyLeagueCalibration(leagueId: string) {
-    const proposal = this.formats.calibration.get(leagueId) ?? this.proposeLeagueCalibration(leagueId);
+    const proposal =
+      this.formats.calibration.get(leagueId) ?? this.proposeLeagueCalibration(leagueId);
     if (!proposal) return null;
     this.formats.applyCalibration(proposal);
     const applied = { ...proposal, applied: true };
@@ -786,6 +842,7 @@ export class AppStore {
           adpRoundPick: seed.market.adpRoundPick,
           fseRank: seed.market.fseRank,
           espnProjectionRank: seed.market.espnProjectionRank,
+          projectedRank: seed.market.projectedRank,
           teamCount: this.leagues.get(leagueId)?.teamCount ?? 12,
         },
         risk: seed.risk,

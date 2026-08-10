@@ -15,7 +15,9 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
           </div>
         </div>
         <nav>
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+            >Dashboard</a
+          >
           <a routerLink="/leagues/connect" routerLinkActive="active">Connect</a>
           <a routerLink="/leagues/manual-setup" routerLinkActive="active">Manual Setup</a>
           <a routerLink="/leagues/demo-league/board" routerLinkActive="active">Player Board</a>
@@ -89,7 +91,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       padding: 0.65rem 0.75rem;
       border-radius: var(--dl-radius-sm);
       color: var(--dl-text-secondary);
-      transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+      transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
     }
     nav a:hover {
       background: var(--dl-surface-overlay);
@@ -143,20 +148,44 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     .content {
       padding: 1.5rem;
       animation: fade-up 0.45s ease both;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
     @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-live) 55%, transparent); }
-      70% { box-shadow: 0 0 0 8px transparent; }
-      100% { box-shadow: 0 0 0 0 transparent; }
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-live) 55%, transparent);
+      }
+      70% {
+        box-shadow: 0 0 0 8px transparent;
+      }
+      100% {
+        box-shadow: 0 0 0 0 transparent;
+      }
     }
     @keyframes fade-up {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     @media (max-width: 900px) {
-      .shell { grid-template-columns: 1fr; }
-      .sidebar { border-right: 0; border-bottom: 1px solid var(--dl-border-subtle); }
-      nav { flex-direction: row; flex-wrap: wrap; }
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--dl-border-subtle);
+      }
+      nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
     }
   `,
 })

@@ -55,9 +55,13 @@ export function gradeInjuryConcern(level: InjurySeverity): FactorGrade {
 export function gradeArchetypeFactor(archetype: ArchetypeId): FactorGrade {
   switch (archetype) {
     case 'PRIME_WR1':
+    case 'PRIME_RB1':
     case 'IN_THEIR_PRIME':
       return 'green';
     case 'PRIME_WR2':
+    case 'PRIME_RB2':
+      return 'yellow';
+    case 'PROVEN_BREAKOUT_CANDIDATE':
       return 'yellow';
     case 'BREAKOUT_CANDIDATE':
       return 'orange';
@@ -73,7 +77,10 @@ export function gradeFactor(
   input: FactorInput | undefined,
   bands: GradingBands,
 ): GradedFactor {
-  if (!input || (input.value === null && (input.categorical === null || input.categorical === undefined))) {
+  if (
+    !input ||
+    (input.value === null && (input.categorical === null || input.categorical === undefined))
+  ) {
     return {
       factorId: def.id,
       label: def.label,
@@ -86,7 +93,9 @@ export function gradeFactor(
   let grade: FactorGrade = 'unknown';
 
   if (def.categorical === 'secondaryTargetCompetition') {
-    grade = gradeSecondaryCompetition((input.categorical as SecondaryTargetCompetition) ?? 'unknown');
+    grade = gradeSecondaryCompetition(
+      (input.categorical as SecondaryTargetCompetition) ?? 'unknown',
+    );
   } else if (def.categorical === 'injuryConcern') {
     grade = gradeInjuryConcern((input.categorical as InjurySeverity) ?? 'some');
   } else if (def.categorical === 'archetypeGrade') {

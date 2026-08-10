@@ -1,6 +1,17 @@
-import type { ArchetypeId, ArchetypeRates, ArchetypeResult, Player, Position } from '@draftlab/domain';
+import type {
+  ArchetypeId,
+  ArchetypeRates,
+  ArchetypeResult,
+  FactorInput,
+  Player,
+  Position,
+} from '@draftlab/domain';
+import { getBenchmarkConfig } from './config/benchmarks.js';
 
-const RB_RATES: Record<'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'IN_THEIR_PRIME', ArchetypeRates> = {
+const RB_RATES: Record<
+  'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_RB1' | 'PRIME_RB2',
+  ArchetypeRates
+> = {
   BREAKOUT_CANDIDATE: {
     returnRate: 0.4286,
     injuryRate: 0.1786,
@@ -15,16 +26,40 @@ const RB_RATES: Record<'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'IN_THEIR_PRIME
     bustRate: 0.1667,
     fineRate: 0.2833,
   },
-  IN_THEIR_PRIME: {
+  // No dedicated bell-cow-vs-committee historical study yet — both tiers reuse the old
+  // undifferentiated IN_THEIR_PRIME rates as an interim stand-in (same pattern as
+  // PROVEN_BREAKOUT_CANDIDATE below). The archetype LABEL is still real and useful —
+  // team_position_rank distinguishes a true lead back from a committee piece — it's only
+  // the numeric EV that doesn't yet reflect a measured difference between them.
+  PRIME_RB1: {
     returnRate: 0.4615,
     injuryRate: 0.1538,
     boomRate: 0.2788,
     bustRate: 0.2019,
     fineRate: 0.1827,
   },
+  PRIME_RB2: {
+    returnRate: 0.4615,
+    injuryRate: 0.1538,
+    boomRate: 0.2788,
+    bustRate: 0.2019,
+    fineRate: 0.1827,
+  },
+  // No dedicated historical study yet for this sub-population — reuse BREAKOUT_CANDIDATE's
+  // empirical rates as an interim stand-in rather than falling through to NEUTRAL_RATES.
+  PROVEN_BREAKOUT_CANDIDATE: {
+    returnRate: 0.4286,
+    injuryRate: 0.1786,
+    boomRate: 0.1964,
+    bustRate: 0.1964,
+    fineRate: 0.1964,
+  },
 };
 
-const WR_RATES: Record<'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_WR1' | 'PRIME_WR2', ArchetypeRates> = {
+const WR_RATES: Record<
+  'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_WR1' | 'PRIME_WR2',
+  ArchetypeRates
+> = {
   BREAKOUT_CANDIDATE: {
     returnRate: 0.2727,
     injuryRate: 0.1591,
@@ -64,20 +99,73 @@ const NEUTRAL_RATES: ArchetypeRates = {
   fineRate: 0.23,
 };
 
+const PRIMARY_VOLUME_FACTOR: Partial<Record<Position, string>> = {
+  WR: 'targets',
+  RB: 'touches',
+};
+
+/**
+ * How much of the WR1/RB1 "lead option" rates a player earns, scaled by their own primary
+ * volume (targets/g for WR, touches/g for RB) against the position's real benchmark.
+ * teamPositionRank === 1 only means "biggest share on his own roster" — it says nothing
+ * about how big that share is. A low-volume leading receiver on a run-heavy offense (e.g.
+ * Khalil Shakir: team's #1 WR by target share, but well under the WR benchmark) shouldn't
+ * get the same elite-alpha boom/bust profile as a true target hog just for edging out
+ * weaker teammates. At/above benchmark: full WR1/RB1 credit. Below it: blend down toward
+ * WR2/RB2. No signal (factor missing): keep the old flat full-credit behavior.
+ */
+function volumeRatio(position: Position, factors: FactorInput[]): number {
+  const factorId = PRIMARY_VOLUME_FACTOR[position];
+  if (!factorId) return 1;
+  const value = factors.find((f) => f.factorId === factorId)?.value;
+  if (value == null) return 1;
+  const benchmark = getBenchmarkConfig(position).factors.find((f) => f.id === factorId)?.benchmark;
+  if (!benchmark) return 1;
+  return Math.max(0, Math.min(1, value / benchmark));
+}
+
+function blendRates(low: ArchetypeRates, high: ArchetypeRates, t: number): ArchetypeRates {
+  return {
+    returnRate: low.returnRate + t * (high.returnRate - low.returnRate),
+    injuryRate: low.injuryRate + t * (high.injuryRate - low.injuryRate),
+    boomRate: low.boomRate + t * (high.boomRate - low.boomRate),
+    bustRate: low.bustRate + t * (high.bustRate - low.bustRate),
+    fineRate: low.fineRate + t * (high.fineRate - low.fineRate),
+  };
+}
+
 export function computeArchetypeEv(rates: ArchetypeRates): number {
-  return 2 * rates.boomRate + 1 * rates.returnRate + 0 * rates.fineRate - 1 * rates.bustRate - 1.5 * rates.injuryRate;
+  return (
+    2 * rates.boomRate +
+    1 * rates.returnRate +
+    0 * rates.fineRate -
+    1 * rates.bustRate -
+    1.5 * rates.injuryRate
+  );
 }
 
 export function classifyRb(player: Player): ArchetypeId {
-  if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
+  if (player.seasonsInLeague <= 3) {
+    const finishCount = player.positionalTop12FinishCount;
+    if (finishCount === undefined) {
+      // No count on record — fall back to the boolean's coarse split (unchanged legacy
+      // behavior). true-with-no-count is treated as already established, same as before.
+      if (!player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
+    } else if (finishCount === 0) {
+      return 'BREAKOUT_CANDIDATE';
+    } else if (finishCount === 1) {
+      return 'PROVEN_BREAKOUT_CANDIDATE';
+    }
+    // finishCount >= 2 falls through — already entrenched, not a breakout.
+  }
   if (player.seasonsInLeague >= 7 || player.age >= 27) return 'TRUSTY_VETERAN';
-  return 'IN_THEIR_PRIME';
+  return player.teamPositionRank === 1 ? 'PRIME_RB1' : 'PRIME_RB2';
 }
 
 export function classifyWr(player: Player): ArchetypeId {
   if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
   if (player.seasonsInLeague >= 7 || player.age >= 28) return 'TRUSTY_VETERAN';
-  return player.isClearWr1 ? 'PRIME_WR1' : 'PRIME_WR2';
+  return player.teamPositionRank === 1 ? 'PRIME_WR1' : 'PRIME_WR2';
 }
 
 export function classifyTe(player: Player): ArchetypeId {
@@ -105,7 +193,17 @@ export function classifyArchetype(player: Player): ArchetypeId {
   }
 }
 
-function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
+function ratesFor(
+  position: Position,
+  archetype: ArchetypeId,
+  factors: FactorInput[],
+): ArchetypeRates {
+  if (position === 'RB' && archetype === 'PRIME_RB1') {
+    return blendRates(RB_RATES.PRIME_RB2, RB_RATES.PRIME_RB1, volumeRatio(position, factors));
+  }
+  if (position === 'WR' && archetype === 'PRIME_WR1') {
+    return blendRates(WR_RATES.PRIME_WR2, WR_RATES.PRIME_WR1, volumeRatio(position, factors));
+  }
   if (position === 'RB' && archetype in RB_RATES) {
     return RB_RATES[archetype as keyof typeof RB_RATES];
   }
@@ -115,9 +213,9 @@ function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
   return NEUTRAL_RATES;
 }
 
-export function evaluateArchetype(player: Player): ArchetypeResult {
+export function evaluateArchetype(player: Player, factors: FactorInput[] = []): ArchetypeResult {
   const archetype = classifyArchetype(player);
-  const rates = ratesFor(player.position, archetype);
+  const rates = ratesFor(player.position, archetype, factors);
   return {
     archetype,
     rates,

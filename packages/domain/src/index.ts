@@ -21,10 +21,13 @@ export type DraftSlotTier = 'S' | 'A' | 'B' | 'C' | 'unrated';
 
 export type ArchetypeId =
   | 'BREAKOUT_CANDIDATE'
+  | 'PROVEN_BREAKOUT_CANDIDATE'
   | 'TRUSTY_VETERAN'
   | 'IN_THEIR_PRIME'
   | 'PRIME_WR1'
-  | 'PRIME_WR2';
+  | 'PRIME_WR2'
+  | 'PRIME_RB1'
+  | 'PRIME_RB2';
 
 export type LeagueType = 'redraft' | 'dynasty' | 'auction';
 
@@ -77,7 +80,23 @@ export interface Player {
   draftRound: number | null;
   status: PlayerStatus;
   hasPositionalTop12Finish: boolean;
-  isClearWr1?: boolean;
+  /**
+   * RB-specific: number of prior top-12-at-position finishes, when known. Lets classifyRb
+   * distinguish a one-hit-wonder breakout (1) from an already-entrenched young RB1 (2+),
+   * which hasPositionalTop12Finish's plain boolean can't. Falls back to the boolean when
+   * undefined, so existing (unmigrated) data keeps its prior classification.
+   */
+  positionalTop12FinishCount?: number;
+  /**
+   * WR/RB only: rank among same-team, same-position teammates by the position's primary
+   * volume stat (targets for WR, touches for RB). 1 = the team's clear lead option — a
+   * true alpha receiver or a bell-cow back, not a committee/complementary piece. Powers
+   * classifyWr's PRIME_WR1/PRIME_WR2 split and classifyRb's PRIME_RB1/PRIME_RB2 split.
+   * QB has no analogous "QB2" within one offense; TE's version of this distinction is
+   * captured by computeCeilingScore's failsTargetShareGate instead, a different mechanism
+   * for the same idea.
+   */
+  teamPositionRank?: number | null;
 }
 
 export interface FactorInput {
@@ -85,6 +104,17 @@ export interface FactorInput {
   value: number | null;
   /** Override for categorical factors */
   categorical?: SecondaryTargetCompetition | InjurySeverity | ArchetypeId | null;
+  /**
+   * Where this value came from — e.g. 'measured', 'stale:team_changed',
+   * 'missing:no_prior_season', 'computed:classifyArchetype'. Optional and
+   * free-form: hand-authored fixtures have no provenance to report, and
+   * sleeperMCP's provenance vocabulary may grow without a type change here.
+   * Was the blocking gap for importing sleeperMCP's player_factors.json —
+   * without it, real gaps (a player who changed teams, a factor nobody has
+   * licensed) would land as ordinary numbers indistinguishable from a
+   * confident measurement.
+   */
+  provenance?: string;
 }
 
 export interface GradedFactor {
@@ -136,6 +166,10 @@ export interface ValueResult {
   blendedRank: number;
   fseRank: number | null;
   espnProjectionRank: number | null;
+  /** Mechanical fallback rank when neither licensed source is available. See ValueInput.projectedRank. */
+  projectedRank: number | null;
+  /** True when valueScore was computed off projectedRank rather than a licensed source — see evaluateValue. */
+  usedMechanicalFallback: boolean;
   adpRoundPick: string;
 }
 
@@ -277,7 +311,13 @@ export interface PlayerRecommendation {
   draftScore: number;
   strategyFit: number;
   rosterNeed: number;
+  /** Draft-pick-timing urgency: how few quality options remain before the user's next pick. */
   scarcityUrgency: number;
+  /** League-format positional scarcity: this position's starting-slot demand vs. its
+   * draftable pool in this league's actual roster/scoring settings, relative to the other
+   * three positions. A different, longer-lived signal than scarcityUrgency — doesn't change
+   * as the draft progresses, only as the league's format does. */
+  formatScarcity: number;
   reasons: RecommendationReason[];
   rank: number;
 }

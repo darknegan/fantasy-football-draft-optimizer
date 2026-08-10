@@ -2,11 +2,18 @@ import type {
   Player,
   PlayerEvaluation,
   PlayerRecommendation,
+  Position,
   RecommendationReason,
   RosterShape,
+  ScoringProfile,
   StrategyId,
 } from '@draftlab/domain';
-import { getRoundTarget, strategyFitMultiplier, strategyFitReason } from '@draftlab/strategy-engine';
+import {
+  getRoundTarget,
+  strategyFitMultiplier,
+  strategyFitReason,
+} from '@draftlab/strategy-engine';
+import { positionalFormatScarcity } from './format-scarcity.js';
 import { computePositionNeeds, rosterNeedMultiplier } from './roster-need.js';
 import { scarcityUrgencyMultiplier } from './scarcity.js';
 
@@ -16,7 +23,15 @@ export interface RecommendContext {
   picksUntilNext: number;
   userRoster: Player[];
   rosterShape: RosterShape;
+  /** Number of teams in the league — feeds positionalFormatScarcity's demand calculation.
+   * Unlike a plain demand/pool ratio, the nonlinear replacement-cliff curve it uses doesn't
+   * cancel this out, so a bigger league genuinely shifts which positions are scarcer. */
+  teamCount: number;
   available: Array<{ player: Player; evaluation: PlayerEvaluation }>;
+  /** League scoring settings — drives the TE-premium scarcity nudge. Omitted in
+   * contexts (mostly tests) that don't have a real league on hand; format
+   * scarcity from roster slots alone still applies. */
+  scoring?: ScoringProfile;
   targets?: Set<string> | string[];
   avoids?: Set<string> | string[];
 }
@@ -32,6 +47,11 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
   const targets = asSet(ctx.targets);
   const avoids = asSet(ctx.avoids);
 
+  const poolSizeByPosition = { QB: 0, RB: 0, WR: 0, TE: 0 } as Record<Position, number>;
+  for (const { player } of ctx.available) {
+    poolSizeByPosition[player.position] += 1;
+  }
+
   const scored = ctx.available.map(({ player, evaluation }) => {
     const strategyFit = strategyFitMultiplier(ctx.strategyId, ctx.round, player.position);
     const rosterNeed = rosterNeedMultiplier(player.position, needs);
@@ -40,8 +60,16 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
       position: player.position,
       picksUntilNext: ctx.picksUntilNext,
     });
+    const formatScarcity = positionalFormatScarcity(
+      player.position,
+      ctx.rosterShape,
+      ctx.teamCount,
+      poolSizeByPosition,
+      ctx.scoring,
+    );
 
-    let contextualScore = evaluation.draftScore * strategyFit * rosterNeed * scarcityUrgency;
+    let contextualScore =
+      evaluation.draftScore * strategyFit * rosterNeed * scarcityUrgency * formatScarcity;
 
     // TE target-share gate: hard cap regardless of other factors.
     if (evaluation.ceiling.failsTargetShareGate) {
@@ -98,6 +126,7 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
       strategyFit,
       rosterNeed,
       scarcityUrgency,
+      formatScarcity,
       reasons,
       rank: 0,
     } satisfies PlayerRecommendation;

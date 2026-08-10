@@ -8,6 +8,8 @@ export interface SeedPlayer {
     adpRoundPick: string;
     fseRank: number | null;
     espnProjectionRank: number | null;
+    /** Mechanical fallback for fseRank/espnProjectionRank. See ValueInput.projectedRank. */
+    projectedRank?: number | null;
   };
   risk?: {
     careerGamesMissedRate?: number;
@@ -60,7 +62,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     // Engineered to 9G / 1Y / 2R → CeilingScore 42
     factors: [
@@ -153,6 +155,10 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
+      // Computed from sleeperMCP's build_factors.py (real 2015-2025 PPR season-total
+      // ranking) — corrects an earlier hand-estimate of 2 that assumed his rookie year
+      // missed the top-12 cut. It didn't.
+      positionalTop12FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.02', fseRank: 3, espnProjectionRank: 4 },
@@ -189,7 +195,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 10.7 * 1.1 },
@@ -211,7 +217,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
     player: {
       id: 'ceedee-lamb',
       externalIds: { sleeper: '6786' },
-      name: "CeeDee Lamb",
+      name: 'CeeDee Lamb',
       team: 'DAL',
       position: 'WR',
       age: 26,
@@ -220,7 +226,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 11.2 },
@@ -281,6 +287,10 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 1,
       status: 'active',
       hasPositionalTop12Finish: true,
+      // Computed from sleeperMCP's build_factors.py (real 2015-2025 PPR season-total
+      // ranking) — corrects an earlier hand-estimate of 2 that assumed his rookie year
+      // missed the top-12 cut. It didn't.
+      positionalTop12FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.06', fseRank: 7, espnProjectionRank: 8 },
@@ -298,7 +308,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftRound: 4,
       status: 'active',
       hasPositionalTop12Finish: true,
-      isClearWr1: true,
+      teamPositionRank: 1,
     },
     factors: [
       { factorId: 'targets', value: 10.5 },

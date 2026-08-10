@@ -28,7 +28,15 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     </div>
 
     <div class="dl-panel table-wrap">
-      <p-table [value]="filtered()" [scrollable]="true" scrollHeight="70vh" styleClass="p-datatable-sm" [rowHover]="true">
+      <p-table
+        [value]="filtered()"
+        [scrollable]="true"
+        scrollHeight="flex"
+        [virtualScroll]="true"
+        [virtualScrollItemSize]="37"
+        styleClass="p-datatable-sm"
+        [rowHover]="true"
+      >
         <ng-template #header>
           <tr>
             <th style="width:3rem">#</th>
@@ -53,15 +61,19 @@ import type { BoardPlayer, Position } from '../../core/api.types';
           >
             <td class="dl-mono">{{ row.drafted ? '—' : (row.recommendation?.rank ?? i + 1) }}</td>
             <td>
-              <a [routerLink]="['/leagues', leagueId, 'board', row.player.id]">{{ row.player.name }}</a>
+              <a [routerLink]="['/leagues', leagueId, 'board', row.player.id]">{{
+                row.player.name
+              }}</a>
               <div class="team dl-muted">{{ row.player.team }}</div>
             </td>
-            <td><span class="pos" [class]="row.player.position">{{ row.player.position }}</span></td>
+            <td>
+              <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
+            </td>
             <td class="dl-mono">
               @if (row.evaluation.ceiling.provisional) {
                 <span class="prov" title="RB benchmarks not loaded">— · provisional</span>
               } @else {
-                {{ row.evaluation.ceiling.ceilingScore }}
+                {{ row.evaluation.ceiling.ceilingScore ?? '—' }}
               }
             </td>
             <td class="dl-mono">{{ row.evaluation.draftScore }}</td>
@@ -72,14 +84,31 @@ import type { BoardPlayer, Position } from '../../core/api.types';
               [class.pos-val]="row.evaluation.value.valueScore > 0"
               [class.neg-val]="row.evaluation.value.valueScore < 0"
             >
-              {{ row.evaluation.value.valueScore > 0 ? '+' : '' }}{{ row.evaluation.value.valueScore }}
+              {{ row.evaluation.value.valueScore > 0 ? '+' : ''
+              }}{{ row.evaluation.value.valueScore }}
             </td>
             <td class="dl-mono">{{ row.evaluation.risk.riskProfile }}</td>
             <td class="dl-mono">{{ row.evaluation.value.adpRoundPick }}</td>
             <td>
               <div class="flags">
-                <button type="button" class="flag-btn" [class.on]="row.target" (click)="toggle(row, 'target')" title="Target">T</button>
-                <button type="button" class="flag-btn avoid" [class.on]="row.avoid" (click)="toggle(row, 'avoid')" title="Avoid">A</button>
+                <button
+                  type="button"
+                  class="flag-btn"
+                  [class.on]="row.target"
+                  (click)="toggle(row, 'target')"
+                  title="Target"
+                >
+                  T
+                </button>
+                <button
+                  type="button"
+                  class="flag-btn avoid"
+                  [class.on]="row.avoid"
+                  (click)="toggle(row, 'avoid')"
+                  title="Avoid"
+                >
+                  A
+                </button>
               </div>
             </td>
           </tr>
@@ -88,28 +117,97 @@ import type { BoardPlayer, Position } from '../../core/api.types';
     </div>
   `,
   styles: `
-    .head { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; flex-wrap: wrap; }
-    h1 { margin: 0 0 0.25rem; }
-    .dl-muted a { color: var(--dl-accent); margin-left: 0.35rem; }
-    .table-wrap { overflow: hidden; }
-    a { color: var(--dl-text-primary); font-weight: 600; }
-    a:hover { color: var(--dl-accent); }
-    .team { font-size: 0.75rem; }
-    .accent { color: var(--dl-accent); font-weight: 600; }
-    .prov { color: var(--dl-text-tertiary); font-size: 0.8rem; }
-    .small { font-size: 0.8rem; color: var(--dl-text-secondary); }
-    .pos-val { color: var(--dl-grade-green); }
-    .neg-val { color: var(--dl-grade-red); }
-    tr.dim { opacity: 0.4; }
-    tr.is-target td:first-child { box-shadow: inset 3px 0 0 var(--dl-accent); }
-    tr.is-avoid td:first-child { box-shadow: inset 3px 0 0 var(--dl-grade-red); }
-    .flags { display: flex; gap: 0.3rem; }
-    .flag-btn {
-      width: 1.6rem; height: 1.6rem; border-radius: 4px; border: 1px solid var(--dl-border-strong);
-      background: transparent; color: var(--dl-text-tertiary); cursor: pointer; font-weight: 700; font-size: 0.7rem;
+    :host {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
     }
-    .flag-btn.on { background: var(--dl-accent-dim); color: var(--dl-accent); border-color: var(--dl-accent); }
-    .flag-btn.avoid.on { background: var(--dl-grade-red-fill); color: var(--dl-grade-red); border-color: var(--dl-grade-red); }
+    .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: end;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+    h1 {
+      margin: 0 0 0.25rem;
+    }
+    .dl-muted a {
+      color: var(--dl-accent);
+      margin-left: 0.35rem;
+    }
+    .table-wrap {
+      overflow: hidden;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    a {
+      color: var(--dl-text-primary);
+      font-weight: 600;
+    }
+    a:hover {
+      color: var(--dl-accent);
+    }
+    .team {
+      font-size: 0.75rem;
+    }
+    .accent {
+      color: var(--dl-accent);
+      font-weight: 600;
+    }
+    .prov {
+      color: var(--dl-text-tertiary);
+      font-size: 0.8rem;
+    }
+    .small {
+      font-size: 0.8rem;
+      color: var(--dl-text-secondary);
+    }
+    .pos-val {
+      color: var(--dl-grade-green);
+    }
+    .neg-val {
+      color: var(--dl-grade-red);
+    }
+    tr.dim {
+      opacity: 0.4;
+    }
+    tr.is-target td:first-child {
+      box-shadow: inset 3px 0 0 var(--dl-accent);
+    }
+    tr.is-avoid td:first-child {
+      box-shadow: inset 3px 0 0 var(--dl-grade-red);
+    }
+    .flags {
+      display: flex;
+      gap: 0.3rem;
+    }
+    .flag-btn {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 4px;
+      border: 1px solid var(--dl-border-strong);
+      background: transparent;
+      color: var(--dl-text-tertiary);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.7rem;
+    }
+    .flag-btn.on {
+      background: var(--dl-accent-dim);
+      color: var(--dl-accent);
+      border-color: var(--dl-accent);
+    }
+    .flag-btn.avoid.on {
+      background: var(--dl-grade-red-fill);
+      color: var(--dl-grade-red);
+      border-color: var(--dl-grade-red);
+    }
   `,
 })
 export class BoardComponent implements OnInit {
@@ -147,6 +245,9 @@ export class BoardComponent implements OnInit {
   }
 
   formatArchetype(a: string) {
-    return a.replaceAll('_', ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+    return a
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replace(/^\w/, (c) => c.toUpperCase());
   }
 }

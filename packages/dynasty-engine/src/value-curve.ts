@@ -1,4 +1,10 @@
-import type { ArchetypeId, MultiYearCurve, Player, PlayerEvaluation, Position } from '@draftlab/domain';
+import type {
+  ArchetypeId,
+  MultiYearCurve,
+  Player,
+  PlayerEvaluation,
+  Position,
+} from '@draftlab/domain';
 
 /** Position peak-age centers used for multi-year decay/growth. */
 const PEAK_AGE: Record<Position, number> = {
@@ -26,9 +32,16 @@ const PRE_PEAK_GROWTH: Record<Position, number> = {
 
 const ARCHETYPE_ASSET_BIAS: Record<ArchetypeId, number> = {
   BREAKOUT_CANDIDATE: 1.15,
+  // Interim estimate (de-risked vs. an unproven breakout, but not yet an established
+  // IN_THEIR_PRIME asset) — no dedicated dynasty study for this split yet.
+  PROVEN_BREAKOUT_CANDIDATE: 1.18,
   IN_THEIR_PRIME: 1.05,
   PRIME_WR1: 1.12,
   PRIME_WR2: 1.05,
+  // Same premium as the WR1/WR2 split, by analogy — no dedicated dynasty study for a
+  // bell-cow-vs-committee RB split yet, same caveat as their EV rates in archetype.ts.
+  PRIME_RB1: 1.12,
+  PRIME_RB2: 1.05,
   TRUSTY_VETERAN: 0.78,
 };
 

@@ -12,7 +12,8 @@ import type { BoardPlayer, League } from '../../core/api.types';
         <p class="eyebrow">DraftLab</p>
         <h1>Build the board. Stick the plan. Win the draft.</h1>
         <p class="lede">
-          Factor-graded player evaluation, nine research-backed strategies, and a live draft room that re-ranks as picks land.
+          Factor-graded player evaluation, nine research-backed strategies, and a live draft room
+          that re-ranks as picks land.
         </p>
         <div class="cta">
           <a class="btn primary" routerLink="/leagues/demo-league/board">Open player board</a>
@@ -43,7 +44,10 @@ import type { BoardPlayer, League } from '../../core/api.types';
           <a class="league" [routerLink]="['/leagues', league.id, 'board']">
             <div>
               <strong>{{ league.name }}</strong>
-              <div class="dl-muted">{{ league.teamCount }}-team · {{ league.platform }} · slot {{ league.draftSlot ?? '—' }}</div>
+              <div class="dl-muted">
+                {{ league.teamCount }}-team · {{ league.platform }} · slot
+                {{ league.draftSlot ?? '—' }}
+              </div>
             </div>
             <span class="chev">→</span>
           </a>
@@ -61,7 +65,7 @@ import type { BoardPlayer, League } from '../../core/api.types';
                 @if (row.evaluation.ceiling.provisional) {
                   —
                 } @else {
-                  {{ row.evaluation.ceiling.ceilingScore }}
+                  {{ row.evaluation.ceiling.ceilingScore ?? '—' }}
                 }
               </span>
             </a>
@@ -98,35 +102,94 @@ import type { BoardPlayer, League } from '../../core/api.types';
       max-width: 46ch;
       line-height: 1.5;
     }
-    .cta { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; }
+    .cta {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
     .btn {
       padding: 0.7rem 1rem;
       border-radius: var(--dl-radius-sm);
       border: 1px solid var(--dl-border-strong);
       font-weight: 600;
-      transition: transform 0.15s ease, background 0.15s ease;
+      transition:
+        transform 0.15s ease,
+        background 0.15s ease;
     }
-    .btn:hover { transform: translateY(-1px); }
-    .btn.primary { background: var(--dl-accent); color: var(--dl-text-inverse); border-color: var(--dl-accent); }
-    .btn.ghost { background: transparent; color: var(--dl-text-primary); }
-    .hero-panel { padding: 1.25rem; display: grid; gap: 1rem; }
-    .stat .label { display: block; color: var(--dl-text-tertiary); font-size: 0.75rem; margin-bottom: 0.25rem; }
-    .stat .value { font-weight: 600; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .card { padding: 1rem 1.1rem; }
-    h2 { margin: 0 0 0.75rem; font-size: 1rem; }
-    .league, .row {
-      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-      padding: 0.75rem 0; border-top: 1px solid var(--dl-border-subtle);
+    .btn:hover {
+      transform: translateY(-1px);
     }
-    .league:first-of-type, .row:first-child { border-top: 0; }
-    .rows { display: flex; flex-direction: column; }
-    .row .name { flex: 1; }
-    .row .score { color: var(--dl-accent); font-weight: 600; }
-    .chev { color: var(--dl-text-tertiary); }
+    .btn.primary {
+      background: var(--dl-accent);
+      color: var(--dl-text-inverse);
+      border-color: var(--dl-accent);
+    }
+    .btn.ghost {
+      background: transparent;
+      color: var(--dl-text-primary);
+    }
+    .hero-panel {
+      padding: 1.25rem;
+      display: grid;
+      gap: 1rem;
+    }
+    .stat .label {
+      display: block;
+      color: var(--dl-text-tertiary);
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .stat .value {
+      font-weight: 600;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .card {
+      padding: 1rem 1.1rem;
+    }
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+    }
+    .league,
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-top: 1px solid var(--dl-border-subtle);
+    }
+    .league:first-of-type,
+    .row:first-child {
+      border-top: 0;
+    }
+    .rows {
+      display: flex;
+      flex-direction: column;
+    }
+    .row .name {
+      flex: 1;
+    }
+    .row .score {
+      color: var(--dl-accent);
+      font-weight: 600;
+    }
+    .chev {
+      color: var(--dl-text-tertiary);
+    }
     @media (max-width: 900px) {
-      .hero, .grid { grid-template-columns: 1fr; }
-      h1 { max-width: none; }
+      .hero,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        max-width: none;
+      }
     }
   `,
 })
@@ -137,6 +200,8 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.api.leagues().subscribe((l) => this.leagues.set(l));
-    this.api.board('demo-league').subscribe((b) => this.top.set(b.filter((x) => !x.drafted).slice(0, 6)));
+    this.api
+      .board('demo-league')
+      .subscribe((b) => this.top.set(b.filter((x) => !x.drafted).slice(0, 6)));
   }
 }

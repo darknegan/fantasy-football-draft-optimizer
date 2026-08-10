@@ -1,9 +1,4 @@
-import type {
-  DraftScoreWeights,
-  FactorInput,
-  Player,
-  PlayerEvaluation,
-} from '@draftlab/domain';
+import type { DraftScoreWeights, FactorInput, Player, PlayerEvaluation } from '@draftlab/domain';
 import { evaluateArchetype } from './archetype.js';
 import { computeCeilingScore, type CeilingOptions } from './ceiling.js';
 import { computeDraftScore, DEFAULT_WEIGHTS } from './draft-score.js';
@@ -21,11 +16,18 @@ export interface EvaluatePlayerInput {
 
 export function evaluatePlayer(input: EvaluatePlayerInput): PlayerEvaluation {
   const ceiling = computeCeilingScore(input.player.position, input.factors, input.ceilingOptions);
-  const archetype = evaluateArchetype(input.player);
+  const archetype = evaluateArchetype(input.player, input.factors);
   const risk = evaluateRisk(input.player, archetype, input.risk);
   const value = evaluateValue(input.value);
   const weights = input.weights ?? DEFAULT_WEIGHTS;
-  const draftScore = computeDraftScore(ceiling, archetype, risk, value, weights);
+  const draftScore = computeDraftScore(
+    ceiling,
+    archetype,
+    risk,
+    value,
+    input.player.position,
+    weights,
+  );
 
   return {
     playerId: input.player.id,

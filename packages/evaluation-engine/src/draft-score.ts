@@ -1,5 +1,12 @@
-import type { CeilingResult, DraftScoreWeights, ValueResult, RiskResult, ArchetypeResult } from '@draftlab/domain';
-import { CEILING_MAX, CEILING_MIN } from './config/grade-weights.js';
+import type {
+  CeilingResult,
+  DraftScoreWeights,
+  ValueResult,
+  RiskResult,
+  ArchetypeResult,
+  Position,
+} from '@draftlab/domain';
+import { CEILING_RANGE } from './config/grade-weights.js';
 
 export const DEFAULT_WEIGHTS: DraftScoreWeights = {
   ceiling: 0.4,
@@ -8,10 +15,17 @@ export const DEFAULT_WEIGHTS: DraftScoreWeights = {
   risk: 0.15,
 };
 
-/** Normalise CeilingScore from [-36, 60] → [0, 100]. */
-export function normaliseCeiling(score: number | null): number {
+/**
+ * Normalise CeilingScore to [0, 100], scaled against what's actually
+ * achievable for this position today (see CEILING_RANGE) rather than one
+ * global range every position is assumed to reach. Positions differ in how
+ * many of their factors are currently sourced, and that's a data-coverage
+ * fact, not a signal that the position itself is weaker.
+ */
+export function normaliseCeiling(score: number | null, position: Position): number {
   if (score == null) return 50; // provisional / unknown — neutral, not punitive
-  return ((score - CEILING_MIN) / (CEILING_MAX - CEILING_MIN)) * 100;
+  const { min, max } = CEILING_RANGE[position];
+  return ((score - min) / (max - min)) * 100;
 }
 
 /** ArchetypeEV roughly spans [-0.5, 1.0]; map to 0–100. */
@@ -31,6 +45,7 @@ export function computeDraftScore(
   archetype: ArchetypeResult,
   risk: RiskResult,
   value: ValueResult,
+  position: Position,
   weights: DraftScoreWeights = DEFAULT_WEIGHTS,
 ): number {
   // For provisional RB (no ceiling), redistribute ceiling weight into archetype + risk.
@@ -47,7 +62,7 @@ export function computeDraftScore(
 
   const total = w.ceiling + w.archetype + w.value + w.risk;
   const score =
-    (w.ceiling / total) * normaliseCeiling(ceiling.ceilingScore) +
+    (w.ceiling / total) * normaliseCeiling(ceiling.ceilingScore, position) +
     (w.archetype / total) * normaliseArchetypeEv(archetype.archetypeEv) +
     (w.value / total) * normaliseValue(value.valueScore) +
     (w.risk / total) * (100 - risk.riskProfile);

@@ -132,7 +132,10 @@ export interface DraftRecap {
   leagueId: string;
   strategyId: string;
   adherence: AdherenceResult;
-  rosterByPosition: Record<string, Array<{ id: string; name: string; draftScore: number; pickNumber: number }>>;
+  rosterByPosition: Record<
+    string,
+    Array<{ id: string; name: string; draftScore: number; pickNumber: number }>
+  >;
   meanDraftScore: number;
   bestValue: { id: string; name: string; valueScore: number; pickNumber: number } | null;
   worstValue: { id: string; name: string; valueScore: number; pickNumber: number } | null;
@@ -167,7 +170,25 @@ export interface CompareStrategiesResult {
   slot: number;
   iterations: number;
   results: StrategySimResult[];
-  ranking: Array<{ strategyId: string; meanRosterScore: number; topThirdRate: number; rank: number }>;
+  ranking: Array<{
+    strategyId: string;
+    meanRosterScore: number;
+    topThirdRate: number;
+    rank: number;
+  }>;
+}
+
+export interface CheatSheetPlayerRow {
+  id: string;
+  name: string;
+  position: Position;
+  draftScore: number;
+  ceilingScore: number | null;
+  provisional: boolean;
+  ceilingKnownFactors: number;
+  adpRoundPick: string;
+  target?: boolean;
+  avoid?: boolean;
 }
 
 export interface CheatSheetGroup {
@@ -175,18 +196,10 @@ export interface CheatSheetGroup {
   tiers: Array<{
     tier: string;
     label: string;
-    players: Array<{
-      id: string;
-      name: string;
-      position: Position;
-      draftScore: number;
-      ceilingScore: number | null;
-      provisional: boolean;
-      adpRoundPick: string;
-      target?: boolean;
-      avoid?: boolean;
-    }>;
+    players: CheatSheetPlayerRow[];
   }>;
+  /** No measured production at all (usually a rookie/backup) — excluded from S-D tiers. */
+  unranked: CheatSheetPlayerRow[];
 }
 
 export type DynastyMode = 'contend' | 'rebuild' | 'neutral';
@@ -268,7 +281,13 @@ export interface AuctionState {
     inflatedValue: number;
     vorpShare: number;
   }>;
-  nominations: Array<{ playerId: string; name: string; reason: string; priority: number; kind: string }>;
+  nominations: Array<{
+    playerId: string;
+    name: string;
+    reason: string;
+    priority: number;
+    kind: string;
+  }>;
   userBudget: AuctionState['budgets'][number];
 }
 
@@ -285,7 +304,12 @@ export interface ContractValuation {
   years: number;
   annualSalary: number;
   totalSalary: number;
-  yearProjections: Array<{ yearOffset: number; projectedValue: number; salary: number; surplus: number }>;
+  yearProjections: Array<{
+    yearOffset: number;
+    projectedValue: number;
+    salary: number;
+    surplus: number;
+  }>;
   totalSurplus: number;
   deadCapOnRelease: number;
   note: string;

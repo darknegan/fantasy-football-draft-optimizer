@@ -37,7 +37,12 @@ function stubEval(playerId: string, draftScore: number, failsGate = false): Play
     risk: {
       riskProfile: 20,
       expectedGamesMissed: 2,
-      components: { careerMissedRate: 0.1, archetypeInjury: 0.15, ageCurvePenalty: 0, recentSeriousInjury: 0 },
+      components: {
+        careerMissedRate: 0.1,
+        archetypeInjury: 0.15,
+        ageCurvePenalty: 0,
+        recentSeriousInjury: 0,
+      },
     },
     value: {
       valueScore: 10,
@@ -45,6 +50,8 @@ function stubEval(playerId: string, draftScore: number, failsGate = false): Play
       blendedRank: 15,
       fseRank: 15,
       espnProjectionRank: 18,
+      projectedRank: null,
+      usedMechanicalFallback: false,
       adpRoundPick: '2.08',
     },
     draftScore,
@@ -73,6 +80,7 @@ describe('recommendPlayers', () => {
       picksUntilNext: 11,
       userRoster: [],
       rosterShape: shape,
+      teamCount: 12,
       available: [
         { player: te, evaluation: stubEval('te1', 70) },
         { player: wr, evaluation: stubEval('wr1', 70) },
@@ -93,6 +101,7 @@ describe('recommendPlayers', () => {
       picksUntilNext: 5,
       userRoster: [],
       rosterShape: shape,
+      teamCount: 12,
       available: [{ player: te, evaluation: stubEval('te_gate', 80, true) }],
     });
     expect(recs[0]?.reasons.some((r) => r.code === 'te_target_share_gate')).toBe(true);
