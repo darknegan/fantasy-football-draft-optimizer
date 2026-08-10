@@ -44,6 +44,16 @@ npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftla
 - Leagues, strategy, live draft, auction, dynasty, and calibration are scoped to the signed-in user
 - Optional demos: `SEED_DEMO_USER=true` seeds `demo@draftlab.local` with three owned leagues
 
+### Troubleshooting register (`ECONNREFUSED`)
+
+You need **both** processes running, plus Postgres:
+
+1. `docker compose up -d postgres` (or any Postgres matching `DATABASE_URL` in `apps/api/.env`)
+2. `npm run dev:api` — must listen on `:3001` (web proxies `/auth` here)
+3. `npm run dev:web` — `:4200`
+
+If Postgres is down, `/api/health` reports `"database":"down"` and auth returns **503** with a clear message instead of a bare `ECONNREFUSED`.
+
 ## Verified model fixtures
 
 Unit tests in `@draftlab/evaluation-engine` reproduce spreadsheet CeilingScores:

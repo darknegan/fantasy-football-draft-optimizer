@@ -4,7 +4,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import { createAppStore } from './create-store.js';
-import { getPool, requireEnv } from './db/pool.js';
+import { assertDbReady, getPool, isDbConnectionError, requireEnv } from './db/pool.js';
 import { createUser, findUserByEmail } from './db/users.js';
 import { upsertLeagueRow } from './db/leagues.js';
 import { hashPassword } from './auth/password.js';
@@ -52,6 +52,7 @@ async function main() {
   const HOST = process.env['HOST'] ?? '0.0.0.0';
 
   const pool = getPool();
+  await assertDbReady(pool);
   const store = createAppStore();
   await maybeSeedDemoUser(pool, store);
 
@@ -67,6 +68,27 @@ async function main() {
   await app.register(websocket);
   await registerAuthDecorators(app);
 
+  app.setErrorHandler((err, _req, reply) => {
+    if (isDbConnectionError(err)) {
+      app.log.error(err);
+      return reply.code(503).send({
+        error: 'Database unavailable',
+        detail:
+          'Postgres refused the connection. Start it with `docker compose up -d postgres` ' +
+          'and confirm DATABASE_URL in apps/api/.env.',
+      });
+    }
+    app.log.error(err);
+    const statusCode =
+      typeof err === 'object' && err && 'statusCode' in err && typeof err.statusCode === 'number'
+        ? err.statusCode
+        : 500;
+    return reply.code(statusCode).send({
+      error: statusCode >= 500 ? 'Internal Server Error' : (err as Error).message,
+      message: (err as Error).message,
+    });
+  });
+
   const sockets = new Map<
     string,
     Set<{ readyState: number; OPEN: number; send: (data: string) => void; userId?: string }>
@@ -81,7 +103,14 @@ async function main() {
     }
   });
 
-  app.get('/api/health', async () => ({ ok: true, service: 'draftlab-api' }));
+  app.get('/api/health', async () => {
+    try {
+      await pool.query('SELECT 1');
+      return { ok: true, service: 'draftlab-api', database: 'up' };
+    } catch {
+      return { ok: false, service: 'draftlab-api', database: 'down' };
+    }
+  });
 
   await authRoutes(app, pool);
   await playerRoutes(app, store);
