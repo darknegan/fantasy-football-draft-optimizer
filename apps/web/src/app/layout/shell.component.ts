@@ -1,29 +1,85 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ActiveLeagueService } from '../core/active-league.service';
 import { ApiService } from '../core/api.service';
+import type { League } from '../core/api.types';
 import { AuthService } from '../core/auth.service';
+
+interface NavItem {
+  label: string;
+  icon: string;
+  link: string | string[];
+  exact?: boolean;
+  requiresLeague?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
+  { match: /^\/$/, title: 'Dashboard' },
+  { match: /\/leagues\/connect$/, title: 'Connections' },
+  { match: /\/leagues\/manual-setup$/, title: 'Manual Setup' },
+  { match: /\/strategy$/, title: 'Strategy Planner' },
+  { match: /\/cheat-sheet$/, title: 'Cheat Sheet' },
+  { match: /\/board(\/|$)/, title: 'Player Board' },
+  { match: /\/draft$/, title: 'Live Draft Room' },
+  { match: /\/auction$/, title: 'Auction Room' },
+  { match: /\/roster$/, title: 'Roster & Dynasty' },
+  { match: /\/recap$/, title: 'Recap' },
+  { match: /\/calibration$/, title: 'Calibration' },
+  { match: /\/scoring$/, title: 'Scoring' },
+];
 
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="shell dl-dark">
-      <aside class="sidebar">
+    <div class="shell dl-dark" [class.nav-open]="navOpen()">
+      <button
+        type="button"
+        class="backdrop"
+        aria-label="Close navigation"
+        tabindex="-1"
+        (click)="closeNav()"
+      ></button>
+
+      <aside
+        id="app-sidebar"
+        class="sidebar"
+        [attr.aria-hidden]="isCompact() && !navOpen() ? 'true' : null"
+      >
         <div class="brand">
-          <span class="mark"></span>
-          <div>
-            <div class="name">DraftLab</div>
-            <div class="tag">Draft Optimizer</div>
-          </div>
+          <span class="mark" aria-hidden="true">D</span>
+          <div class="name">DraftLab</div>
         </div>
 
         @if (active.leagues().length) {
-          <label class="switcher">
-            <span>ACTIVE LEAGUE</span>
+          <label class="league-switcher">
+            <span class="sw-label">ACTIVE LEAGUE</span>
+            <span class="sw-name">
+              {{ active.selected()?.name ?? 'Select league' }}
+              <span class="chev" aria-hidden="true">▾</span>
+            </span>
+            @if (leagueMeta(); as meta) {
+              <span class="sw-meta">{{ meta }}</span>
+            }
             <select
               [value]="active.selectedId() ?? ''"
               (change)="onSelectLeague($event)"
+              aria-label="Active league"
             >
               @for (league of active.leagues(); track league.id) {
                 <option [value]="league.id">{{ league.name }}</option>
@@ -32,212 +88,247 @@ import { AuthService } from '../core/auth.service';
           </label>
         }
 
-        <nav>
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
-            >Dashboard</a
-          >
-          <a routerLink="/leagues/connect" routerLinkActive="active">Connect</a>
-          <a routerLink="/leagues/manual-setup" routerLinkActive="active">Manual Setup</a>
-          @if (active.selectedId(); as id) {
-            <a [routerLink]="['/leagues', id, 'board']" routerLinkActive="active">Player Board</a>
-            <a [routerLink]="['/leagues', id, 'cheat-sheet']" routerLinkActive="active">Cheat Sheet</a>
-            <a [routerLink]="['/leagues', id, 'strategy']" routerLinkActive="active">Strategy</a>
-            <a [routerLink]="['/leagues', id, 'draft']" routerLinkActive="active">Live Draft</a>
-            <a [routerLink]="['/leagues', id, 'roster']" routerLinkActive="active">Dynasty</a>
-            <a [routerLink]="['/leagues', id, 'auction']" routerLinkActive="active">Auction</a>
-            <a [routerLink]="['/leagues', id, 'recap']" routerLinkActive="active">Recap</a>
-            <a [routerLink]="['/leagues', id, 'calibration']" routerLinkActive="active">Calibration</a>
-            <a [routerLink]="['/leagues', id, 'scoring']" routerLinkActive="active">Scoring</a>
+        <nav class="nav-scroll" aria-label="Primary">
+          @for (group of navGroups(); track group.label) {
+            <div class="nav-group">
+              <div class="group-label">{{ group.label }}</div>
+              @for (item of group.items; track item.label) {
+                <a
+                  class="nav-link"
+                  [routerLink]="item.link"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: item.exact === true }"
+                  (click)="onNavClick()"
+                >
+                  <span
+                    class="nav-icon"
+                    aria-hidden="true"
+                    [style.--icon]="'url(/nav/' + item.icon + '.svg)'"
+                  ></span>
+                  {{ item.label }}
+                </a>
+              }
+            </div>
           }
         </nav>
+
         <div class="side-foot">
-          <div class="account">{{ auth.user()?.displayName }}</div>
-          <button type="button" class="logout" (click)="logout()">Log out</button>
+          <div class="account-row">
+            <div class="account">{{ auth.user()?.displayName }}</div>
+            <button type="button" class="logout" (click)="logout()">Log out</button>
+          </div>
+          <div class="sync-chip" role="status">
+            <span class="dot" [class.idle]="!hasLiveSync()" aria-hidden="true"></span>
+            <span>{{ syncLabel() }}</span>
+          </div>
         </div>
       </aside>
+
       <div class="main">
         <header class="top">
-          <div class="crumb">
-            {{ active.selected()?.name ?? 'No league selected' }}
+          <button
+            type="button"
+            class="menu-toggle"
+            [attr.aria-expanded]="navOpen()"
+            aria-controls="app-sidebar"
+            [attr.aria-label]="navOpen() ? 'Close navigation' : 'Open navigation'"
+            (click)="toggleNav()"
+          >
+            <span class="bars" aria-hidden="true"></span>
+          </button>
+
+          <div class="title-col">
+            <h1 class="page-title">{{ pageTitle() }}</h1>
+            <p class="page-sub">{{ pageSubtitle() }}</p>
           </div>
-          <div class="live">
-            <span class="dot"></span>
-            {{ active.leagues().length ? active.leagues().length + ' leagues' : 'Connect a league' }}
+
+          <div class="top-spacer" aria-hidden="true"></div>
+
+          <form class="search" role="search" (submit)="onSearch($event)">
+            <img src="/nav/search.svg" width="16" height="16" alt="" />
+            <input
+              type="search"
+              name="q"
+              placeholder="Search players…"
+              aria-label="Search players"
+              [value]="searchQuery()"
+              (input)="onSearchInput($event)"
+            />
+          </form>
+
+          <div class="live-chip" role="status">
+            <span class="dot" [class.idle]="!hasLiveSync()" aria-hidden="true"></span>
+            {{ liveChipLabel() }}
+          </div>
+
+          <div class="avatar" [attr.aria-label]="auth.user()?.displayName ?? 'Account'">
+            {{ initials() }}
           </div>
         </header>
+
         <main class="content">
           <router-outlet />
         </main>
       </div>
     </div>
   `,
-  styles: `
-    .shell {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      min-height: 100vh;
-    }
-    .sidebar {
-      border-right: 1px solid var(--dl-border-subtle);
-      background: color-mix(in srgb, var(--dl-surface-raised) 88%, transparent);
-      backdrop-filter: blur(8px);
-      padding: 1.25rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-    .brand {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      animation: fade-up 0.5s ease both;
-    }
-    .mark {
-      width: 2rem;
-      height: 2rem;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--dl-accent), #0ea5a0);
-      box-shadow: 0 0 24px color-mix(in srgb, var(--dl-accent) 35%, transparent);
-    }
-    .name {
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      font-size: 1.15rem;
-    }
-    .tag {
-      font-size: 0.7rem;
-      color: var(--dl-text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .switcher {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: var(--dl-text-tertiary);
-    }
-    .switcher select {
-      border: 1px solid var(--dl-border-strong);
-      background: var(--dl-surface-overlay);
-      color: var(--dl-text-primary);
-      border-radius: var(--dl-radius-sm);
-      padding: 0.55rem 0.6rem;
-    }
-    nav {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    nav a {
-      padding: 0.65rem 0.75rem;
-      border-radius: var(--dl-radius-sm);
-      color: var(--dl-text-secondary);
-      transition:
-        background 0.15s ease,
-        color 0.15s ease,
-        transform 0.15s ease;
-    }
-    nav a:hover {
-      background: var(--dl-surface-overlay);
-      color: var(--dl-text-primary);
-      transform: translateX(2px);
-    }
-    nav a.active {
-      background: var(--dl-accent-dim);
-      color: var(--dl-accent);
-    }
-    .side-foot {
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .account {
-      font-size: 0.85rem;
-      color: var(--dl-text-secondary);
-    }
-    .logout {
-      border: 1px solid var(--dl-border-subtle);
-      background: transparent;
-      color: var(--dl-text-secondary);
-      border-radius: var(--dl-radius-sm);
-      padding: 0.45rem 0.6rem;
-      text-align: left;
-      cursor: pointer;
-    }
-    .logout:hover {
-      color: var(--dl-text-primary);
-      border-color: var(--dl-border-strong);
-    }
-    .main {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid var(--dl-border-subtle);
-    }
-    .crumb {
-      font-weight: 600;
-    }
-    .live {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      color: var(--dl-text-secondary);
-      font-size: 0.85rem;
-    }
-    .dot {
-      width: 0.5rem;
-      height: 0.5rem;
-      border-radius: 999px;
-      background: var(--dl-accent);
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-accent) 50%, transparent);
-      animation: pulse 1.8s ease infinite;
-    }
-    .content {
-      padding: 1.25rem 1.5rem 2rem;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 0;
-    }
-    @keyframes fade-up {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: none;
-      }
-    }
-    @keyframes pulse {
-      50% {
-        box-shadow: 0 0 0 6px transparent;
-      }
-    }
-    @media (max-width: 900px) {
-      .shell {
-        grid-template-columns: 1fr;
-      }
-    }
-  `,
+  styleUrl: './shell.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:keydown.escape)': 'onEscape()',
+    '(window:resize)': 'onResize()',
+  },
 })
 export class ShellComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly active = inject(ActiveLeagueService);
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly navOpen = signal(false);
+  readonly isCompact = signal(false);
+  readonly searchQuery = signal('');
+  readonly pageTitle = signal('Dashboard');
+
+  readonly initials = computed(() => {
+    const name = this.auth.user()?.displayName?.trim() || 'DL';
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  });
+
+  readonly leagueMeta = computed(() => {
+    const league = this.active.selected();
+    return league ? formatLeagueMeta(league) : null;
+  });
+
+  readonly hasLiveSync = computed(() => {
+    const league = this.active.selected();
+    return !!league && league.platform === 'sleeper';
+  });
+
+  readonly syncLabel = computed(() => {
+    if (!this.active.leagues().length) return 'Connect a league to sync';
+    if (this.hasLiveSync()) return 'Sleeper connected';
+    return 'Manual league';
+  });
+
+  readonly liveChipLabel = computed(() => {
+    const league = this.active.selected();
+    if (!league) return 'No league';
+    if (league.platform === 'sleeper') return 'Sleeper · live';
+    return 'Manual · local';
+  });
+
+  readonly pageSubtitle = computed(() => {
+    const count = this.active.leagues().length;
+    if (!count) return 'Connect a league to get started';
+    const selected = this.active.selected()?.name;
+    return selected
+      ? `${count} league${count === 1 ? '' : 's'} connected · ${selected}`
+      : `${count} league${count === 1 ? '' : 's'} connected`;
+  });
+
+  readonly navGroups = computed((): NavGroup[] => {
+    const id = this.active.selectedId();
+    const leaguePath = (segment: string) => (id ? ['/leagues', id, segment] : ['/leagues/connect']);
+
+    return [
+      {
+        label: 'PLAN',
+        items: [
+          { label: 'Dashboard', icon: 'dashboard', link: '/', exact: true },
+          {
+            label: 'Strategy Planner',
+            icon: 'strategy',
+            link: leaguePath('strategy'),
+            requiresLeague: true,
+          },
+          {
+            label: 'Player Board',
+            icon: 'board',
+            link: leaguePath('board'),
+            requiresLeague: true,
+          },
+          {
+            label: 'Cheat Sheet',
+            icon: 'research',
+            link: leaguePath('cheat-sheet'),
+            requiresLeague: true,
+          },
+        ],
+      },
+      {
+        label: 'DRAFT',
+        items: [
+          {
+            label: 'Live Draft Room',
+            icon: 'draft',
+            link: leaguePath('draft'),
+            requiresLeague: true,
+          },
+          {
+            label: 'Auction Room',
+            icon: 'auction',
+            link: leaguePath('auction'),
+            requiresLeague: true,
+          },
+        ],
+      },
+      {
+        label: 'MANAGE',
+        items: [
+          {
+            label: 'Roster & Dynasty',
+            icon: 'roster',
+            link: leaguePath('roster'),
+            requiresLeague: true,
+          },
+          { label: 'Connections', icon: 'connect', link: '/leagues/connect' },
+          { label: 'Manual Setup', icon: 'connect', link: '/leagues/manual-setup' },
+          {
+            label: 'Scoring',
+            icon: 'auction',
+            link: leaguePath('scoring'),
+            requiresLeague: true,
+          },
+          {
+            label: 'Recap',
+            icon: 'board',
+            link: leaguePath('recap'),
+            requiresLeague: true,
+          },
+          {
+            label: 'Calibration',
+            icon: 'research',
+            link: leaguePath('calibration'),
+            requiresLeague: true,
+          },
+        ],
+      },
+    ];
+  });
 
   ngOnInit() {
+    this.syncCompact();
+    this.destroyRef.onDestroy(() => {
+      if (typeof document !== 'undefined') document.body.style.overflow = '';
+    });
     this.api.leagues().subscribe((leagues) => this.active.setLeagues(leagues));
+    this.updateTitle(this.router.url);
+
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((e) => {
+        this.updateTitle(e.urlAfterRedirects);
+        this.closeNav();
+      });
   }
 
   onSelectLeague(event: Event) {
@@ -245,8 +336,80 @@ export class ShellComponent implements OnInit {
     if (value) this.active.select(value);
   }
 
+  toggleNav() {
+    this.navOpen.update((open) => !open);
+    this.syncBodyScroll();
+  }
+
+  closeNav() {
+    if (!this.navOpen()) return;
+    this.navOpen.set(false);
+    this.syncBodyScroll();
+  }
+
+  onNavClick() {
+    if (this.isCompact()) this.closeNav();
+  }
+
+  onEscape() {
+    this.closeNav();
+  }
+
+  onResize() {
+    this.syncCompact();
+  }
+
+  onSearchInput(event: Event) {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  onSearch(event: Event) {
+    event.preventDefault();
+    const q = this.searchQuery().trim();
+    const id = this.active.selectedId();
+    if (!id) {
+      void this.router.navigateByUrl('/leagues/connect');
+      return;
+    }
+    void this.router.navigate(['/leagues', id, 'board'], q ? { queryParams: { q } } : {});
+  }
+
   logout() {
     void this.auth.logout();
     this.active.clear();
   }
+
+  private updateTitle(url: string) {
+    const path = url.split('?')[0] ?? '/';
+    const hit = PAGE_TITLES.find((entry) => entry.match.test(path));
+    this.pageTitle.set(hit?.title ?? 'DraftLab');
+  }
+
+  private syncCompact() {
+    const compact = typeof window !== 'undefined' && window.innerWidth <= 1024;
+    this.isCompact.set(compact);
+    if (!compact && this.navOpen()) {
+      this.navOpen.set(false);
+      this.syncBodyScroll();
+    }
+  }
+
+  private syncBodyScroll() {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = this.navOpen() ? 'hidden' : '';
+  }
+}
+
+function formatLeagueMeta(league: League): string {
+  const platform = league.platform === 'sleeper' ? 'Sleeper' : 'Manual';
+  const teams = `${league.teamCount}-team`;
+  const type = titleCase(league.type || league.draftType || 'League');
+  const scoring = league.scoringSummary?.variant?.toUpperCase() || 'PPR';
+  return `${platform} · ${teams} · ${type} · ${scoring}`;
+}
+
+function titleCase(value: string): string {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
