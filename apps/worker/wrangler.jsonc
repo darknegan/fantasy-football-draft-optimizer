@@ -9,7 +9,8 @@
     "head_sampling_rate": 1
   },
   "vars": {
-    "SERVICE_NAME": "draftlab-api"
+    "SERVICE_NAME": "draftlab-api",
+    "AUTH_COOKIE_SECURE": "true"
   },
   "kv_namespaces": [
     {
@@ -17,4 +18,11 @@
       "id": "c17fff5dd30b4102a61d2e4c11f5d101"
     }
   ]
+  // Secrets (set via `wrangler secret put`):
+  //   DATABASE_URL          — Supabase pooler, e.g.
+  //     postgresql://postgres.<ref>:<pass>@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+  //   JWT_ACCESS_SECRET
+  //   JWT_REFRESH_SECRET
+  // Optional Hyperdrive (preferred once created):
+  // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<hyperdrive-id>" }]
 }

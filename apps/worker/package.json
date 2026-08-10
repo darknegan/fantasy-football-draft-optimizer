@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --use-system-ca ../../node_modules/wrangler/bin/wrangler.js dev",
-    "deploy": "node --use-system-ca ../../node_modules/wrangler/bin/wrangler.js deploy",
-    "types": "node --use-system-ca ../../node_modules/wrangler/bin/wrangler.js types",
+    "dev": "node ../../node_modules/wrangler/bin/wrangler.js dev",
+    "deploy": "node ../../node_modules/wrangler/bin/wrangler.js deploy",
+    "types": "node ../../node_modules/wrangler/bin/wrangler.js types",
     "cf-typegen": "npm run types",
     "check": "tsc -p tsconfig.json --noEmit"
   },
@@ -19,8 +19,10 @@
     "@draftlab/integrations": "*",
     "@draftlab/recommendation-engine": "*",
     "@draftlab/strategy-engine": "*",
+    "@supabase/supabase-js": "^2.112.2",
     "hono": "^4.9.6",
-    "jose": "^6.2.8"
+    "jose": "^6.2.8",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

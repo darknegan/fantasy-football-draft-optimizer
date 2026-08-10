@@ -42,16 +42,29 @@ npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftla
 ### Supabase
 
 Production/shared Postgres lives in Supabase project **draftlab** (`mvuwjtlcvsoamasbuirf`, `us-west-1`).
-Schema matches `db/schema.sql`. Set:
+Schema matches `db/schema.sql`.
+
+**Local Node API** (`apps/api/.env`) — session pooler (IPv4):
 
 ```
 DATABASE_URL=postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:5432/postgres
 ```
 
-Use the **session pooler** (IPv4). Direct `db.*.supabase.co` is IPv6-only on the free tier.
-Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
-and URL-encode special characters (`!` → `%21`). The Node API connects as the Postgres role
-(not the Supabase JS anon client).
+**Cloudflare Workers** (`draftlab-api`) — on Workers Free, use the Supabase **service role**
+over HTTPS (raw Postgres TCP hits the 50-subrequest limit without Hyperdrive):
+
+```bash
+cd apps/worker
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # Settings → API → service_role
+npx wrangler secret put JWT_ACCESS_SECRET           # same value as apps/api/.env
+npx wrangler secret put JWT_REFRESH_SECRET
+npm run deploy
+npm run deploy -w @draftlab/web   # UI Worker already service-binds to draftlab-api
+```
+
+`/api/health` reports `"database":"up"` and `"dbBinding":"supabase_http"` when connected.
+Copy the DB password for local Node from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
+and URL-encode special characters (`!` → `%21`).
 
 ### Auth
 
