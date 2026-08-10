@@ -1,236 +1,415 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { ActiveLeagueService } from '../../core/active-league.service';
 import { ApiService } from '../../core/api.service';
-import type { BoardPlayer, League } from '../../core/api.types';
+import type { DraftSlotInfo, League, StrategyDefinition, StrategyTier } from '../../core/api.types';
+
+interface ResearchFinding {
+  badge: string;
+  tone: 'green' | 'red' | 'yellow' | 'tier-s';
+  title: string;
+  body: string;
+}
+
+interface ReadinessStep {
+  label: string;
+  done: boolean;
+}
+
+interface LeagueCardVm {
+  league: League;
+  platformLabel: string;
+  formatLabel: string;
+  metaLine: string;
+  draftLabel: string;
+  slotLabel: string;
+  slotTier: StrategyTier | null;
+  strategyLabel: string;
+  strategyTier: StrategyTier | null;
+  statusLabel: string;
+  statusTone: 'ok' | 'warn' | 'muted';
+  ctaLabel: string;
+  ctaLink: string[];
+  primary: boolean;
+}
+
+const RESEARCH_FINDINGS: ResearchFinding[] = [
+  {
+    badge: '53.52%',
+    tone: 'green',
+    title: 'Prime WR1s are the most reliable asset in fantasy football',
+    body: 'Highest return on ADP of any bucket, 33.80% boom rate, only 12.68% bust, and the lowest injury rate at 11.27%. Nothing else at any position is close.',
+  },
+  {
+    badge: '30.56%',
+    tone: 'red',
+    title: 'Veteran wide receivers — not veteran running backs — are the worst bet',
+    body: 'Trusty Veteran WRs get injured 30.56% of the time and boom just 8.33%, against 21.67% injured for veteran RBs. Apply the age penalty harder at WR than RB.',
+  },
+  {
+    badge: '0%',
+    tone: 'yellow',
+    title: 'Round 4 is a dead zone for tight ends',
+    body: 'Round 2 TEs became league-winners 43% of the time and round 3 TEs 25%, but round 4 TEs 0%, with a second 20% spike in round 10. Pay early or wait — never round 4.',
+  },
+  {
+    badge: 'S',
+    tone: 'tier-s',
+    title: 'The boring strategy wins: Balanced is the only S-tier archetype',
+    body: 'Every committed positional gimmick grades A or lower, and Robust RB and Double Hero WR land in C. Balanced is the default; the sharper strategies are opt-in.',
+  },
+];
 
 @Component({
   selector: 'app-dashboard',
   imports: [RouterLink],
   template: `
-    <section class="hero">
-      <div>
-        <p class="eyebrow">DraftLab</p>
-        <h1>Build the board. Stick the plan. Win the draft.</h1>
-        <p class="lede">
-          Factor-graded player evaluation, nine research-backed strategies, and a live draft room
-          that re-ranks as picks land — all scoped to your account.
-        </p>
-        <div class="cta">
-          @if (active.selectedId(); as id) {
-            <a class="btn primary" [routerLink]="['/leagues', id, 'board']">Open player board</a>
-            <a class="btn ghost" [routerLink]="['/leagues', id, 'draft']">Live draft</a>
-          } @else {
-            <a class="btn primary" routerLink="/leagues/connect">Connect a league</a>
-            <a class="btn ghost" routerLink="/leagues/manual-setup">Manual setup</a>
-          }
-        </div>
-      </div>
-      <div class="hero-panel dl-panel">
-        <div class="stat">
-          <span class="label">Verified ceilings</span>
-          <span class="value dl-mono">Allen 41 · Chase 42 · Bowers 36</span>
-        </div>
-        <div class="stat">
-          <span class="label">Your leagues</span>
-          <span class="value">{{ leagues().length }}</span>
-        </div>
-        <div class="stat">
-          <span class="label">RB CeilingScore</span>
-          <span class="value">Provisional — benchmarks pending</span>
-        </div>
-      </div>
-    </section>
+    <div class="dash">
+      @if (showMultiDraftNote()) {
+        <aside class="conflict" role="status">
+          <span class="conflict-mark" aria-hidden="true">!</span>
+          <div class="conflict-copy">
+            <strong>Multiple live drafts connected</strong>
+            <p>
+              You have {{ sleeperLeagueCount() }} Sleeper leagues on this account. The draft room can
+              only poll one live draft per tab — open a second tab if two drafts run at once.
+            </p>
+          </div>
+          <a class="conflict-action" routerLink="/leagues/connect">Review connections</a>
+        </aside>
+      }
 
-    <section class="grid">
-      <article class="dl-panel card">
-        <h2>Your leagues</h2>
-        @if (!leagues().length) {
-          <p class="empty dl-muted">
-            No leagues yet.
-            <a routerLink="/leagues/connect">Connect Sleeper</a>
-            or
-            <a routerLink="/leagues/manual-setup">set one up manually</a>.
+      @if (!leagueCards().length) {
+        <section class="empty-hero">
+          <h2>Connect a league to get started</h2>
+          <p>
+            Import from Sleeper or set one up manually. Your board, strategy planner, and draft room
+            all scope to the active league.
           </p>
-        }
-        @for (league of leagues(); track league.id) {
-          <a class="league" [routerLink]="['/leagues', league.id, 'board']" (click)="active.select(league.id)">
-            <div>
-              <strong>{{ league.name }}</strong>
-              <div class="dl-muted">
-                {{ league.teamCount }}-team · {{ league.platform }} ·
-                {{ league.type }} · slot {{ league.draftSlot ?? '—' }}
+          <div class="empty-actions">
+            <a class="btn primary" routerLink="/leagues/connect">Connect Sleeper</a>
+            <a class="btn" routerLink="/leagues/manual-setup">Manual setup</a>
+          </div>
+        </section>
+      } @else {
+        <section class="league-cards" aria-label="Your leagues">
+          @for (card of leagueCards(); track card.league.id) {
+            <article class="league-card">
+              <div class="card-top">
+                <div class="chips">
+                  <span class="chip platform">{{ card.platformLabel }}</span>
+                  <span class="chip format">{{ card.formatLabel }}</span>
+                </div>
+                <span class="countdown">{{ card.league.season }}</span>
+              </div>
+              <h2 class="league-name">{{ card.league.name }}</h2>
+              <p class="league-meta">{{ card.metaLine }}</p>
+              <div class="divider" aria-hidden="true"></div>
+              <div class="stats">
+                <div>
+                  <p class="stat-label">Draft</p>
+                  <div class="stat-value">{{ card.draftLabel }}</div>
+                </div>
+                <div>
+                  <p class="stat-label">Your slot</p>
+                  <div class="stat-value">
+                    @if (card.slotTier) {
+                      <span class="tier" [class]="tierClass(card.slotTier)">{{
+                        tierGlyph(card.slotTier)
+                      }}</span>
+                    }
+                    {{ card.slotLabel }}
+                  </div>
+                </div>
+                <div>
+                  <p class="stat-label">Strategy</p>
+                  <div class="stat-value">
+                    @if (card.strategyTier) {
+                      <span class="tier" [class]="tierClass(card.strategyTier)">{{
+                        tierGlyph(card.strategyTier)
+                      }}</span>
+                    }
+                    {{ card.strategyLabel }}
+                  </div>
+                </div>
+              </div>
+              <div class="card-foot">
+                <div class="status" [class.warn]="card.statusTone === 'warn'" [class.muted]="card.statusTone === 'muted'">
+                  <span class="dot" aria-hidden="true"></span>
+                  <span>{{ card.statusLabel }}</span>
+                </div>
+                <a
+                  class="btn"
+                  [class.primary]="card.primary"
+                  [routerLink]="card.ctaLink"
+                  (click)="active.select(card.league.id)"
+                >
+                  {{ card.ctaLabel }}
+                </a>
+              </div>
+            </article>
+          }
+        </section>
+      }
+
+      <section class="lower">
+        <article class="panel research">
+          <div class="research-head">
+            <h2>What the research says</h2>
+            <span class="meta">11 seasons · 400 drafted players</span>
+          </div>
+          @for (finding of findings; track finding.title) {
+            <div class="finding">
+              <div class="stat-badge" [class]="finding.tone">{{ finding.badge }}</div>
+              <div class="finding-copy">
+                <h3>{{ finding.title }}</h3>
+                <p>{{ finding.body }}</p>
               </div>
             </div>
-            <span class="chev">→</span>
-          </a>
-        }
-      </article>
-
-      <article class="dl-panel card">
-        <h2>Top of the board</h2>
-        @if (!active.selectedId()) {
-          <p class="empty dl-muted">Select or connect a league to see ranked players.</p>
-        }
-        <div class="rows">
-          @for (row of top(); track row.player.id) {
-            <a class="row" [routerLink]="['/leagues', active.selectedId(), 'board', row.player.id]">
-              <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
-              <span class="name">{{ row.player.name }}</span>
-              <span class="score dl-mono">
-                @if (row.evaluation.ceiling.provisional) {
-                  —
-                } @else {
-                  {{ row.evaluation.ceiling.ceilingScore ?? '—' }}
-                }
-              </span>
-            </a>
           }
+        </article>
+
+        <div class="side-col">
+          <article class="panel side-panel">
+            <h2>Draft readiness</h2>
+            <p class="sub">
+              {{ readinessLeagueName() }}
+              @if (readinessDoneCount(); as done) {
+                · {{ done }}/{{ readinessSteps().length }} complete
+              }
+            </p>
+            <ul class="checklist">
+              @for (step of readinessSteps(); track step.label) {
+                <li [class.done]="step.done">
+                  <span class="check" [class.on]="step.done" [class.off]="!step.done" aria-hidden="true">
+                    @if (step.done) {
+                      ✓
+                    }
+                  </span>
+                  <span>{{ step.label }}</span>
+                </li>
+              }
+            </ul>
+          </article>
+
+          <article class="panel side-panel">
+            <div class="coverage-head">
+              <span class="pulse" aria-hidden="true"></span>
+              <h2>Model coverage</h2>
+            </div>
+            <p class="coverage-copy">
+              QB, WR and TE are graded on all 12 factors. Running backs currently run on archetype,
+              VORP and injury data only — their 12-factor benchmarks are not yet sourced, so RB
+              ceiling scores are marked provisional rather than presented as verified.
+            </p>
+            <div class="coverage-grid" aria-label="Position model coverage">
+              <div class="cov ok">
+                <span class="pos-label">QB</span>
+                <span class="val">12/12</span>
+              </div>
+              <div class="cov ok">
+                <span class="pos-label">WR</span>
+                <span class="val">12/12</span>
+              </div>
+              <div class="cov ok">
+                <span class="pos-label">TE</span>
+                <span class="val">12/12</span>
+              </div>
+              <div class="cov prov">
+                <span class="pos-label">RB</span>
+                <span class="val">prov.</span>
+              </div>
+            </div>
+          </article>
         </div>
-      </article>
-    </section>
+      </section>
+    </div>
   `,
-  styles: `
-    .hero {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
-      align-items: stretch;
-    }
-    .eyebrow {
-      margin: 0 0 0.5rem;
-      color: var(--dl-accent);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    h1 {
-      margin: 0 0 0.75rem;
-      font-size: clamp(1.8rem, 3vw, 2.6rem);
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      max-width: 14ch;
-    }
-    .lede {
-      color: var(--dl-text-secondary);
-      max-width: 46ch;
-      line-height: 1.5;
-    }
-    .cta {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1.25rem;
-      flex-wrap: wrap;
-    }
-    .btn {
-      padding: 0.7rem 1rem;
-      border-radius: var(--dl-radius-sm);
-      border: 1px solid var(--dl-border-strong);
-      font-weight: 600;
-      transition:
-        transform 0.15s ease,
-        background 0.15s ease;
-    }
-    .btn:hover {
-      transform: translateY(-1px);
-    }
-    .btn.primary {
-      background: var(--dl-accent);
-      color: var(--dl-text-inverse);
-      border-color: var(--dl-accent);
-    }
-    .btn.ghost {
-      background: transparent;
-      color: var(--dl-text-primary);
-    }
-    .hero-panel {
-      padding: 1.25rem;
-      display: grid;
-      gap: 1rem;
-    }
-    .stat .label {
-      display: block;
-      color: var(--dl-text-tertiary);
-      font-size: 0.75rem;
-      margin-bottom: 0.25rem;
-    }
-    .stat .value {
-      font-weight: 600;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    .card {
-      padding: 1rem 1.1rem;
-    }
-    h2 {
-      margin: 0 0 0.75rem;
-      font-size: 1rem;
-    }
-    .empty {
-      margin: 0;
-      line-height: 1.5;
-    }
-    .empty a {
-      color: var(--dl-accent);
-      font-weight: 600;
-    }
-    .league,
-    .row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.75rem 0;
-      border-top: 1px solid var(--dl-border-subtle);
-    }
-    .league:first-of-type,
-    .row:first-child {
-      border-top: 0;
-    }
-    .rows {
-      display: flex;
-      flex-direction: column;
-    }
-    .row .name {
-      flex: 1;
-    }
-    .row .score {
-      color: var(--dl-accent);
-      font-weight: 600;
-    }
-    .chev {
-      color: var(--dl-text-tertiary);
-    }
-    @media (max-width: 900px) {
-      .hero,
-      .grid {
-        grid-template-columns: 1fr;
-      }
-      h1 {
-        max-width: none;
-      }
-    }
-  `,
+  styleUrl: './dashboard.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit {
   private readonly api = inject(ApiService);
   readonly active = inject(ActiveLeagueService);
+
+  readonly findings = RESEARCH_FINDINGS;
   readonly leagues = signal<League[]>([]);
-  readonly top = signal<BoardPlayer[]>([]);
+  readonly strategies = signal<StrategyDefinition[]>([]);
+  readonly draftSlots = signal<DraftSlotInfo[]>([]);
+
+  readonly sleeperLeagueCount = computed(
+    () => this.leagues().filter((l) => l.platform === 'sleeper').length,
+  );
+
+  readonly showMultiDraftNote = computed(() => this.sleeperLeagueCount() >= 2);
+
+  readonly leagueCards = computed(() => {
+    const strategies = this.strategies();
+    const slots = this.draftSlots();
+    const selectedId = this.active.selectedId();
+    return this.leagues().map((league, index) =>
+      toLeagueCard(league, strategies, slots, league.id === selectedId || (!selectedId && index === 0)),
+    );
+  });
+
+  readonly readinessFocus = computed(() => {
+    const selected = this.active.selected();
+    return selected ?? this.leagues()[0] ?? null;
+  });
+
+  readonly readinessLeagueName = computed(() => this.readinessFocus()?.name ?? 'No league selected');
+
+  readonly readinessSteps = computed((): ReadinessStep[] => {
+    const league = this.readinessFocus();
+    const strategy = league?.strategyId
+      ? this.strategies().find((s) => s.id === league.strategyId)
+      : undefined;
+    const slot = league?.draftSlot;
+    const slotInfo = slot ? this.draftSlots().find((s) => s.slot === slot) : undefined;
+    const scoringOk = !!league?.scoringSummary && !(league.scoringSummary.warnings?.length);
+    const hasScoring = !!league?.scoringSummary;
+
+    return [
+      {
+        label:
+          league?.platform === 'sleeper'
+            ? 'League synced from Sleeper'
+            : league
+              ? 'Manual league configured'
+              : 'League connected',
+        done: !!league,
+      },
+      {
+        label: hasScoring
+          ? scoringOk
+            ? 'Scoring validated'
+            : 'Scoring needs review'
+          : 'Scoring validated against standings',
+        done: hasScoring && scoringOk,
+      },
+      {
+        label: strategy
+          ? `Strategy selected — ${strategy.name} (${tierGlyph(strategy.tier)})`
+          : 'Strategy selected',
+        done: !!strategy,
+      },
+      {
+        label:
+          slot != null
+            ? `Draft slot confirmed — ${formatSlot(slot, league?.teamCount ?? 12)}${
+                slotInfo ? ` (${tierGlyph(slotInfo.tier)})` : ''
+              }`
+            : 'Draft slot confirmed',
+        done: slot != null,
+      },
+      { label: 'Targets and avoids flagged', done: false },
+      { label: 'Simulation reviewed', done: false },
+    ];
+  });
+
+  readonly readinessDoneCount = computed(
+    () => this.readinessSteps().filter((step) => step.done).length,
+  );
 
   ngOnInit() {
-    this.api.leagues().subscribe((l) => {
-      this.leagues.set(l);
-      this.active.setLeagues(l);
-      const id = this.active.selectedId();
-      if (id) {
-        this.api.board(id).subscribe((b) => this.top.set(b.filter((x) => !x.drafted).slice(0, 6)));
-      }
+    forkJoin({
+      leagues: this.api.leagues(),
+      strategies: this.api.strategies(),
+      slots: this.api.draftSlots(),
+    }).subscribe(({ leagues, strategies, slots }) => {
+      this.leagues.set(leagues);
+      this.strategies.set(strategies);
+      this.draftSlots.set(slots);
+      this.active.setLeagues(leagues);
     });
   }
+
+  tierClass(tier: StrategyTier): string {
+    return tier === 'unrated' ? 'unrated' : tier;
+  }
+
+  tierGlyph(tier: StrategyTier): string {
+    return tierGlyph(tier);
+  }
+}
+
+function toLeagueCard(
+  league: League,
+  strategies: StrategyDefinition[],
+  slots: DraftSlotInfo[],
+  primary: boolean,
+): LeagueCardVm {
+  const strategy = league.strategyId
+    ? strategies.find((s) => s.id === league.strategyId)
+    : undefined;
+  const slotInfo =
+    league.draftSlot != null ? slots.find((s) => s.slot === league.draftSlot) : undefined;
+  const hasScoring = !!league.scoringSummary;
+  const scoringWarn = !!league.scoringSummary?.warnings?.length;
+  const platformLabel = league.platform === 'sleeper' ? 'Sleeper' : 'Manual';
+  const formatLabel = titleCase(league.type || league.draftType || 'League');
+  const scoringBits = [
+    `${league.teamCount}-team`,
+    league.scoringSummary?.variant?.toUpperCase() || 'PPR',
+    league.scoringSummary?.tePremium ? 'TE premium' : null,
+    league.scoringSummary?.superflex ? 'Superflex' : null,
+  ].filter(Boolean);
+
+  let statusLabel = 'Board ready';
+  let statusTone: LeagueCardVm['statusTone'] = 'ok';
+  let ctaLabel = 'Open draft room';
+  let ctaLink = ['/leagues', league.id, 'draft'];
+
+  if (!hasScoring || scoringWarn) {
+    statusLabel = scoringWarn ? 'Scoring needs review' : 'Scoring not confirmed';
+    statusTone = 'warn';
+    ctaLabel = 'Verify scoring';
+    ctaLink = ['/leagues', league.id, 'scoring'];
+  } else if (!strategy) {
+    statusLabel = 'Strategy needed';
+    statusTone = 'warn';
+    ctaLabel = 'Plan strategy';
+    ctaLink = ['/leagues', league.id, 'strategy'];
+  } else if (league.draftType === 'auction' || /auction/i.test(league.type)) {
+    statusLabel = 'Contracts configured';
+    statusTone = 'ok';
+    ctaLabel = 'Open auction';
+    ctaLink = ['/leagues', league.id, 'auction'];
+  } else if (!league.draftSlot) {
+    statusLabel = 'Pick a draft slot';
+    statusTone = 'muted';
+    ctaLabel = 'Plan strategy';
+    ctaLink = ['/leagues', league.id, 'strategy'];
+  }
+
+  return {
+    league,
+    platformLabel,
+    formatLabel,
+    metaLine: scoringBits.join(' · '),
+    draftLabel: league.sleeperDraftId ? 'Sleeper draft linked' : `${league.season} season`,
+    slotLabel: league.draftSlot != null ? formatSlot(league.draftSlot, league.teamCount) : '—',
+    slotTier: slotInfo?.tier ?? null,
+    strategyLabel: strategy?.name ?? '—',
+    strategyTier: strategy?.tier ?? null,
+    statusLabel,
+    statusTone,
+    ctaLabel,
+    ctaLink,
+    primary: primary && ctaLabel === 'Open draft room',
+  };
+}
+
+function formatSlot(slot: number, teamCount: number): string {
+  const pick = ((slot - 1) % teamCount) + 1;
+  return `1.${String(pick).padStart(2, '0')}`;
+}
+
+function tierGlyph(tier: StrategyTier): string {
+  return tier === 'unrated' ? '–' : tier;
+}
+
+function titleCase(value: string): string {
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
