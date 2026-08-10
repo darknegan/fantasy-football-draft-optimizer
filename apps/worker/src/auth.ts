@@ -10,7 +10,7 @@ export const requireAccessJwt = createMiddleware<{
   const secret = c.env.JWT_ACCESS_SECRET;
   if (!secret) {
     return c.json(
-      { error: 'Auth is not configured on the edge Worker. Use the Node API with DATABASE_URL.' },
+      { error: 'Auth is not configured on the edge Worker. Set JWT_ACCESS_SECRET.' },
       503,
     );
   }
@@ -35,9 +35,11 @@ export const requireAccessJwt = createMiddleware<{
   }
 });
 
-export function persistenceUnavailable() {
+export function dbUnavailable(detail?: string) {
   return {
-    error:
-      'League persistence and auth account writes require the Node Fastify API (Postgres). Edge Worker rejects durable mutations.',
+    error: 'Database unavailable',
+    detail:
+      detail ??
+      'Configure DATABASE_URL (Supabase pooler) or Hyperdrive binding HYPERDRIVE on draftlab-api.',
   };
 }

@@ -1,10 +1,16 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import type { StrategyId } from '@draftlab/domain';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import type { DraftType, LeagueType, RosterShape, StrategyId } from '@draftlab/domain';
 import {
+  createManualLeague,
+  mapSleeperLeague,
+  resolveDraftSlot,
+  rosterPresetForScoring,
   scoringConfirmation,
   SCORING_PRESETS,
   sharedSleeperLimiter,
+  SleeperClient,
 } from '@draftlab/integrations';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
 import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
@@ -13,7 +19,10 @@ import {
   type PlayerFactorsArtifact,
 } from '../../api/src/data/load-artifact.js';
 import { AppStore } from '../../api/src/services/store.js';
-import { persistenceUnavailable, requireAccessJwt } from './auth.js';
+import { dbUnavailable, requireAccessJwt, type WorkerUser } from './auth.js';
+import { updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
+import { loadUserLeagues, ownedLeague, withSql } from './leagues.js';
+import { authRoutes } from './routes/auth.js';
 
 const { players: ARTIFACT_PLAYERS, skipped: artifactSkipped } = seedPlayersFromArtifact(
   playerFactors as unknown as PlayerFactorsArtifact,
@@ -29,7 +38,7 @@ if (artifactSkipped.length) {
 
 const store = new AppStore(ARTIFACT_PLAYERS);
 
-const app = new Hono<{ Bindings: Env; Variables: { user: { sub: string; email: string; displayName: string } } }>();
+const app = new Hono<{ Bindings: Env; Variables: { user: WorkerUser } }>();
 
 app.use(
   '*',
@@ -39,8 +48,7 @@ app.use(
   }),
 );
 
-app.all('/auth/*', (c) => c.json(persistenceUnavailable(), 503));
-app.all('/me', (c) => c.json(persistenceUnavailable(), 503));
+app.route('/', authRoutes);
 
 app.use('/api/leagues/*', requireAccessJwt);
 app.use('/api/leagues', requireAccessJwt);
@@ -51,11 +59,25 @@ app.get('/api/health', async (c) => {
     deployedAt = new Date().toISOString();
     await c.env.DRAFTLAB_KV.put('deployedAt', deployedAt);
   }
+
+  let database: 'up' | 'down' | 'unconfigured' = 'unconfigured';
+  if (c.env.HYPERDRIVE || c.env.DATABASE_URL) {
+    try {
+      await withSql(c.env, c.executionCtx, async (sql) => {
+        await sql`SELECT 1`;
+      });
+      database = 'up';
+    } catch {
+      database = 'down';
+    }
+  }
+
   return c.json({
     ok: true,
     service: c.env.SERVICE_NAME,
     runtime: 'cloudflare-workers',
     deployedAt,
+    database,
   });
 });
 
@@ -74,82 +96,324 @@ app.get('/api/players/:id', (c) => {
   return c.json({ player, evaluation: store.getEvaluation(player.id) });
 });
 
-app.get('/api/leagues', (c) => {
+app.get('/api/leagues', async (c) => {
   const user = c.get('user');
-  return c.json(store.listLeagues(user.sub));
+  try {
+    const leagues = await withSql(c.env, c.executionCtx, (sql) =>
+      loadUserLeagues(store, sql, user.sub),
+    );
+    return c.json(leagues);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
 app.get('/api/sleeper/limiter', (c) => c.json(sharedSleeperLimiter.snapshot()));
 
-app.get('/api/leagues/:id', (c) => {
+app.get('/api/leagues/:id', async (c) => {
   const user = c.get('user');
-  const league = store.assertOwns(user.sub, c.req.param('id'));
-  if (!league) return c.json({ error: 'League not found' }, 404);
-  return c.json({ ...league, scoringSummary: scoringConfirmation(league) });
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    return c.json({ ...league, scoringSummary: scoringConfirmation(league) });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
 app.get('/api/scoring-presets', (c) => c.json(SCORING_PRESETS));
 
-app.post('/api/leagues/manual', async (c) => c.json(persistenceUnavailable(), 503));
-
-app.post('/api/leagues/sleeper/connect', async (c) => c.json(persistenceUnavailable(), 503));
-
-app.post('/api/leagues/:id/recalculate', (c) => c.json(persistenceUnavailable(), 503));
-app.patch('/api/leagues/:id', async (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/draft/picks', async (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/draft/start-polling', (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/draft/manual-mode', (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/flags', async (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/dynasty/mode', async (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/auction/bid', async (c) => c.json(persistenceUnavailable(), 503));
-app.put('/api/leagues/:id/auction/contract-rules', async (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/calibration/propose', (c) => c.json(persistenceUnavailable(), 503));
-app.post('/api/leagues/:id/calibration/apply', (c) => c.json(persistenceUnavailable(), 503));
-
-app.get('/api/leagues/:id/scoring-summary', (c) => {
+app.post('/api/leagues/manual', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const summary = store.scoringSummary(c.req.param('id'));
-  if (!summary) return c.json({ error: 'League not found' }, 404);
-  return c.json(summary);
+  const body = await c.req.json<{
+    name: string;
+    teamCount: number;
+    season?: number;
+    draftSlot?: number;
+    strategyId?: StrategyId;
+    scoringPresetId?: string;
+    draftType?: DraftType;
+    type?: LeagueType;
+    roster?: Partial<RosterShape>;
+    confirmSummary?: boolean;
+  }>();
+
+  const scoring =
+    SCORING_PRESETS.find((p) => p.id === body.scoringPresetId) ?? SCORING_PRESETS[0]!;
+  const baseRoster = rosterPresetForScoring(body.scoringPresetId);
+  const roster: RosterShape = {
+    ...baseRoster,
+    ...body.roster,
+    totalStarters: 0,
+  };
+  roster.totalStarters =
+    roster.qb + roster.rb + roster.wr + roster.te + roster.flex + roster.superflex;
+
+  const league = createManualLeague({
+    userId: user.sub,
+    name: body.name,
+    teamCount: body.teamCount,
+    season: body.season ?? 2025,
+    scoring,
+    roster,
+    draftSlot: body.draftSlot,
+    strategyId: body.strategyId ?? 'balanced',
+    draftType: body.draftType,
+    type: body.type,
+  });
+
+  try {
+    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
+      const persisted = await upsertLeagueRow(sql, league);
+      const inMemory = store.upsertLeague(persisted);
+      store.recalculateForLeague(inMemory.id);
+      return inMemory;
+    });
+    const summary = scoringConfirmation(saved);
+    if (!body.confirmSummary) {
+      return c.json(
+        {
+          league: saved,
+          scoringSummary: summary,
+          requiresConfirmation: true,
+          message: 'Confirm scoring summary before drafting.',
+        },
+        201,
+      );
+    }
+    return c.json({ league: saved, scoringSummary: summary, requiresConfirmation: false });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-app.get('/api/leagues/:id/board', (c) => {
+app.post('/api/leagues/sleeper/connect', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  return c.json(store.getBoard(c.req.param('id')));
+  const body = await c.req.json<{ username: string; season?: number }>();
+  const client = new SleeperClient();
+  try {
+    const sleeperUser = await client.getUser(body.username);
+    const season = body.season ?? new Date().getFullYear();
+    const leagues = await client.getUserLeagues(sleeperUser.user_id, season);
+    const mapped = await withSql(c.env, c.executionCtx, async (sql) => {
+      const out = [];
+      for (const l of leagues) {
+        let draft = null;
+        try {
+          const drafts = await client.getLeagueDrafts(l.league_id);
+          draft = drafts[0] ?? null;
+        } catch {
+          draft = null;
+        }
+        const league = mapSleeperLeague(l, { userId: user.sub, draft });
+        league.sleeperUserId = sleeperUser.user_id;
+        if (draft && sleeperUser.user_id) {
+          league.draftSlot = resolveDraftSlot(draft, sleeperUser.user_id) ?? league.draftSlot;
+        }
+        const persisted = await upsertLeagueRow(sql, league);
+        const saved = store.upsertLeague(persisted);
+        store.recalculateForLeague(saved.id);
+        out.push({
+          ...saved,
+          scoringSummary: scoringConfirmation(saved),
+        });
+      }
+      return out;
+    });
+    return c.json({ user: sleeperUser, leagues: mapped, limiter: client.limiterSnapshot() });
+  } catch (err) {
+    return c.json(
+      {
+        error: 'Failed to reach Sleeper or database',
+        detail: err instanceof Error ? err.message : String(err),
+        limiter: sharedSleeperLimiter.snapshot(),
+      },
+      502,
+    );
+  }
 });
 
-app.get('/api/leagues/:id/draft', (c) => {
+app.post('/api/leagues/:id/recalculate', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const draft = store.getDraft(c.req.param('id'));
-  if (!draft) return c.json({ error: 'Draft not found' }, 404);
-  return c.json(draft);
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.recalculateForLeague(league.id);
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-app.get('/api/leagues/:id/adherence', (c) => {
+app.patch('/api/leagues/:id', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const result = store.adherence(c.req.param('id'));
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
+  const body = await c.req.json<
+    Partial<{ strategyId: StrategyId; draftSlot: number; sleeperDraftId: string; name: string }>
+  >();
+  try {
+    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
+      if (!(await ownedLeague(store, sql, user.sub, c.req.param('id')))) return null;
+      const persisted = await updateLeagueRow(sql, user.sub, c.req.param('id'), body);
+      if (!persisted) return null;
+      return store.updateLeague(c.req.param('id'), persisted);
+    });
+    if (!saved) return c.json({ error: 'League not found' }, 404);
+    return c.json({ ...saved, scoringSummary: scoringConfirmation(saved) });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-app.get('/api/leagues/:id/recap', (c) => {
+app.post('/api/leagues/:id/draft/picks', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const result = store.recap(c.req.param('id'));
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
+  const body = await c.req.json<{
+    pickNumber: number;
+    round: number;
+    slot: number;
+    playerId: string;
+    rosterId?: string;
+  }>();
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'Draft not found' }, 404);
+    const draft = store.getDraft(league.id);
+    if (!draft) return c.json({ error: 'Draft not found' }, 404);
+    const updated = store.applyPick(league.id, {
+      pickNumber: body.pickNumber,
+      round: body.round,
+      slot: body.slot,
+      playerId: body.playerId,
+      rosterId: body.rosterId ?? draft.userRosterId,
+      source: 'manual',
+    });
+    return c.json({
+      draft: updated,
+      board: store.getBoard(league.id),
+      adherence: store.adherence(league.id),
+    });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-
-app.get('/api/leagues/:id/flags', (c) => {
+app.post('/api/leagues/:id/draft/start-polling', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  return c.json(store.getFlags(c.req.param('id')));
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league?.sleeperDraftId) {
+      return c.json({ error: 'League has no Sleeper draft id — use manual picks' }, 400);
+    }
+    store.patchDraft(league.id, { syncMode: 'polling', syncBanner: null });
+    return c.json(store.getDraft(league.id));
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
+
+app.post('/api/leagues/:id/draft/manual-mode', async (c) => {
+  const user = c.get('user');
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'Draft not found' }, 404);
+    const draft = store.patchDraft(league.id, {
+      syncMode: 'manual',
+      syncBanner: 'Manual pick entry — Sleeper polling paused.',
+    });
+    if (!draft) return c.json({ error: 'Draft not found' }, 404);
+    return c.json(draft);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+});
+
+app.post('/api/leagues/:id/flags', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ playerId: string; kind: 'target' | 'avoid'; value?: boolean }>();
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    store.setFlag(league.id, body.playerId, body.kind, body.value ?? true);
+    return c.json({ ok: true, ...store.getFlags(league.id) });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+});
+
+app.post('/api/leagues/:id/dynasty/mode', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ mode?: string }>();
+  try {
+    const saved = await withSql(c.env, c.executionCtx, async (sql) => {
+      if (!(await ownedLeague(store, sql, user.sub, c.req.param('id')))) return null;
+      const persisted = await updateLeagueRow(sql, user.sub, c.req.param('id'), {
+        dynastyMode: body.mode as never,
+      });
+      if (!persisted) return null;
+      return store.updateLeague(c.req.param('id'), persisted);
+    });
+    if (!saved) return c.json({ error: 'League not found' }, 404);
+    return c.json(saved);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+});
+
+app.post('/api/leagues/:id/auction/bid', async (c) => c.json({ error: 'Not implemented on edge' }, 501));
+app.put('/api/leagues/:id/auction/contract-rules', async (c) =>
+  c.json({ error: 'Not implemented on edge' }, 501),
+);
+app.post('/api/leagues/:id/calibration/propose', (c) =>
+  c.json({ error: 'Not implemented on edge' }, 501),
+);
+app.post('/api/leagues/:id/calibration/apply', (c) =>
+  c.json({ error: 'Not implemented on edge' }, 501),
+);
+
+async function guardedGet(
+  c: {
+    env: Env;
+    executionCtx: { waitUntil(promise: Promise<unknown>): void };
+    get: (k: 'user') => WorkerUser;
+    req: { param: (k: string) => string };
+    json: (body: unknown, status?: ContentfulStatusCode) => Response;
+  },
+  handler: (leagueId: string) => unknown,
+) {
+  const user = c.get('user');
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = handler(league.id);
+    if (result == null) return c.json({ error: 'League not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+}
+
+app.get('/api/leagues/:id/scoring-summary', (c) =>
+  guardedGet(c, (id) => store.scoringSummary(id)),
+);
+app.get('/api/leagues/:id/board', (c) => guardedGet(c, (id) => store.getBoard(id)));
+app.get('/api/leagues/:id/draft', (c) => guardedGet(c, (id) => store.getDraft(id)));
+app.get('/api/leagues/:id/adherence', (c) => guardedGet(c, (id) => store.adherence(id)));
+app.get('/api/leagues/:id/recap', (c) => guardedGet(c, (id) => store.recap(id)));
+app.get('/api/leagues/:id/flags', (c) => guardedGet(c, (id) => store.getFlags(id)));
 
 app.get('/api/strategies', (c) => c.json(store.strategies()));
 
@@ -163,90 +427,99 @@ app.get('/api/draft-slots', (c) => {
 
 app.post('/api/leagues/:id/simulate', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
   const body = await c.req.json<{
     strategyId?: StrategyId;
     iterations?: number;
     rounds?: number;
     seed?: number;
   }>();
-  const result = store.simulate(c.req.param('id'), body ?? {});
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.simulate(league.id, body ?? {});
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
 app.post('/api/leagues/:id/compare-strategies', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
   const body = await c.req.json<{
     strategyIds?: StrategyId[];
     iterations?: number;
     rounds?: number;
     seed?: number;
   }>();
-  const result = store.compare(c.req.param('id'), body ?? {});
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.compare(league.id, body ?? {});
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-app.get('/api/leagues/:id/cheat-sheet', (c) => {
+app.get('/api/leagues/:id/cheat-sheet', (c) => guardedGet(c, (id) => store.cheatSheet(id)));
+app.get('/api/leagues/:id/dynasty', (c) => guardedGet(c, (id) => store.dynastyOverview(id)));
+app.get('/api/leagues/:id/auction/values', (c) => guardedGet(c, (id) => store.auctionState(id)));
+app.get('/api/leagues/:id/auction/max-bid', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const result = store.cheatSheet(c.req.param('id'));
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
-});
-
-app.get('/api/leagues/:id/dynasty', (c) => {
-  const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const overview = store.dynastyOverview(c.req.param('id'));
-  if (!overview) return c.json({ error: 'League not found' }, 404);
-  return c.json(overview);
-});
-
-app.get('/api/leagues/:id/auction/values', (c) => {
-  const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const state = store.auctionState(c.req.param('id'));
-  if (!state) return c.json({ error: 'League not found' }, 404);
-  return c.json(state);
-});
-
-app.get('/api/leagues/:id/auction/max-bid', (c) => {
-  const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
   const playerId = c.req.query('playerId');
   if (!playerId) return c.json({ error: 'playerId required' }, 400);
-  const result = store.auctionMaxBid(c.req.param('id'), playerId);
-  if (!result) return c.json({ error: 'League not found' }, 404);
-  return c.json(result);
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.auctionMaxBid(league.id, playerId);
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
-
-app.get('/api/leagues/:id/auction/nominations', (c) => {
+app.get('/api/leagues/:id/auction/nominations', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const state = store.auctionState(c.req.param('id'));
-  if (!state) return c.json({ error: 'League not found' }, 404);
-  return c.json({ nominations: state.nominations, inflationRate: state.inflationRate });
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const state = store.auctionState(league.id);
+    if (!state) return c.json({ error: 'League not found' }, 404);
+    return c.json({ nominations: state.nominations, inflationRate: state.inflationRate });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
 app.post('/api/leagues/:id/auction/contract-preview', async (c) => {
   const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
   const body = await c.req.json<{ playerId: string; annualSalary: number; years: number }>();
-  const result = store.auctionContractPreview(c.req.param('id'), body);
-  if (!result) return c.json({ error: 'Player or league not found' }, 404);
-  return c.json(result);
+  try {
+    const league = await withSql(c.env, c.executionCtx, (sql) =>
+      ownedLeague(store, sql, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'Player or league not found' }, 404);
+    const result = store.auctionContractPreview(league.id, body);
+    if (!result) return c.json({ error: 'Player or league not found' }, 404);
+    return c.json(result);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
 });
 
-app.get('/api/leagues/:id/calibration', (c) => {
-  const user = c.get('user');
-  if (!store.assertOwns(user.sub, c.req.param('id'))) return c.json({ error: 'League not found' }, 404);
-  const summary = store.calibrationSummary(c.req.param('id'));
-  if (!summary) return c.json({ error: 'League not found' }, 404);
-  return c.json(summary);
-});
+app.get('/api/leagues/:id/calibration', (c) =>
+  guardedGet(c, (id) => store.calibrationSummary(id)),
+);
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 

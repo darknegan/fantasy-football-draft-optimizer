@@ -42,16 +42,29 @@ npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftla
 ### Supabase
 
 Production/shared Postgres lives in Supabase project **draftlab** (`mvuwjtlcvsoamasbuirf`, `us-west-1`).
-Schema matches `db/schema.sql`. Set:
+Schema matches `db/schema.sql`.
+
+**Local Node API** (`apps/api/.env`) — session pooler (IPv4):
 
 ```
 DATABASE_URL=postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:5432/postgres
 ```
 
-Use the **session pooler** (IPv4). Direct `db.*.supabase.co` is IPv6-only on the free tier.
+**Cloudflare Workers** (`draftlab-api`) — set secrets (transaction pooler preferred on the edge):
+
+```bash
+cd apps/worker
+npx wrangler secret put DATABASE_URL
+# postgresql://postgres.mvuwjtlcvsoamasbuirf:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:6543/postgres
+npx wrangler secret put JWT_ACCESS_SECRET   # same value as apps/api/.env
+npx wrangler secret put JWT_REFRESH_SECRET  # same value as apps/api/.env
+npm run deploy
+npm run deploy -w @draftlab/web   # UI Worker already service-binds to draftlab-api
+```
+
+`/api/health` on the edge reports `"database":"up"` when Supabase is reachable.
 Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database)
-and URL-encode special characters (`!` → `%21`). The Node API connects as the Postgres role
-(not the Supabase JS anon client).
+and URL-encode special characters (`!` → `%21`).
 
 ### Auth
 

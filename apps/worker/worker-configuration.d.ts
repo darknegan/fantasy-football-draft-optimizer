@@ -5,6 +5,13 @@ interface __BaseEnv_Env {
 	DRAFTLAB_KV: KVNamespace;
 	SERVICE_NAME: "draftlab-api";
 	JWT_ACCESS_SECRET?: string;
+	JWT_REFRESH_SECRET?: string;
+	/** Supabase transaction/session pooler URL when Hyperdrive is not bound. */
+	DATABASE_URL?: string;
+	/** Optional Cloudflare Hyperdrive binding to Supabase Postgres. */
+	HYPERDRIVE?: Hyperdrive;
+	/** Defaults to secure cookies in production; set "false" for local wrangler. */
+	AUTH_COOKIE_SECURE?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
