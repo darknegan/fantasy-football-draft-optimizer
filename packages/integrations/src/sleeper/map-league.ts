@@ -69,7 +69,7 @@ export function mapSleeperLeague(
   const scoring = mapScoring(league.scoring_settings ?? {});
   return {
     // Opaque id; API persistence upserts by (userId, platform, externalId).
-    id: crypto.randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     userId: opts?.userId ?? '',
     name: league.name,
     platform: 'sleeper',

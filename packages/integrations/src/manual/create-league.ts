@@ -27,7 +27,7 @@ export interface ManualLeagueInput {
 }
 
 export function createManualLeague(input: ManualLeagueInput): League {
-  const id = crypto.randomUUID();
+  const id = globalThis.crypto.randomUUID();
   const roster = {
     ...input.roster,
     totalStarters:

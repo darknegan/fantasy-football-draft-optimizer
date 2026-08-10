@@ -68,7 +68,8 @@ export class SleeperRateLimiter {
 }
 
 function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+  // Avoid unbound setTimeout (Illegal invocation on some Workers runtimes).
+  return new Promise((r) => globalThis.setTimeout(r, ms));
 }
 
 /** Process-wide shared limiter for all Sleeper egress. */
