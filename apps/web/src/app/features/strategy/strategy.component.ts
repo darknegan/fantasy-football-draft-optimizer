@@ -199,7 +199,7 @@ import type {
 export class StrategyComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly strategies = signal<StrategyDefinition[]>([]);
   readonly selectedId = signal('balanced');
   readonly slots = signal<Array<{ label: string; value: number }>>([]);
@@ -231,7 +231,7 @@ export class StrategyComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.api.strategies().subscribe((s) => {
       this.strategies.set(s);
       this.simStrategyId = this.selectedId();

@@ -62,13 +62,15 @@ export function mapLeagueType(settings: Record<string, number | string> | undefi
 
 export function mapSleeperLeague(
   league: SleeperLeague,
-  opts?: { draftSlot?: number; draft?: SleeperDraft | null },
+  opts?: { userId?: string; draftSlot?: number; draft?: SleeperDraft | null },
 ): League {
   const draft = opts?.draft;
   const roster = mapRosterPositions(league.roster_positions ?? []);
   const scoring = mapScoring(league.scoring_settings ?? {});
   return {
-    id: `sleeper-${league.league_id}`,
+    // Opaque id; API persistence upserts by (userId, platform, externalId).
+    id: crypto.randomUUID(),
+    userId: opts?.userId ?? '',
     name: league.name,
     platform: 'sleeper',
     externalId: league.league_id,

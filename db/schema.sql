@@ -1,7 +1,28 @@
--- DraftLab Postgres schema (Phase 1 foundations)
--- Engines currently run against in-memory seed data; this schema is the durable target.
+-- DraftLab Postgres schema
+-- Users/auth + league ownership are durable; engines may still use in-memory seed data.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "citext";
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email CITEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
 
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -41,7 +62,8 @@ CREATE TABLE IF NOT EXISTS player_market (
 );
 
 CREATE TABLE IF NOT EXISTS leagues (
-  id TEXT PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   platform TEXT NOT NULL CHECK (platform IN ('sleeper', 'manual')),
   external_id TEXT,
@@ -55,12 +77,17 @@ CREATE TABLE IF NOT EXISTS leagues (
   strategy_id TEXT,
   sleeper_draft_id TEXT,
   sleeper_user_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  dynasty_mode TEXT,
+  auction_budget INT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, platform, external_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_leagues_user ON leagues(user_id);
 
 CREATE TABLE IF NOT EXISTS draft_picks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
   pick_number INT NOT NULL,
   round INT NOT NULL,
   slot INT NOT NULL,
@@ -74,11 +101,9 @@ CREATE TABLE IF NOT EXISTS draft_picks (
 CREATE INDEX IF NOT EXISTS idx_players_position ON players(position);
 CREATE INDEX IF NOT EXISTS idx_draft_picks_league ON draft_picks(league_id);
 
--- Phase 6–7: dynasty pick assets, auction bids/contracts, calibration outcomes
-
 CREATE TABLE IF NOT EXISTS draft_pick_assets (
   id TEXT PRIMARY KEY,
-  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
   season INT NOT NULL,
   round INT NOT NULL,
   original_roster_id TEXT NOT NULL,
@@ -89,7 +114,7 @@ CREATE TABLE IF NOT EXISTS draft_pick_assets (
 
 CREATE TABLE IF NOT EXISTS auction_bids (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
   player_id TEXT NOT NULL REFERENCES players(id),
   roster_id TEXT NOT NULL,
   amount INT NOT NULL,
@@ -98,7 +123,7 @@ CREATE TABLE IF NOT EXISTS auction_bids (
 );
 
 CREATE TABLE IF NOT EXISTS contract_rules (
-  league_id TEXT PRIMARY KEY REFERENCES leagues(id) ON DELETE CASCADE,
+  league_id UUID PRIMARY KEY REFERENCES leagues(id) ON DELETE CASCADE,
   max_length INT NOT NULL DEFAULT 4,
   salary_cap INT,
   dead_cap_pct_on_release DOUBLE PRECISION NOT NULL DEFAULT 0.5,
@@ -109,7 +134,7 @@ CREATE TABLE IF NOT EXISTS contract_rules (
 
 CREATE TABLE IF NOT EXISTS draft_outcomes (
   id TEXT PRIMARY KEY,
-  league_id TEXT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  league_id UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
   pick_number INT NOT NULL,
   recommended_player_id TEXT,
   actual_player_id TEXT NOT NULL,
@@ -129,6 +154,3 @@ CREATE TABLE IF NOT EXISTS calibration_configs (
   applied_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-ALTER TABLE leagues ADD COLUMN IF NOT EXISTS dynasty_mode TEXT;
-ALTER TABLE leagues ADD COLUMN IF NOT EXISTS auction_budget INT;

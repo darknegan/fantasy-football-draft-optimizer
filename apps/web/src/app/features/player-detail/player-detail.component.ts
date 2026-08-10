@@ -179,12 +179,12 @@ import type { Player, PlayerEvaluation } from '../../core/api.types';
 export class PlayerDetailComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly player = signal<Player | null>(null);
   readonly evaluation = signal<PlayerEvaluation | null>(null);
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     const pid = this.route.snapshot.paramMap.get('pid')!;
     this.api.player(pid).subscribe((res) => {
       this.player.set(res.player);

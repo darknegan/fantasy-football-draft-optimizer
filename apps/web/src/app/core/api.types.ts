@@ -75,6 +75,7 @@ export interface ScoringSummary {
 
 export interface League {
   id: string;
+  userId: string;
   name: string;
   platform: 'sleeper' | 'manual';
   type: string;

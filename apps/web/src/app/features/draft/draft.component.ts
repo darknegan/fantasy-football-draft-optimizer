@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { clearQueuedPick, listQueuedPicks, queuePick } from '../../core/offline-draft.store';
 import type { AdherenceResult, BoardPlayer, DraftState, League } from '../../core/api.types';
 
@@ -158,11 +159,12 @@ export class DateAgoPipe implements PipeTransform {
 })
 export class DraftComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private timer?: ReturnType<typeof setInterval>;
   private onlineHandler?: () => void;
 
-  leagueId = 'demo-league';
+  leagueId = '';
   filter = '';
   readonly league = signal<League | null>(null);
   readonly draft = signal<DraftState | null>(null);
@@ -190,7 +192,7 @@ export class DraftComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.reload();
     this.flushQueue();
     this.timer = setInterval(() => this.reload(), 5000);
@@ -236,8 +238,11 @@ export class DraftComponent implements OnInit, OnDestroy {
     const slot = l.draftSlot ?? 1;
     const body = { pickNumber, round, slot, playerId: row.player.id };
 
+    const userId = this.auth.user()?.id;
+    if (!userId) return;
+
     if (!navigator.onLine) {
-      await queuePick({ leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
+      await queuePick({ userId, leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
       this.draft.set({
         ...d,
         syncBanner: 'Offline — pick queued locally and will sync on reconnect.',
@@ -255,7 +260,7 @@ export class DraftComponent implements OnInit, OnDestroy {
         this.picking.set(false);
       },
       error: async () => {
-        await queuePick({ leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
+        await queuePick({ userId, leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
         this.picking.set(false);
         this.draft.set({
           ...d,
@@ -268,7 +273,9 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   private async flushQueue() {
     if (!navigator.onLine) return;
-    const queued = await listQueuedPicks(this.leagueId);
+    const userId = this.auth.user()?.id;
+    if (!userId) return;
+    const queued = await listQueuedPicks(userId, this.leagueId);
     for (const q of queued) {
       try {
         await new Promise<void>((resolve, reject) => {

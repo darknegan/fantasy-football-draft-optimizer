@@ -189,11 +189,11 @@ import type { CheatSheetGroup } from '../../core/api.types';
 export class CheatSheetComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly groups = signal<CheatSheetGroup[]>([]);
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.api.cheatSheet(this.leagueId).subscribe((g) => this.groups.set(g));
   }
 }

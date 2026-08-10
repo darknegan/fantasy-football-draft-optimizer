@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: draftlab
+      POSTGRES_PASSWORD: draftlab
+      POSTGRES_DB: draftlab
+    volumes:
+      - draftlab_pg:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U draftlab -d draftlab']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  draftlab_pg:

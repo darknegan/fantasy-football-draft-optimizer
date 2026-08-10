@@ -152,12 +152,12 @@ import type { DynastyOverview } from '../../core/api.types';
 export class DynastyComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-dynasty';
+  leagueId = '';
   readonly modes = ['contend', 'neutral', 'rebuild'] as const;
   readonly overview = signal<DynastyOverview | null>(null);
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-dynasty';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.reload();
   }
 

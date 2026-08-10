@@ -240,10 +240,12 @@ inflation rate, and the max-bid figure that is the auction room's most valuable 
 
 ## 6. Screen Inventory
 
-Ten screens, ordered by the flow a new user follows. All are built in the Figma file.
+Twelve screens, ordered by the flow a new user follows. All are built in the Figma file.
 
 | # | Screen | Purpose |
 | --- | --- | --- |
+| — | [**Login**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1285) | Account sign-in: DraftLab brand, email/password, primary CTA, link to Sign up, inline error state (centered auth panel, no app chrome) |
+| — | [**Sign up**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1286) | Account creation: display name, email, password, confirm password, primary CTA, link to Login |
 | 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and an explicit model-coverage card marking RB provisional |
 | 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow, manual league setup as an equal path for other platforms, discovered-league table with detected format and scoring, and a note stating plainly why ESPN is not supported |
 | 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |

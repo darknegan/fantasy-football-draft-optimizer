@@ -54,14 +54,17 @@ import { buildRecap } from './recap.js';
 
 export class AppStore {
   private readonly seeds: SeedPlayer[];
+  /** Global catalog evaluations (public /api/players). */
   private readonly evaluations = new Map<string, PlayerEvaluation>();
+  /** Per-league evaluation caches — recalculate/calibration must not clobber other leagues. */
+  private readonly leagueEvaluations = new Map<string, Map<string, PlayerEvaluation>>();
   private readonly leagues = new Map<string, League>();
   private readonly drafts = new Map<string, DraftState>();
   private readonly targets = new Map<string, Set<string>>();
   private readonly avoids = new Map<string, Set<string>>();
   readonly formats = new FormatState();
 
-  constructor(seeds: SeedPlayer[]) {
+  constructor(seeds: SeedPlayer[], opts?: { seedDemoUserId?: string }) {
     this.seeds = seeds;
     for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
@@ -79,7 +82,15 @@ export class AppStore {
       this.evaluations.set(seed.player.id, evaluation);
     }
 
+    if (opts?.seedDemoUserId) {
+      this.seedDemoLeagues(opts.seedDemoUserId);
+    }
+  }
+
+  /** Dev-only demos attached to a dedicated demo user (SEED_DEMO_USER). */
+  seedDemoLeagues(userId: string) {
     const demo = createManualLeague({
+      userId,
       name: 'Demo 12-Team PPR',
       teamCount: 12,
       season: 2025,
@@ -88,11 +99,12 @@ export class AppStore {
       draftSlot: 3,
       strategyId: 'balanced',
     });
-    demo.id = 'demo-league';
     this.leagues.set(demo.id, demo);
     this.drafts.set(demo.id, this.createEmptyDraft(demo.id));
+    this.recalculateForLeague(demo.id);
 
     const dynasty = createManualLeague({
+      userId,
       name: 'Demo Dynasty Superflex',
       type: 'dynasty',
       draftType: 'rookie',
@@ -113,7 +125,6 @@ export class AppStore {
       strategyId: 'balanced',
       dynastyMode: 'rebuild',
     });
-    dynasty.id = 'demo-dynasty';
     this.leagues.set(dynasty.id, dynasty);
     this.drafts.set(dynasty.id, this.createEmptyDraft(dynasty.id));
     this.formats.ensureDynasty(dynasty.id, 'rebuild');
@@ -121,8 +132,10 @@ export class AppStore {
       dynasty.id,
       seedPickAssets(dynasty.teamCount, dynasty.season, 'roster-user'),
     );
+    this.recalculateForLeague(dynasty.id);
 
     const auction = createManualLeague({
+      userId,
       name: 'Demo Auction Contracts',
       type: 'auction',
       draftType: 'auction',
@@ -135,7 +148,6 @@ export class AppStore {
       auctionBudget: 200,
       contractRules: { ...DEFAULT_CONTRACT_RULES },
     });
-    auction.id = 'demo-auction';
     this.leagues.set(auction.id, auction);
     this.drafts.set(auction.id, this.createEmptyDraft(auction.id));
     const slots =
@@ -147,9 +159,10 @@ export class AppStore {
       auction.roster.superflex +
       auction.roster.bench;
     this.formats.ensureAuction(auction.id, auction.teamCount, 200, slots, 'roster-user');
+    this.recalculateForLeague(auction.id);
 
-    // Seed a few calibration outcomes so Phase 7 UI has something to show on first load.
     this.seedDemoOutcomes(demo.id);
+    return { demo, dynasty, auction };
   }
 
   private seedDemoOutcomes(leagueId: string) {
@@ -210,16 +223,41 @@ export class AppStore {
     return this.evaluations.get(id);
   }
 
+  getLeagueEvaluation(leagueId: string, playerId: string): PlayerEvaluation | undefined {
+    return this.leagueEvaluations.get(leagueId)?.get(playerId) ?? this.evaluations.get(playerId);
+  }
+
   listEvaluations() {
     return [...this.evaluations.values()];
   }
 
-  listLeagues() {
-    return [...this.leagues.values()];
+  listLeagues(userId?: string) {
+    const all = [...this.leagues.values()];
+    if (!userId) return all;
+    return all.filter((l) => l.userId === userId);
   }
 
   getLeague(id: string) {
     return this.leagues.get(id);
+  }
+
+  getLeagueForUser(userId: string, leagueId: string): League | null {
+    const league = this.leagues.get(leagueId);
+    if (!league || league.userId !== userId) return null;
+    return league;
+  }
+
+  assertOwns(userId: string, leagueId: string): League | null {
+    return this.getLeagueForUser(userId, leagueId);
+  }
+
+  hydrateLeagues(leagues: League[]) {
+    for (const league of leagues) {
+      this.upsertLeague(league);
+      if (!this.leagueEvaluations.has(league.id)) {
+        this.recalculateForLeague(league.id);
+      }
+    }
   }
 
   upsertLeague(league: League) {
@@ -233,7 +271,7 @@ export class AppStore {
   updateLeague(id: string, patch: Partial<League>) {
     const existing = this.leagues.get(id);
     if (!existing) return null;
-    const next = { ...existing, ...patch, id };
+    const next = { ...existing, ...patch, id, userId: existing.userId };
     this.leagues.set(id, next);
     return next;
   }
@@ -260,6 +298,8 @@ export class AppStore {
   recalculateForLeague(leagueId: string) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
+    const cache = new Map<string, PlayerEvaluation>();
+    const weights = this.formats.getActiveWeights(leagueId);
     for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
         player: seed.player,
@@ -272,9 +312,11 @@ export class AppStore {
           teamCount: league.teamCount,
         },
         risk: seed.risk,
+        weights,
       });
-      this.evaluations.set(seed.player.id, evaluation);
+      cache.set(seed.player.id, evaluation);
     }
+    this.leagueEvaluations.set(leagueId, cache);
     return {
       leagueId,
       playerCount: this.seeds.length,
@@ -302,7 +344,7 @@ export class AppStore {
       league,
       draft,
       getPlayer: (id) => this.getPlayer(id),
-      getEvaluation: (id) => this.getEvaluation(id),
+      getEvaluation: (id) => this.getLeagueEvaluation(leagueId, id),
     });
   }
 
@@ -310,6 +352,7 @@ export class AppStore {
     const league = this.leagues.get(leagueId);
     const draft = this.drafts.get(leagueId);
     if (!league || !draft) return [];
+    if (!this.leagueEvaluations.has(leagueId)) this.recalculateForLeague(leagueId);
 
     const draftedIds = new Set(draft.picks.filter((p) => p.playerId).map((p) => p.playerId!));
     const userRoster = draft.picks
@@ -319,7 +362,7 @@ export class AppStore {
 
     const available = this.seeds.filter((s) => !draftedIds.has(s.player.id)).map((s) => ({
       player: s.player,
-      evaluation: this.evaluations.get(s.player.id)!,
+      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
     }));
 
     const round = Math.floor((draft.currentPick - 1) / league.teamCount) + 1;
@@ -348,7 +391,7 @@ export class AppStore {
       const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
       const npvByPlayer = new Map<string, number>();
       for (const s of this.seeds) {
-        const evaluation = this.evaluations.get(s.player.id)!;
+        const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
         npvByPlayer.set(s.player.id, buildMultiYearCurve(s.player, evaluation, league.season).npv);
       }
       recs = applyDynastyModeToRecommendations(recs, mode, npvByPlayer);
@@ -358,7 +401,7 @@ export class AppStore {
 
     return this.seeds.map((s) => ({
       player: s.player,
-      evaluation: this.evaluations.get(s.player.id)!,
+      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
       recommendation: recById.get(s.player.id),
       drafted: draftedIds.has(s.player.id),
       target: targetSet.has(s.player.id),
@@ -444,9 +487,9 @@ export class AppStore {
     };
   }
 
-  private simPool(teamCount: number): SimPlayer[] {
+  private simPool(leagueId: string, teamCount: number): SimPlayer[] {
     return this.seeds.map((s) => {
-      const evaluation = this.evaluations.get(s.player.id)!;
+      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
       return {
         id: s.player.id,
         name: s.player.name,
@@ -471,7 +514,7 @@ export class AppStore {
       rounds: opts.rounds ?? 8,
       iterations: opts.iterations ?? 200,
       seed: opts.seed ?? 42,
-      players: this.simPool(league.teamCount),
+      players: this.simPool(leagueId, league.teamCount),
     });
   }
 
@@ -496,7 +539,7 @@ export class AppStore {
       rounds: opts.rounds ?? 8,
       iterations: opts.iterations ?? 150,
       seed: opts.seed ?? 42,
-      players: this.simPool(league.teamCount),
+      players: this.simPool(leagueId, league.teamCount),
     });
   }
 
@@ -506,7 +549,7 @@ export class AppStore {
     const targetSet = this.targets.get(leagueId) ?? new Set();
     const avoidSet = this.avoids.get(leagueId) ?? new Set();
     const players = this.seeds.map((s) => {
-      const evaluation = this.evaluations.get(s.player.id)!;
+      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
       return {
         id: s.player.id,
         name: s.player.name,
@@ -548,7 +591,7 @@ export class AppStore {
       userRoster.length > 0 ? userRoster : this.seeds.slice(0, 12).map((s) => s.player);
 
     const curves = this.seeds.map((s) => {
-      const evaluation = this.evaluations.get(s.player.id)!;
+      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
       const curve = buildMultiYearCurve(s.player, evaluation, league.season);
       return {
         playerId: s.player.id,
@@ -581,7 +624,7 @@ export class AppStore {
       rookieBoard: buildRookieBoard(
         this.seeds.map((s) => ({
           player: s.player,
-          evaluation: this.evaluations.get(s.player.id)!,
+          evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
         })),
         league.season,
         mode === 'contend' ? 'contend' : 'rebuild',
@@ -612,8 +655,8 @@ export class AppStore {
       this.seeds.map((s) => ({
         playerId: s.player.id,
         position: s.player.position,
-        draftScore: this.evaluations.get(s.player.id)!.draftScore,
-        vorp: vorpFromEvaluation(this.evaluations.get(s.player.id)!),
+        draftScore: this.getLeagueEvaluation(leagueId, s.player.id)!.draftScore,
+        vorp: vorpFromEvaluation(this.getLeagueEvaluation(leagueId, s.player.id)!),
       })),
       {
         teamCount: league.teamCount,
@@ -657,7 +700,7 @@ export class AppStore {
           name: player.name,
           position: player.position,
           age: player.age,
-          draftScore: this.evaluations.get(v.playerId)!.draftScore,
+          draftScore: this.getLeagueEvaluation(leagueId, v.playerId)!.draftScore,
         };
       });
 
@@ -767,18 +810,18 @@ export class AppStore {
     if (!this.leagues.get(leagueId)) return null;
     const outcomes = this.formats.outcomes.get(leagueId) ?? [];
     const rows = buildRecVsActual(outcomes, (id) => this.getPlayer(id)?.name ?? null);
+    const bands = this.formats.getActiveBands(leagueId);
+    const weights = this.formats.getActiveWeights(leagueId);
     const proposal =
       this.formats.calibration.get(leagueId) ??
-      (outcomes.length
-        ? proposeCalibration(outcomes, this.formats.activeBands, this.formats.activeWeights)
-        : null);
+      (outcomes.length ? proposeCalibration(outcomes, bands, weights) : null);
     return {
       leagueId,
       outcomes,
       rows,
       proposal,
-      activeBands: this.formats.activeBands,
-      activeWeights: this.formats.activeWeights,
+      activeBands: bands,
+      activeWeights: weights,
     };
   }
 
@@ -787,8 +830,8 @@ export class AppStore {
     const outcomes = this.formats.outcomes.get(leagueId) ?? [];
     const proposal = proposeCalibration(
       outcomes,
-      this.formats.activeBands,
-      this.formats.activeWeights,
+      this.formats.getActiveBands(leagueId),
+      this.formats.getActiveWeights(leagueId),
     );
     this.formats.calibration.set(leagueId, proposal);
     return proposal;
@@ -798,26 +841,10 @@ export class AppStore {
     const proposal =
       this.formats.calibration.get(leagueId) ?? this.proposeLeagueCalibration(leagueId);
     if (!proposal) return null;
-    this.formats.applyCalibration(proposal);
+    this.formats.applyCalibration(leagueId, proposal);
     const applied = { ...proposal, applied: true };
     this.formats.calibration.set(leagueId, applied);
-    // Re-score board with new weights.
-    for (const seed of this.seeds) {
-      const evaluation = evaluatePlayer({
-        player: seed.player,
-        factors: seed.factors,
-        value: {
-          adpRoundPick: seed.market.adpRoundPick,
-          fseRank: seed.market.fseRank,
-          espnProjectionRank: seed.market.espnProjectionRank,
-          projectedRank: seed.market.projectedRank,
-          teamCount: this.leagues.get(leagueId)?.teamCount ?? 12,
-        },
-        risk: seed.risk,
-        weights: this.formats.activeWeights,
-      });
-      this.evaluations.set(seed.player.id, evaluation);
-    }
+    this.recalculateForLeague(leagueId);
     return applied;
   }
 

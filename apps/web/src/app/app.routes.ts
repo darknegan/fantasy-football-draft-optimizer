@@ -1,14 +1,27 @@
 import { Routes } from '@angular/router';
+import { authGuard, guestGuard } from './core/auth.guard';
 import { ShellComponent } from './layout/shell.component';
 
 export const routes: Routes = [
   {
+    path: 'login',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'signup',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/signup.component').then((m) => m.SignupComponent),
+  },
+  {
     path: '',
     component: ShellComponent,
+    canActivate: [authGuard],
     children: [
       {
         path: '',
-        loadComponent: () => import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
         path: 'leagues/connect',
@@ -34,7 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'leagues/:id/board/:pid',
-        loadComponent: () => import('./features/player-detail/player-detail.component').then((m) => m.PlayerDetailComponent),
+        loadComponent: () =>
+          import('./features/player-detail/player-detail.component').then((m) => m.PlayerDetailComponent),
       },
       {
         path: 'leagues/:id/draft',

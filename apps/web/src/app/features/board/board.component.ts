@@ -213,7 +213,7 @@ import type { BoardPlayer, Position } from '../../core/api.types';
 export class BoardComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-league';
+  leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
   readonly posFilter = signal<Position | 'ALL'>('ALL');
   readonly posOptions = [
@@ -231,7 +231,7 @@ export class BoardComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-league';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.reload();
   }
 

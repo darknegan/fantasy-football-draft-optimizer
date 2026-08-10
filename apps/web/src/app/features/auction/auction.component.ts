@@ -151,7 +151,7 @@ import type { AuctionState, ContractValuation, MaxBidResult } from '../../core/a
 export class AuctionComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-  leagueId = 'demo-auction';
+  leagueId = '';
   readonly state = signal<AuctionState | null>(null);
   readonly maxBid = signal<MaxBidResult | null>(null);
   readonly contract = signal<ContractValuation | null>(null);
@@ -160,7 +160,7 @@ export class AuctionComponent implements OnInit {
   deadCapPct = 50;
 
   ngOnInit() {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? 'demo-auction';
+    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     this.reload();
   }
 

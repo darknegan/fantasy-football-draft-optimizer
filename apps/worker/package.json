@@ -19,7 +19,8 @@
     "@draftlab/integrations": "*",
     "@draftlab/recommendation-engine": "*",
     "@draftlab/strategy-engine": "*",
-    "hono": "^4.9.6"
+    "hono": "^4.9.6",
+    "jose": "^6.2.8"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

@@ -1,9 +1,12 @@
 import type { FastifyInstance } from 'fastify';
+import type { Pool } from 'pg';
 import type { StrategyId } from '@draftlab/domain';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
+import { authenticate } from '../auth/plugin.js';
+import { requireOwnedLeague } from '../auth/ownership.js';
 import type { AppStore } from '../services/store.js';
 
-export async function strategyRoutes(app: FastifyInstance, store: AppStore) {
+export async function strategyRoutes(app: FastifyInstance, store: AppStore, pool: Pool) {
   app.get('/api/strategies', async () => store.strategies());
 
   app.get<{ Querystring: { slot?: string; teamCount?: string; rounds?: string } }>(
@@ -21,7 +24,8 @@ export async function strategyRoutes(app: FastifyInstance, store: AppStore) {
   app.post<{
     Params: { id: string };
     Body: { strategyId?: StrategyId; iterations?: number; rounds?: number; seed?: number };
-  }>('/api/leagues/:id/simulate', async (req, reply) => {
+  }>('/api/leagues/:id/simulate', { preHandler: authenticate }, async (req, reply) => {
+    if (!(await requireOwnedLeague(req, reply, store, pool))) return;
     const result = store.simulate(req.params.id, req.body ?? {});
     if (!result) return reply.code(404).send({ error: 'League not found' });
     return result;
@@ -30,15 +34,21 @@ export async function strategyRoutes(app: FastifyInstance, store: AppStore) {
   app.post<{
     Params: { id: string };
     Body: { strategyIds?: StrategyId[]; iterations?: number; rounds?: number; seed?: number };
-  }>('/api/leagues/:id/compare-strategies', async (req, reply) => {
+  }>('/api/leagues/:id/compare-strategies', { preHandler: authenticate }, async (req, reply) => {
+    if (!(await requireOwnedLeague(req, reply, store, pool))) return;
     const result = store.compare(req.params.id, req.body ?? {});
     if (!result) return reply.code(404).send({ error: 'League not found' });
     return result;
   });
 
-  app.get<{ Params: { id: string } }>('/api/leagues/:id/cheat-sheet', async (req, reply) => {
-    const result = store.cheatSheet(req.params.id);
-    if (!result) return reply.code(404).send({ error: 'League not found' });
-    return result;
-  });
+  app.get<{ Params: { id: string } }>(
+    '/api/leagues/:id/cheat-sheet',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (!(await requireOwnedLeague(req, reply, store, pool))) return;
+      const result = store.cheatSheet(req.params.id);
+      if (!result) return reply.code(404).send({ error: 'League not found' });
+      return result;
+    },
+  );
 }

@@ -23,15 +23,26 @@ db/schema.sql                   Postgres target schema
 ```bash
 npm install
 npm run build:packages
+# Postgres (accounts + league ownership)
+docker compose up -d postgres   # or local Postgres with db/schema.sql applied
+cp apps/api/.env.example apps/api/.env   # set DATABASE_URL + JWT secrets
+export $(grep -v '^#' apps/api/.env | xargs)
 npm run test:engines
-npm run dev:api    # http://localhost:3001
-npm run dev:web    # http://localhost:4200 (proxies /api)
-npm run dev:worker # http://localhost:8787 (API Worker)
+npm run test -w @draftlab/api
+npm run dev:api    # http://localhost:3001  (auth + durable leagues)
+npm run dev:web    # http://localhost:4200 (proxies /api, /auth, /me, /ws)
+npm run dev:worker # edge mirror — JWT required for leagues; mutations return 503 without Node DB
 npm run deploy:worker
-npm run deploy:web    # Angular SPA Worker → proxies /api to draftlab-api
+npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftlab-api
 ```
 
-Demo league id: `demo-league`.
+### Auth
+
+- Register / login: `/signup`, `/login`
+- API: `POST /auth/register|login|refresh|logout`, `GET /me`
+- Access JWT (Bearer) + httpOnly refresh cookie (`draftlab_refresh`)
+- Leagues, strategy, live draft, auction, dynasty, and calibration are scoped to the signed-in user
+- Optional demos: `SEED_DEMO_USER=true` seeds `demo@draftlab.local` with three owned leagues
 
 ## Verified model fixtures
 
