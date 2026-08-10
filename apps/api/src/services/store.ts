@@ -520,7 +520,13 @@ export class AppStore {
 
   compare(
     leagueId: string,
-    opts: { strategyIds?: StrategyId[]; iterations?: number; rounds?: number; seed?: number },
+    opts: {
+      strategyIds?: StrategyId[];
+      iterations?: number;
+      rounds?: number;
+      seed?: number;
+      draftSlot?: number;
+    },
   ) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
@@ -534,7 +540,7 @@ export class AppStore {
       ] as StrategyId[])) as StrategyId[];
     return compareStrategies({
       strategyIds,
-      slot: league.draftSlot ?? 1,
+      slot: opts.draftSlot ?? league.draftSlot ?? 1,
       teamCount: league.teamCount,
       rounds: opts.rounds ?? 8,
       iterations: opts.iterations ?? 150,

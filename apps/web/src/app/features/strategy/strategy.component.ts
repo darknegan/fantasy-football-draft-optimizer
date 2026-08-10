@@ -35,6 +35,53 @@ const ROUND_WINNER_RATES: Record<number, Partial<Record<Position, number>>> = {
 const PLAN_ROUNDS = [1, 2, 3, 4, 5, 6, 7, 10];
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
+/** Figma `04 · Strategy Planner` card order (node 17:326 / 17:437 / 17:546). */
+const DISPLAY_ORDER = [
+  'balanced',
+  'hero_wr',
+  'double_hero_rb',
+  'elite_te',
+  'hero_rb',
+  'robust_rb',
+  'double_hero_wr',
+  'zero_rb',
+  'elite_qb',
+] as const;
+
+/** Illustrative R1–6 shapes from the Figma mock (not engine primary[0]). */
+const SHAPE_PREVIEW: Record<string, Position[]> = {
+  balanced: ['RB', 'WR', 'RB', 'WR', 'WR', 'RB'],
+  hero_wr: ['WR', 'RB', 'RB', 'WR', 'TE', 'RB'],
+  double_hero_rb: ['RB', 'RB', 'WR', 'WR', 'QB', 'WR'],
+  elite_te: ['WR', 'TE', 'RB', 'WR', 'RB', 'WR'],
+  hero_rb: ['RB', 'WR', 'WR', 'WR', 'RB', 'TE'],
+  robust_rb: ['RB', 'RB', 'RB', 'WR', 'RB', 'WR'],
+  double_hero_wr: ['WR', 'WR', 'RB', 'RB', 'RB', 'WR'],
+  zero_rb: ['WR', 'WR', 'WR', 'TE', 'QB', 'WR'],
+  elite_qb: ['QB', 'WR', 'RB', 'WR', 'RB', 'WR'],
+};
+
+type FitKind = 'ok' | 'warn' | 'muted' | 'info';
+
+interface FitNote {
+  kind: FitKind;
+  /** Use `{pick}` for the formatted draft slot when the copy is slot-relative. */
+  label: string;
+}
+
+/** Fit footnotes from Figma strategy cards. */
+const FIT_NOTES: Record<string, FitNote> = {
+  balanced: { kind: 'ok', label: 'Strong from {pick}' },
+  hero_wr: { kind: 'ok', label: 'Strong from {pick}' },
+  double_hero_rb: { kind: 'ok', label: 'Best at the turn — {pick} works' },
+  elite_te: { kind: 'ok', label: 'Take the TE in rounds 2‑3, not 4' },
+  hero_rb: { kind: 'ok', label: 'Workable from {pick}' },
+  robust_rb: { kind: 'warn', label: 'Hard to execute from {pick}' },
+  double_hero_wr: { kind: 'warn', label: 'Needs a top-4 pick' },
+  zero_rb: { kind: 'muted', label: 'Tier not shown in source data' },
+  elite_qb: { kind: 'info', label: 'QB pays off in rounds 3‑4, not 1' },
+};
+
 interface RoundPlanRow {
   round: number;
   rates: Record<Position, number | null>;
@@ -45,6 +92,7 @@ interface RoundPlanRow {
 interface CompareBar {
   strategyId: string;
   name: string;
+  tier: StrategyTier;
   topThirdRate: number;
   meanRosterScore: number;
   best: boolean;
@@ -88,6 +136,7 @@ interface CompareBar {
                 class="fit-row"
                 [class.warn]="fitTone(s) === 'warn'"
                 [class.muted]="fitTone(s) === 'muted'"
+                [class.info]="fitTone(s) === 'info'"
               >
                 <span class="fit-dot" aria-hidden="true"></span>
                 <span>{{ fitLabel(s) }}</span>
@@ -119,6 +168,7 @@ interface CompareBar {
             <div class="bars">
               @for (bar of bars; track bar.strategyId) {
                 <div class="bar-row">
+                  <span class="tier" [class]="tierClass(bar.tier)">{{ tierGlyph(bar.tier) }}</span>
                   <span class="bar-name">{{ bar.name }}</span>
                   <div class="bar-track">
                     <span
@@ -218,7 +268,7 @@ interface CompareBar {
         </section>
 
         <aside class="callout" role="note">
-          <h3>Do not take a tight end in round 4</h3>
+          <h3>× Do not take a tight end in round 4</h3>
           <p>
             Round 2 TEs became league-winners 43% of the time and round 3 TEs 25%, but round 4 TEs
             0%, with a second 20% spike in round 10. Pay early or wait — never round 4.
@@ -254,13 +304,17 @@ export class StrategyComponent implements OnInit {
     const c = this.compare();
     if (!c?.ranking?.length) return null;
     const ranked = c.ranking.slice(0, 4);
-    return ranked.map((r, i) => ({
-      strategyId: r.strategyId,
-      name: this.strategies().find((s) => s.id === r.strategyId)?.name ?? r.strategyId,
-      topThirdRate: r.topThirdRate,
-      meanRosterScore: r.meanRosterScore,
-      best: i === 0,
-    }));
+    return ranked.map((r, i) => {
+      const def = this.strategies().find((s) => s.id === r.strategyId);
+      return {
+        strategyId: r.strategyId,
+        name: def?.name ?? r.strategyId,
+        tier: def?.tier ?? 'unrated',
+        topThirdRate: r.topThirdRate,
+        meanRosterScore: r.meanRosterScore,
+        best: i === 0,
+      };
+    });
   });
 
   ngOnInit() {
@@ -271,7 +325,7 @@ export class StrategyComponent implements OnInit {
       slots: this.api.draftSlots(),
       league: this.api.league(this.leagueId),
     }).subscribe(({ strategies, slots, league }) => {
-      this.strategies.set(strategies);
+      this.strategies.set(orderStrategies(strategies));
       this.slotInfos.set(slots.length ? slots : defaultSlots());
       this.applyLeague(league);
       this.runCompare();
@@ -307,6 +361,10 @@ export class StrategyComponent implements OnInit {
   }
 
   shapePreview(s: StrategyDefinition): Array<{ round: number; pos: Position }> {
+    const shape = SHAPE_PREVIEW[s.id];
+    if (shape) {
+      return shape.map((pos, i) => ({ round: i + 1, pos }));
+    }
     return s.rounds.slice(0, 6).map((r) => ({
       round: r.round,
       pos: (r.primary[0] ?? 'WR') as Position,
@@ -332,18 +390,16 @@ export class StrategyComponent implements OnInit {
 
   fitLabel(s: StrategyDefinition): string {
     const pick = this.formatSlot(this.slot());
+    const note = FIT_NOTES[s.id];
+    if (note) return note.label.replaceAll('{pick}', pick);
     if (s.tier === 'unrated') return 'Tier not shown in source data';
-    if (s.tier === 'C' || s.id === 'robust_rb' || s.id === 'double_hero_wr') {
-      return `Hard to execute from ${pick}`;
-    }
+    if (s.tier === 'C') return `Hard to execute from ${pick}`;
     if (s.tier === 'S' || s.tier === 'A') return `Strong from ${pick}`;
     return `Viable from ${pick}`;
   }
 
-  fitTone(s: StrategyDefinition): 'ok' | 'warn' | 'muted' {
-    if (s.tier === 'unrated') return 'muted';
-    if (s.tier === 'C' || s.id === 'robust_rb' || s.id === 'double_hero_wr') return 'warn';
-    return 'ok';
+  fitTone(s: StrategyDefinition): FitKind {
+    return FIT_NOTES[s.id]?.kind ?? (s.tier === 'unrated' ? 'muted' : s.tier === 'C' ? 'warn' : 'ok');
   }
 
   formatSlot(slot: number): string {
@@ -387,11 +443,10 @@ export class StrategyComponent implements OnInit {
         strategyIds: ids.length ? ids : ['balanced', 'hero_wr', 'double_hero_rb', 'elite_te'],
         iterations: 150,
         rounds: 8,
+        draftSlot: this.slot(),
       })
       .subscribe({
         next: (r) => {
-          // Slot is saved on the league for compare; refresh after slot change uses league slot.
-          // If API uses league draftSlot, update league first for accuracy — for UI we show bars as returned.
           this.compare.set(r);
           this.cmpLoading.set(false);
         },
@@ -401,6 +456,15 @@ export class StrategyComponent implements OnInit {
         },
       });
   }
+}
+
+function orderStrategies(list: StrategyDefinition[]): StrategyDefinition[] {
+  const rank = new Map(DISPLAY_ORDER.map((id, i) => [id, i]));
+  return [...list].sort((a, b) => {
+    const ai = rank.get(a.id as (typeof DISPLAY_ORDER)[number]) ?? 100;
+    const bi = rank.get(b.id as (typeof DISPLAY_ORDER)[number]) ?? 100;
+    return ai - bi || a.name.localeCompare(b.name);
+  });
 }
 
 function defaultSlots(): DraftSlotInfo[] {
