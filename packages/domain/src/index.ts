@@ -123,6 +123,9 @@ export interface GradedFactor {
   value: number | null;
   grade: FactorGrade;
   weight: number;
+  /** Benchmark from the position config — used on Player Detail factor rows. */
+  benchmark?: number | null;
+  category?: 'volume' | 'situational' | 'profile';
   note?: string;
 }
 

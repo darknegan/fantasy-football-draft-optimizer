@@ -1,0 +1,187 @@
+@if (loading()) {
+  <p class="pd-muted">Loading player…</p>
+} @else if (error()) {
+  <p class="pd-error">{{ error() }}</p>
+} @else if (player(); as p) {
+  <article class="pd">
+    <a class="pd-back" [routerLink]="['/leagues', leagueId, 'board']">← Player board</a>
+
+    <header class="pd-header">
+      <div class="pd-identity">
+        <div class="pd-name-row">
+          <span class="pos" [class]="p.position">{{ p.position }}</span>
+          <h1 class="pd-name">{{ p.name }}</h1>
+        </div>
+        <p class="pd-meta">
+          <span>{{ p.team }}</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>Age {{ p.age }}</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>Year {{ p.seasonsInLeague }}</span>
+          @if (evaluation(); as e) {
+            <span class="dot" aria-hidden="true"></span>
+            <span>ADP {{ e.value.adpRoundPick }}</span>
+          }
+        </p>
+      </div>
+
+      <div class="pd-metrics">
+        @for (m of metrics(); track m.label) {
+          <div class="pd-metric" [class]="m.tone">
+            <span class="pd-metric-label">{{ m.label }}</span>
+            <div class="pd-metric-value">
+              <span class="num">{{ m.value }}</span>
+              <span class="unit">{{ m.unit }}</span>
+            </div>
+            <span class="pd-metric-sub">{{ m.sub }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="pd-actions">
+        <button
+          type="button"
+          class="pd-btn primary"
+          [class.active]="isTarget()"
+          [disabled]="flagBusy() || !leagueId"
+          (click)="toggleTarget()"
+        >
+          {{ isTarget() ? 'Targeted' : 'Flag as target' }}
+        </button>
+        <button type="button" class="pd-btn" disabled title="Compare coming soon">Compare</button>
+      </div>
+    </header>
+
+    @if (evaluation(); as e) {
+      <div class="pd-columns">
+        <section class="pd-panel factors" aria-labelledby="factor-title">
+          <div class="pd-panel-head">
+            <h2 id="factor-title">Factor breakdown</h2>
+            <span class="chip accent">{{ knownChip() }}</span>
+            <span class="pd-panel-hint">{{ benchHint() }}</span>
+          </div>
+
+          @if (e.ceiling.provisional) {
+            <p class="pd-muted">
+              Ceiling is provisional for this position until benchmarks land. Showing available
+              profile signals instead.
+            </p>
+          } @else {
+            <div class="factor-head" aria-hidden="true">
+              <span class="c-factor">Factor</span>
+              <span class="c-bench">Benchmark</span>
+              <span class="c-proj">Projected</span>
+              <span class="c-grade">Grade</span>
+            </div>
+
+            @for (group of factorGroups(); track group.category) {
+              <div class="factor-group">
+                <div class="factor-group-label">
+                  <span class="cat">{{ group.label }}</span>
+                  <span class="hint">{{ group.hint }}</span>
+                </div>
+                @for (factor of group.factors; track factor.factorId) {
+                  <div class="factor-row">
+                    <span class="c-factor">{{ factor.label }}</span>
+                    <span class="c-bench mono">{{ formatFactorValue(factor, 'benchmark') }}</span>
+                    <span class="c-proj mono">{{ formatFactorValue(factor, 'value') }}</span>
+                    <span class="c-grade">
+                      <span class="grade-pill" [class]="gradeClass(factor.grade)">{{
+                        gradeLabel(factor.grade)
+                      }}</span>
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="weighted">
+              <span class="weighted-label">Weighted total</span>
+              <span class="weighted-math mono">{{ weightedBreakdown() }}</span>
+              <span class="weighted-score mono" [class.good]="(e.ceiling.ceilingScore ?? 0) >= 30">
+                {{ e.ceiling.ceilingScore ?? '—' }}
+              </span>
+              <span class="weighted-den mono">/60</span>
+            </div>
+          }
+        </section>
+
+        <div class="pd-side">
+          @if (teChecks().length) {
+            <section class="pd-panel" aria-labelledby="te-title">
+              <div class="pd-panel-head tight">
+                <h2 id="te-title">Tight end gate</h2>
+                <span class="chip" [class.good]="tePassedCount() === teChecks().length">
+                  {{ tePassedCount() }} of {{ teChecks().length }} passed
+                </span>
+              </div>
+              <p class="pd-copy">
+                Of league-winning tight end seasons, almost all were their team’s first or second
+                target and lined up in-line under half the time. This is closer to a filter than a
+                weighting.
+              </p>
+              <ul class="te-list">
+                @for (check of teChecks(); track check.key) {
+                  <li class="te-row" [class.fail]="!check.passed">
+                    <span class="te-mark" aria-hidden="true">{{ check.passed ? '✓' : '×' }}</span>
+                    <span class="te-label">{{ check.label }}</span>
+                    <span class="te-value mono" [class.pass]="check.passed">{{
+                      check.valueLabel
+                    }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section class="pd-panel" aria-labelledby="injury-title">
+            <div class="pd-panel-head tight">
+              <h2 id="injury-title">Injury history</h2>
+              <span class="pd-panel-hint">{{ injurySummary() }}</span>
+            </div>
+            <div class="injury-grid">
+              @for (season of injurySeasons(); track season.year) {
+                <div class="injury-tile" [class]="season.tone">
+                  <span class="injury-year mono">{{ season.year }}</span>
+                  <span class="injury-n mono">{{ season.missed }}</span>
+                  <span class="injury-unit">missed</span>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="pd-panel" aria-labelledby="market-title">
+            <h2 id="market-title">Market value</h2>
+            <div class="kv">
+              <span>Our combined rank</span>
+              <strong class="mono">{{ formatRank(e.value.blendedRank) }}</strong>
+            </div>
+            <div class="kv">
+              <span>ESPN projection rank</span>
+              <strong class="mono">{{ formatRank(e.value.espnProjectionRank) }}</strong>
+            </div>
+            <div class="kv">
+              <span>Difference</span>
+              <strong
+                class="mono"
+                [class.bad]="(marketDiffValue() ?? 0) > 1"
+                [class.good]="(marketDiffValue() ?? 0) < -1"
+              >
+                @if (marketDiffValue() !== null) {
+                  {{ formatDelta(marketDiffValue()!) }}
+                } @else {
+                  {{ formatDelta(e.value.valueScore) }}
+                }
+              </strong>
+            </div>
+            <div class="kv">
+              <span>Multi-site ADP</span>
+              <strong class="mono">{{ e.value.adpRoundPick }}</strong>
+            </div>
+            <p class="pd-copy market-note">{{ marketNarrative() }}</p>
+          </section>
+        </div>
+      </div>
+    }
+  </article>
+}
