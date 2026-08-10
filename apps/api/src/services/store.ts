@@ -61,9 +61,23 @@ import { buildRecap } from './recap.js';
 // spot-check tests construct their own fixtures inline and never imported
 // SEED_PLAYERS — but nothing in the live app reads them anymore.
 const moduleDir = fileURLToPath(new URL('.', import.meta.url));
+
+// Local dev: sleeperMCP is checked out as a sibling of this repo, so read its
+// artifact straight from that working tree -- always current, no copy step.
+const CHECKOUT_ARTIFACT_PATH = resolve(
+  moduleDir,
+  '../../../../../../sleeperMCP/artifacts/player_factors.json',
+);
+// Deploy hosts only check out THIS repo -- there is no sibling sleeperMCP
+// folder, so the checkout path above can never exist there. data/player_factors.json
+// is a committed snapshot for exactly that case. It goes stale the moment
+// sleeperMCP regenerates a fresher one; re-copy it here and commit when that
+// matters (see docs on the sleeperMCP side for the regenerate command).
+const BUNDLED_ARTIFACT_PATH = resolve(moduleDir, '../../data/player_factors.json');
+
 const ARTIFACT_PATH =
   process.env['SLEEPER_MCP_ARTIFACT_PATH'] ??
-  resolve(moduleDir, '../../../../../../sleeperMCP/artifacts/player_factors.json');
+  (existsSync(CHECKOUT_ARTIFACT_PATH) ? CHECKOUT_ARTIFACT_PATH : BUNDLED_ARTIFACT_PATH);
 
 if (!existsSync(ARTIFACT_PATH)) {
   throw new Error(
