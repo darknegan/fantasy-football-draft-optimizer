@@ -1,12 +1,27 @@
-import { Component, computed, inject, OnDestroy, OnInit, Pipe, PipeTransform, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  Pipe,
+  PipeTransform,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { clearQueuedPick, listQueuedPicks, queuePick } from '../../core/offline-draft.store';
-import type { AdherenceResult, BoardPlayer, DraftState, League } from '../../core/api.types';
+import type {
+  AdherenceResult,
+  BoardPlayer,
+  DraftState,
+  League,
+  Position,
+  RosterShape,
+  StrategyDefinition,
+} from '../../core/api.types';
 
 @Pipe({ name: 'dateAgo' })
 export class DateAgoPipe implements PipeTransform {
@@ -19,143 +34,87 @@ export class DateAgoPipe implements PipeTransform {
   }
 }
 
+interface BoardColumn {
+  slot: number;
+  label: string;
+  isYou: boolean;
+}
+
+interface BoardCell {
+  pickNumber: number;
+  slot: number;
+  isYouCol: boolean;
+  isOnClock: boolean;
+  isYourPick: boolean;
+  filled: boolean;
+  position?: Position;
+  playerName?: string;
+}
+
+interface BoardRow {
+  round: number;
+  cells: BoardCell[];
+}
+
+interface RosterSlotView {
+  key: string;
+  position: Position;
+  badge: string;
+  badgePos: Position;
+  playerName: string | null;
+  pickNumber: number | null;
+}
+
+interface NeedView {
+  position: Position;
+  label: string;
+  detail: string;
+  tone: 'critical' | 'high' | 'moderate' | 'low';
+  barPct: number;
+}
+
+interface RecentPickView {
+  pickNumber: number;
+  position: Position;
+  playerName: string;
+  teamLabel: string;
+}
+
+interface PositionRunView {
+  title: string;
+  body: string;
+  position: Position;
+}
+
+const DEFAULT_ROSTER: RosterShape = {
+  qb: 1,
+  rb: 2,
+  wr: 2,
+  te: 1,
+  flex: 1,
+  superflex: 0,
+  bench: 6,
+  totalStarters: 7,
+};
+
+const STRATEGY_NAMES: Record<string, string> = {
+  balanced: 'Balanced',
+  hero_rb: 'Hero RB',
+  hero_wr: 'Hero WR',
+  zero_rb: 'Zero RB',
+  robust_rb: 'Robust RB',
+  elite_te: 'Elite TE',
+  elite_qb: 'Elite QB',
+  double_hero_rb: 'Double Hero RB',
+  double_hero_wr: 'Double Hero WR',
+};
+
 @Component({
   selector: 'app-draft',
-  imports: [Button, DateAgoPipe, RouterLink, FormsModule, InputText],
-  template: `
-    @if (draft()?.syncBanner; as banner) {
-      <div class="banner">{{ banner }}</div>
-    }
-
-    <div class="head">
-      <div>
-        <h1>Live draft room</h1>
-        <p class="dl-muted">
-          Pick {{ draft()?.currentPick ?? 1 }} · Round {{ round() }} ·
-          @if (draft()?.picksUntilUser != null) {
-            <strong class="until">{{ draft()!.picksUntilUser === 0 ? 'Your pick' : draft()!.picksUntilUser + ' until you' }}</strong>
-            ·
-          }
-          synced {{ draft()?.lastSyncedAt | dateAgo }}
-        </p>
-      </div>
-      <div class="actions">
-        <div class="sync">
-          <span class="dot" [class.degraded]="draft()?.syncMode === 'degraded' || draft()?.syncMode === 'manual'"></span>
-          {{ syncLabel() }}
-        </div>
-        <p-button label="Manual mode" severity="secondary" [outlined]="true" size="small" (onClick)="manualMode()" />
-        <a class="link" [routerLink]="['/leagues', leagueId, 'recap']">Recap →</a>
-      </div>
-    </div>
-
-    <div class="meter dl-panel">
-      <div class="meter-top">
-        <span>Strategy adherence</span>
-        <strong>{{ adherence()?.score ?? '—' }}% · {{ (adherence()?.state ?? 'on_plan').replaceAll('_', ' ') }}</strong>
-      </div>
-      <div class="bar"><span [style.width.%]="adherence()?.score ?? 0"></span></div>
-    </div>
-
-    <div class="layout">
-      <section class="dl-panel queue">
-        <div class="queue-head">
-          <h2>Recommended now</h2>
-          <input pInputText [(ngModel)]="filter" placeholder="Search available…" class="search" />
-        </div>
-        <div class="recs">
-          @for (row of filteredAvailable().slice(0, 10); track row.player.id) {
-            <button
-              type="button"
-              class="rec"
-              [class.target]="row.target"
-              [class.avoid]="row.avoid"
-              (click)="pick(row)"
-              [disabled]="picking()"
-            >
-              <div class="left">
-                <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
-                <div>
-                  <strong>{{ row.player.name }}</strong>
-                  <div class="reason dl-muted">
-                    {{ row.recommendation?.reasons?.[0]?.message ?? 'Best available fit' }}
-                  </div>
-                </div>
-              </div>
-              <span class="score dl-mono">{{ row.recommendation?.contextualScore }}</span>
-            </button>
-          }
-        </div>
-      </section>
-
-      <section class="dl-panel roster">
-        <h2>Your roster</h2>
-        @if (!roster().length) {
-          <p class="dl-muted">No picks yet. Recommendations follow {{ league()?.strategyId ?? 'balanced' }}.</p>
-        }
-        @for (p of roster(); track p.pickNumber) {
-          <div class="pick">
-            <span class="dl-mono">{{ p.pickNumber }}</span>
-            <span>{{ playerName(p.playerId) }}</span>
-          </div>
-        }
-        <p-button class="refresh" label="Refresh board" severity="secondary" [outlined]="true" (onClick)="reload()" />
-      </section>
-    </div>
-  `,
-  styles: `
-    .banner {
-      margin-bottom: 0.75rem; padding: 0.65rem 0.85rem; border-radius: 6px;
-      background: color-mix(in srgb, var(--dl-warning) 15%, transparent);
-      border: 1px solid color-mix(in srgb, var(--dl-warning) 40%, transparent);
-      color: var(--dl-warning); font-size: 0.85rem;
-    }
-    .head { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; align-items: end; flex-wrap: wrap; }
-    h1 { margin: 0 0 0.25rem; }
-    .until { color: var(--dl-accent); }
-    .actions { display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap; }
-    .sync { display: flex; align-items: center; gap: 0.45rem; color: var(--dl-text-secondary); font-size: 0.85rem; }
-    .dot {
-      width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--dl-live);
-      animation: pulse 2s infinite;
-    }
-    .dot.degraded { background: var(--dl-warning); animation: none; }
-    .link { color: var(--dl-accent); font-weight: 600; font-size: 0.85rem; }
-    .meter { padding: 0.75rem 1rem; margin-bottom: 1rem; }
-    .meter-top { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem; }
-    .bar { height: 0.4rem; background: var(--dl-surface-sunken); border-radius: 99px; overflow: hidden; }
-    .bar span { display: block; height: 100%; background: var(--dl-accent); }
-    .layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; }
-    .dl-panel { padding: 1rem; }
-    h2 { margin: 0; font-size: 1rem; }
-    .queue-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
-    .search { max-width: 14rem; }
-    .recs { display: grid; gap: 0.5rem; }
-    .rec {
-      display: flex; justify-content: space-between; gap: 0.75rem; align-items: center;
-      text-align: left; padding: 0.75rem; border-radius: var(--dl-radius-sm);
-      border: 1px solid var(--dl-border-subtle); background: var(--dl-surface-overlay);
-      color: inherit; cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease;
-    }
-    .rec:hover:not(:disabled) { border-color: var(--dl-accent); transform: translateX(2px); }
-    .rec:disabled { opacity: 0.5; cursor: wait; }
-    .rec.target { border-color: color-mix(in srgb, var(--dl-accent) 50%, transparent); }
-    .rec.avoid { border-color: color-mix(in srgb, var(--dl-grade-red) 50%, transparent); }
-    .left { display: flex; gap: 0.65rem; align-items: start; }
-    .reason { font-size: 0.75rem; margin-top: 0.15rem; max-width: 36ch; }
-    .score { color: var(--dl-accent); font-weight: 700; font-size: 1.1rem; }
-    .pick {
-      display: flex; gap: 0.75rem; padding: 0.5rem 0;
-      border-bottom: 1px solid var(--dl-border-subtle); font-size: 0.9rem;
-    }
-    .refresh { margin-top: 1rem; display: inline-block; }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dl-live) 55%, transparent); }
-      70% { box-shadow: 0 0 0 8px transparent; }
-      100% { box-shadow: 0 0 0 0 transparent; }
-    }
-    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-  `,
+  imports: [DateAgoPipe],
+  templateUrl: './draft.component.html',
+  styleUrl: './draft.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DraftComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
@@ -164,39 +123,264 @@ export class DraftComponent implements OnInit, OnDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private onlineHandler?: () => void;
 
+  readonly totalRounds = 16;
+
   leagueId = '';
-  filter = '';
   readonly league = signal<League | null>(null);
   readonly draft = signal<DraftState | null>(null);
   readonly board = signal<BoardPlayer[]>([]);
   readonly adherence = signal<AdherenceResult | null>(null);
+  readonly strategies = signal<StrategyDefinition[]>([]);
   readonly picking = signal(false);
 
-  readonly available = computed(() => this.board().filter((b) => !b.drafted));
-  readonly filteredAvailable = computed(() => {
-    const q = this.filter.trim().toLowerCase();
-    const rows = this.available();
-    if (!q) return rows;
-    return rows.filter((r) => r.player.name.toLowerCase().includes(q) || r.player.team.toLowerCase().includes(q));
-  });
+  readonly teamCount = computed(() => this.league()?.teamCount ?? 12);
+  readonly userSlot = computed(() => this.league()?.draftSlot ?? 1);
+
   readonly round = computed(() => {
     const d = this.draft();
-    const l = this.league();
-    if (!d || !l) return 1;
-    return Math.floor((d.currentPick - 1) / l.teamCount) + 1;
+    const n = this.teamCount();
+    if (!d) return 1;
+    return Math.floor((d.currentPick - 1) / n) + 1;
   });
-  readonly roster = computed(() => {
+
+  readonly nextUserPickOverall = computed(() => {
     const d = this.draft();
+    const slot = this.userSlot();
+    const n = this.teamCount();
+    if (!d) return slot;
+    for (let p = d.currentPick; p <= n * this.totalRounds; p++) {
+      if (slotForPick(p, n) === slot) return p;
+    }
+    return d.currentPick;
+  });
+
+  readonly picksUntilUser = computed(() => {
+    const d = this.draft();
+    if (!d) return null;
+    if (d.picksUntilUser != null) return d.picksUntilUser;
+    return Math.max(0, this.nextUserPickOverall() - d.currentPick);
+  });
+
+  readonly isUserTurn = computed(() => this.picksUntilUser() === 0);
+
+  readonly topRecs = computed(() =>
+    this.board()
+      .filter((b) => !b.drafted && b.recommendation)
+      .sort(
+        (a, b) =>
+          (a.recommendation?.rank ?? 99) - (b.recommendation?.rank ?? 99) ||
+          (b.recommendation?.contextualScore ?? 0) - (a.recommendation?.contextualScore ?? 0),
+      )
+      .slice(0, 3),
+  );
+
+  readonly boardColumns = computed((): BoardColumn[] => {
+    const n = this.teamCount();
+    const you = this.userSlot();
+    return Array.from({ length: n }, (_, i) => {
+      const slot = i + 1;
+      return {
+        slot,
+        label: slot === you ? 'YOU' : `Team ${slot}`,
+        isYou: slot === you,
+      };
+    });
+  });
+
+  readonly boardRows = computed((): BoardRow[] => {
+    const d = this.draft();
+    const n = this.teamCount();
+    const you = this.userSlot();
+    const byPick = new Map((d?.picks ?? []).map((p) => [p.pickNumber, p]));
+    const current = d?.currentPick ?? 1;
+    const nextYou = this.nextUserPickOverall();
+    const maxRound = Math.min(
+      this.totalRounds,
+      Math.max(3, Math.ceil(current / n) + 1, Math.ceil((d?.picks.length ?? 0) / n) + 1),
+    );
+
+    const rows: BoardRow[] = [];
+    for (let round = 1; round <= maxRound; round++) {
+      const cells: BoardCell[] = [];
+      for (let slot = 1; slot <= n; slot++) {
+        const pickNumber = pickNumberForSlot(round, slot, n);
+        const event = byPick.get(pickNumber);
+        const player = event?.playerId
+          ? this.board().find((b) => b.player.id === event.playerId)
+          : undefined;
+        cells.push({
+          pickNumber,
+          slot,
+          isYouCol: slot === you,
+          isOnClock: pickNumber === current && !event?.playerId,
+          isYourPick: pickNumber === nextYou && !event?.playerId,
+          filled: Boolean(event?.playerId),
+          position: player?.player.position,
+          playerName: player ? shortName(player.player.name) : undefined,
+        });
+      }
+      rows.push({ round, cells });
+    }
+    return rows;
+  });
+
+  readonly rosterSlots = computed((): RosterSlotView[] => {
+    const shape = this.league()?.roster ?? DEFAULT_ROSTER;
+    const picks = (this.draft()?.picks ?? [])
+      .filter((p) => p.rosterId === this.draft()?.userRosterId && p.playerId)
+      .sort((a, b) => a.pickNumber - b.pickNumber);
+    const used = new Set<string>();
+    const slots: Array<{ key: string; position: Position }> = [];
+    const push = (position: Position, count: number) => {
+      for (let i = 0; i < count; i++) slots.push({ key: `${position}-${i}`, position });
+    };
+    push('QB', shape.qb + shape.superflex);
+    push('RB', shape.rb);
+    push('WR', shape.wr);
+    push('TE', shape.te);
+    for (let i = 0; i < shape.flex; i++) slots.push({ key: `FLEX-${i}`, position: 'WR' });
+
+    const assigned: RosterSlotView[] = slots.map((s) => ({
+      key: s.key,
+      position: s.position,
+      badge: s.key.startsWith('FLEX') ? 'FLEX' : s.position,
+      badgePos: s.key.startsWith('FLEX') ? ('WR' as Position) : s.position,
+      playerName: null,
+      pickNumber: null,
+    }));
+
+    // Fill strict positions first, then flex.
+    for (const pick of picks) {
+      const player = this.board().find((b) => b.player.id === pick.playerId);
+      if (!player || used.has(pick.playerId!)) continue;
+      const pos = player.player.position;
+      let idx = assigned.findIndex(
+        (s) => !s.playerName && !s.key.startsWith('FLEX') && s.position === pos,
+      );
+      if (idx < 0 && (pos === 'RB' || pos === 'WR' || pos === 'TE')) {
+        idx = assigned.findIndex((s) => !s.playerName && s.key.startsWith('FLEX'));
+      }
+      if (idx < 0) continue;
+      used.add(pick.playerId!);
+      assigned[idx] = {
+        ...assigned[idx]!,
+        position: pos,
+        badge: pos,
+        badgePos: pos,
+        playerName: player.player.name,
+        pickNumber: pick.pickNumber,
+      };
+    }
+
+    return assigned;
+  });
+
+  readonly teamNeeds = computed((): NeedView[] => {
+    const shape = this.league()?.roster ?? DEFAULT_ROSTER;
+    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    for (const slot of this.rosterSlots()) {
+      if (slot.playerName) counts[slot.position] += 1;
+    }
+    const required: Record<Position, number> = {
+      QB: shape.qb + shape.superflex,
+      RB: shape.rb,
+      WR: shape.wr,
+      TE: shape.te,
+    };
+    const order: Position[] = ['WR', 'TE', 'RB', 'QB'];
+    return order.map((position) => {
+      const filled = counts[position];
+      const need = Math.max(0, required[position] - filled);
+      const urgency =
+        need > 0 ? 1 - filled / Math.max(required[position], 1) : filled === 0 ? 0.2 : 0.08;
+      const tone =
+        urgency >= 0.75 ? 'critical' : urgency >= 0.45 ? 'high' : urgency >= 0.2 ? 'moderate' : 'low';
+      const label =
+        tone === 'critical'
+          ? 'Critical'
+          : tone === 'high'
+            ? 'High'
+            : tone === 'moderate'
+              ? 'Moderate'
+              : 'Low';
+      const detail =
+        need > 0
+          ? `${need} slot${need === 1 ? '' : 's'} open`
+          : position === 'QB'
+            ? 'wait for later rounds'
+            : `${position} starters filled`;
+      return {
+        position,
+        label,
+        detail,
+        tone,
+        barPct: Math.round(Math.min(1, Math.max(0.12, urgency)) * 100),
+      };
+    });
+  });
+
+  readonly recentPicks = computed((): RecentPickView[] => {
+    const d = this.draft();
+    const n = this.teamCount();
     if (!d) return [];
-    return d.picks.filter((p) => p.rosterId === d.userRosterId);
+    return [...d.picks]
+      .filter((p) => p.playerId)
+      .sort((a, b) => b.pickNumber - a.pickNumber)
+      .slice(0, 4)
+      .map((p) => {
+        const player = this.board().find((b) => b.player.id === p.playerId);
+        const slot = slotForPick(p.pickNumber, n);
+        return {
+          pickNumber: p.pickNumber,
+          position: player?.player.position ?? 'WR',
+          playerName: player?.player.name ?? p.playerId!,
+          teamLabel: slot === this.userSlot() ? 'YOU' : `Team ${slot}`,
+        };
+      });
+  });
+
+  readonly positionRun = computed((): PositionRunView | null => {
+    const d = this.draft();
+    if (!d) return null;
+    const recent = [...d.picks]
+      .filter((p) => p.playerId)
+      .sort((a, b) => b.pickNumber - a.pickNumber)
+      .slice(0, 10);
+    if (recent.length < 5) return null;
+    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    for (const p of recent) {
+      const pos = this.board().find((b) => b.player.id === p.playerId)?.player.position;
+      if (pos) counts[pos] += 1;
+    }
+    const top = (Object.entries(counts) as Array<[Position, number]>).sort((a, b) => b[1] - a[1])[0];
+    if (!top || top[1] / recent.length < 0.45) return null;
+    const [position, count] = top;
+    const label =
+      position === 'RB'
+        ? 'Running back'
+        : position === 'WR'
+          ? 'Wide receiver'
+          : position === 'TE'
+            ? 'Tight end'
+            : 'Quarterback';
+    const next = this.formatPick(this.survivalTargetPick());
+    return {
+      position,
+      title: `${label} run in progress`,
+      body: `${count} of the last ${recent.length} selections were ${label.toLowerCase()}s, so ${position} supply is draining faster than ADP predicts. Tier depth at the position may be gone before your ${next} pick — but do not let that push you onto a worse player than the best alternative on the board.`,
+    };
   });
 
   ngOnInit() {
     this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.api.strategies().subscribe({
+      next: (s) => this.strategies.set(s),
+      error: () => undefined,
+    });
     this.reload();
-    this.flushQueue();
+    void this.flushQueue();
     this.timer = setInterval(() => this.reload(), 5000);
-    this.onlineHandler = () => this.flushQueue();
+    this.onlineHandler = () => void this.flushQueue();
     window.addEventListener('online', this.onlineHandler);
   }
 
@@ -205,12 +389,154 @@ export class DraftComponent implements OnInit, OnDestroy {
     if (this.onlineHandler) window.removeEventListener('online', this.onlineHandler);
   }
 
-  syncLabel() {
+  isDegraded() {
     const mode = this.draft()?.syncMode;
-    if (mode === 'polling') return 'Polling Sleeper';
-    if (mode === 'degraded') return 'Degraded — manual OK';
-    if (mode === 'hybrid') return 'Hybrid sync';
-    return 'Manual entry';
+    return mode === 'degraded' || mode === 'manual';
+  }
+
+  syncTitle() {
+    const platform = this.league()?.platform === 'sleeper' ? 'Sleeper' : 'Manual';
+    const mode = this.draft()?.syncMode;
+    if (mode === 'polling') return `${platform} · polling`;
+    if (mode === 'degraded') return `${platform} · degraded`;
+    if (mode === 'hybrid') return `${platform} · hybrid`;
+    return `${platform} · manual`;
+  }
+
+  onTheClockLabel() {
+    const d = this.draft();
+    const n = this.teamCount();
+    if (!d) return 'Waiting for draft';
+    const slot = slotForPick(d.currentPick, n);
+    const team = slot === this.userSlot() ? 'You' : `Team ${slot}`;
+    return `${team} · pick ${this.formatPick(d.currentPick)}`;
+  }
+
+  untilYouLabel() {
+    const until = this.picksUntilUser();
+    if (until == null) return '—';
+    if (until === 0) return 'On the clock';
+    if (until === 1) return '1 selection away';
+    return `${until} selections away`;
+  }
+
+  pickClockLabel() {
+    if (this.isUserTurn()) return 'NOW';
+    const until = this.picksUntilUser();
+    if (until == null) return '—';
+    // Honest: we don't get Sleeper's pick timer — show picks remaining instead.
+    return `${until}`;
+  }
+
+  strategyLabel() {
+    const id = this.league()?.strategyId ?? 'balanced';
+    return (
+      this.strategies().find((s) => s.id === id)?.name ?? STRATEGY_NAMES[id] ?? id.replaceAll('_', ' ')
+    );
+  }
+
+  canDraft() {
+    const d = this.draft();
+    return Boolean(d && d.status !== 'complete');
+  }
+
+  formatPick(overall: number): string {
+    const n = this.teamCount();
+    const round = Math.floor((overall - 1) / n) + 1;
+    const slot = ((overall - 1) % n) + 1;
+    // Display snake pick as round.slot-in-round (not team slot).
+    return `${round}.${String(slot).padStart(2, '0')}`;
+  }
+
+  survivalTargetPick() {
+    const n = this.teamCount();
+    const next = this.nextUserPickOverall();
+    // "Survives to" the following user pick (turn after next), matching the mock.
+    for (let p = next + 1; p <= n * this.totalRounds; p++) {
+      if (slotForPick(p, n) === this.userSlot()) return p;
+    }
+    return next + n;
+  }
+
+  playerMeta(row: BoardPlayer): string {
+    const p = row.player;
+    const adp = row.evaluation.value.adpRoundPick;
+    const bits = [p.team, p.age != null ? String(p.age) : null, p.seasonsInLeague != null ? `Yr ${p.seasonsInLeague}` : null, adp || null];
+    return bits.filter(Boolean).join(' · ');
+  }
+
+  scoreLabel(row: BoardPlayer): string {
+    return String(Math.round(row.recommendation?.contextualScore ?? row.evaluation.draftScore));
+  }
+
+  cardReasons(row: BoardPlayer): string[] {
+    const reasons = row.recommendation?.reasons?.map((r) => r.message) ?? [];
+    if (reasons.length >= 3) return reasons.slice(0, 3);
+    const extras = [
+      `Contextual score ${this.scoreLabel(row)} after strategy fit and roster need`,
+      row.target ? 'On your target list' : null,
+      `ADP ${row.evaluation.value.adpRoundPick || '—'}`,
+    ].filter(Boolean) as string[];
+    return [...reasons, ...extras].slice(0, 3);
+  }
+
+  reasonIcon(_reason: string, index: number): string {
+    if (index === 1) return '/draft/reason-mid.svg';
+    if (index >= 2) return '/draft/reason-down.svg';
+    return '/draft/reason-up.svg';
+  }
+
+  survivalOf(row: BoardPlayer): number {
+    return row.recommendation?.survivalProbability ?? 0.4;
+  }
+
+  survivalTone(row: BoardPlayer): string {
+    const p = this.survivalOf(row);
+    if (p < 0.25) return 'red';
+    if (p < 0.4) return 'yellow';
+    return 'green';
+  }
+
+  survivalNote(row: BoardPlayer): string {
+    const p = this.survivalOf(row);
+    const label = this.formatPick(this.survivalTargetPick());
+    if (p < 0.25) return `Unlikely to reach ${label}`;
+    if (p < 0.4) return `Coin-flip to reach ${label}`;
+    return `Reasonable shot to reach ${label}`;
+  }
+
+  formatPct(rate: number): string {
+    return `${Math.round(rate * 100)}%`;
+  }
+
+  adherenceLabel() {
+    const state = this.adherence()?.state ?? 'on_plan';
+    if (state === 'on_plan') return 'On plan';
+    if (state === 'drifting') return 'Drifting';
+    return 'Pivot';
+  }
+
+  adherenceTone() {
+    const state = this.adherence()?.state ?? 'on_plan';
+    if (state === 'drifting') return 'drifting';
+    if (state === 'pivot_recommended') return 'pivot';
+    return '';
+  }
+
+  adherenceCopy() {
+    const a = this.adherence();
+    const strategy = this.strategyLabel();
+    const next = this.formatPick(this.nextUserPickOverall());
+    if (!a) {
+      return `${strategy} is active. Recommendations at ${next} follow the round plan and your open starter slots.`;
+    }
+    if (a.state === 'on_plan') {
+      return `${strategy} is on track. At ${next}, stay with the plan unless a clear value outlier appears.`;
+    }
+    if (a.gapPositions.length) {
+      return `${strategy} is ${a.state.replaceAll('_', ' ')}. Gaps at ${a.gapPositions.join(', ')} are pulling the roster off plan.`;
+    }
+    return `${strategy} adherence ${a.score}% — ${a.state.replaceAll('_', ' ')}.`;
   }
 
   reload() {
@@ -224,18 +550,13 @@ export class DraftComponent implements OnInit, OnDestroy {
     this.api.setManualMode(this.leagueId).subscribe((d) => this.draft.set(d));
   }
 
-  playerName(id: string | null) {
-    if (!id) return '—';
-    return this.board().find((b) => b.player.id === id)?.player.name ?? id;
-  }
-
   async pick(row: BoardPlayer) {
     const d = this.draft();
     const l = this.league();
     if (!d || !l) return;
     const pickNumber = d.currentPick;
     const round = Math.floor((pickNumber - 1) / l.teamCount) + 1;
-    const slot = l.draftSlot ?? 1;
+    const slot = slotForPick(pickNumber, l.teamCount);
     const body = { pickNumber, round, slot, playerId: row.player.id };
 
     const userId = this.auth.user()?.id;
@@ -260,7 +581,12 @@ export class DraftComponent implements OnInit, OnDestroy {
         this.picking.set(false);
       },
       error: async () => {
-        await queuePick({ userId, leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
+        await queuePick({
+          userId,
+          leagueId: this.leagueId,
+          ...body,
+          queuedAt: new Date().toISOString(),
+        });
         this.picking.set(false);
         this.draft.set({
           ...d,
@@ -295,4 +621,22 @@ export class DraftComponent implements OnInit, OnDestroy {
       }
     }
   }
+}
+
+function slotForPick(pickNumber: number, teamCount: number): number {
+  const round = Math.floor((pickNumber - 1) / teamCount) + 1;
+  const indexInRound = (pickNumber - 1) % teamCount;
+  if (round % 2 === 1) return indexInRound + 1;
+  return teamCount - indexInRound;
+}
+
+function pickNumberForSlot(round: number, slot: number, teamCount: number): number {
+  if (round % 2 === 1) return (round - 1) * teamCount + slot;
+  return (round - 1) * teamCount + (teamCount - slot + 1);
+}
+
+function shortName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return parts[parts.length - 1]!;
 }

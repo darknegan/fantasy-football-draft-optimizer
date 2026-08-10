@@ -1,0 +1,258 @@
+@if (draft()?.syncBanner; as banner) {
+  <div class="banner" role="status">{{ banner }}</div>
+}
+
+<div class="draft-room">
+  <header class="status-bar">
+    <div class="on-clock">
+      <div class="on-clock-label">
+        <span class="live-dot" [class.degraded]="isDegraded()"></span>
+        <span>ON THE CLOCK</span>
+      </div>
+      <div class="on-clock-team">{{ onTheClockLabel() }}</div>
+    </div>
+
+    <div class="timer" [class.your-turn]="isUserTurn()">
+      <div class="timer-value dl-mono">{{ pickClockLabel() }}</div>
+      <div class="timer-cap">PICK CLOCK</div>
+    </div>
+
+    <div class="next-pick">
+      <div class="cap">YOUR NEXT PICK</div>
+      <div class="next-row">
+        <span class="dl-mono accent">{{ formatPick(nextUserPickOverall()) }}</span>
+        <span>{{ untilYouLabel() }}</span>
+      </div>
+    </div>
+
+    <div class="round-meta">
+      <div class="cap">ROUND</div>
+      <div>{{ round() }} of {{ totalRounds }}</div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="sync-chip">
+      <span class="live-dot sm" [class.degraded]="isDegraded()"></span>
+      <div>
+        <div class="sync-title">{{ syncTitle() }}</div>
+        <div class="sync-sub">last pick seen {{ draft()?.lastSyncedAt | dateAgo }}</div>
+      </div>
+    </div>
+
+    <button type="button" class="manual-btn" (click)="manualMode()">Enter pick manually</button>
+  </header>
+
+  <div class="body">
+    <div class="main-col">
+      <section class="recs-block">
+        <div class="recs-head">
+          <h1>Recommended at {{ formatPick(nextUserPickOverall()) }}</h1>
+          <span class="chip">{{ strategyLabel() }} · round {{ round() }}</span>
+          <span class="spacer"></span>
+          <p class="rerank">
+            Re-ranked {{ draft()?.lastSyncedAt | dateAgo }} against your roster and the live board
+          </p>
+        </div>
+
+        <div class="rec-cards">
+          @for (card of topRecs(); track card.player.id; let i = $index) {
+            <article class="rec-card" [class.best]="i === 0">
+              <div class="rec-top">
+                <span class="rank" [class.best]="i === 0">{{ i + 1 }}</span>
+                <span class="pos" [class]="card.player.position">{{ card.player.position }}</span>
+                @if (i === 0) {
+                  <span class="spacer"></span>
+                  <span class="best-chip">Best pick</span>
+                }
+              </div>
+
+              <div class="name-row">
+                <div class="identity">
+                  <strong>{{ card.player.name }}</strong>
+                  <div class="meta">{{ playerMeta(card) }}</div>
+                </div>
+                <span class="score dl-mono">{{ scoreLabel(card) }}</span>
+              </div>
+
+              <ul class="reasons">
+                @for (reason of cardReasons(card); track reason) {
+                  <li>
+                    <img
+                      class="bullet"
+                      [src]="reasonIcon(reason, $index)"
+                      width="6"
+                      height="12"
+                      alt=""
+                    />
+                    <span>{{ reason }}</span>
+                  </li>
+                }
+              </ul>
+
+              <div class="survival">
+                <div class="surv-head">
+                  <span>SURVIVES TO {{ formatPick(survivalTargetPick()) }}</span>
+                  <span class="dl-mono" [class]="survivalTone(card)">{{
+                    formatPct(survivalOf(card))
+                  }}</span>
+                </div>
+                <div class="surv-bar">
+                  <span
+                    [style.width.%]="survivalOf(card) * 100"
+                    [class]="survivalTone(card)"
+                  ></span>
+                </div>
+                <p class="surv-note">{{ survivalNote(card) }}</p>
+              </div>
+
+              <button
+                type="button"
+                class="draft-btn"
+                [class.primary]="i === 0"
+                [disabled]="picking() || !canDraft()"
+                (click)="pick(card)"
+              >
+                {{ i === 0 ? 'Draft ' + card.player.name : 'Draft' }}
+              </button>
+            </article>
+          } @empty {
+            <div class="empty-recs dl-panel">
+              <p>No available recommendations yet. Sync the board or enter a pick manually.</p>
+              <button type="button" class="manual-btn" (click)="reload()">Refresh board</button>
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (positionRun(); as run) {
+        <aside class="run-alert" role="status">
+          <span class="run-bang" aria-hidden="true">!</span>
+          <div>
+            <strong>{{ run.title }}</strong>
+            <p>{{ run.body }}</p>
+          </div>
+        </aside>
+      }
+
+      <section class="board-block">
+        <div class="board-head">
+          <h2>Draft board</h2>
+          <span class="chip muted"
+            >Snake · {{ teamCount() }} teams · {{ totalRounds }} rounds</span
+          >
+          <span class="spacer"></span>
+          <span class="slot-note">Your slot is column {{ userSlot() }}</span>
+        </div>
+
+        <div class="board-scroll">
+          <table class="snake-board">
+            <thead>
+              <tr>
+                <th class="round-h"></th>
+                @for (col of boardColumns(); track col.slot) {
+                  <th [class.you]="col.isYou">{{ col.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of boardRows(); track row.round) {
+                <tr>
+                  <th class="round-h">{{ row.round }}</th>
+                  @for (cell of row.cells; track cell.pickNumber) {
+                    <td
+                      [class.you-col]="cell.isYouCol"
+                      [class.on-clock]="cell.isOnClock"
+                      [class.your-pick]="cell.isYourPick"
+                      [class.filled]="cell.filled"
+                    >
+                      @if (cell.filled) {
+                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                        <div class="cell-player">
+                          <span class="pos tiny" [class]="cell.position">{{ cell.position }}</span>
+                          <span>{{ cell.playerName }}</span>
+                        </div>
+                      } @else if (cell.isOnClock) {
+                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                        <div class="cell-state warn">On the clock</div>
+                      } @else if (cell.isYourPick) {
+                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                        <div class="cell-state accent">Your pick</div>
+                      } @else {
+                        <div class="cell-pick dl-mono muted">{{ formatPick(cell.pickNumber) }}</div>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side-rail">
+      <section class="rail-card">
+        <h3>Your roster</h3>
+        <ul class="roster-slots">
+          @for (slot of rosterSlots(); track slot.key) {
+            <li>
+              <span class="pos" [class]="slot.badgePos">{{ slot.badge }}</span>
+              @if (slot.playerName) {
+                <span class="slot-name">{{ slot.playerName }}</span>
+                <span class="slot-pick dl-mono">{{ formatPick(slot.pickNumber!) }}</span>
+              } @else {
+                <span class="slot-open">Open</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="rail-card">
+        <h3>Team needs</h3>
+        <ul class="needs">
+          @for (need of teamNeeds(); track need.position) {
+            <li>
+              <div class="need-top">
+                <span class="pos" [class]="need.position">{{ need.position }}</span>
+                <span class="need-level" [class]="need.tone">{{ need.label }}</span>
+              </div>
+              <p class="need-detail">{{ need.detail }}</p>
+              <div class="need-bar">
+                <span [style.width.%]="need.barPct" [class]="need.tone"></span>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="rail-card adherence">
+        <div class="adh-top">
+          <h3>Strategy adherence</h3>
+          <span class="adh-chip" [class]="adherenceTone()">{{ adherenceLabel() }}</span>
+        </div>
+        <p>{{ adherenceCopy() }}</p>
+        <div class="adh-bar">
+          <span [style.width.%]="adherence()?.score ?? 0"></span>
+        </div>
+      </section>
+
+      <section class="rail-card">
+        <h3>Recent picks</h3>
+        <ul class="recent">
+          @for (p of recentPicks(); track p.pickNumber) {
+            <li>
+              <span class="dl-mono">{{ formatPick(p.pickNumber) }}</span>
+              <span class="pos tiny" [class]="p.position">{{ p.position }}</span>
+              <span class="recent-name">{{ p.playerName }}</span>
+              <span class="recent-team">{{ p.teamLabel }}</span>
+            </li>
+          } @empty {
+            <li class="empty">No picks yet</li>
+          }
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
