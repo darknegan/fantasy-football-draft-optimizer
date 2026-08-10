@@ -23,8 +23,11 @@ db/schema.sql                   Postgres target schema
 ```bash
 npm install
 npm run build:packages
-# Postgres (accounts + league ownership)
-docker compose up -d postgres   # or local Postgres with db/schema.sql applied
+# Postgres (accounts + league ownership) — either:
+#   A) Supabase project "draftlab" (recommended): set DATABASE_URL in apps/api/.env
+#      Host: db.mvuwjtlcvsoamasbuirf.supabase.co
+#      Dashboard: https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf
+#   B) Local: docker compose up -d postgres
 cp apps/api/.env.example apps/api/.env   # DATABASE_URL + JWT_* live here
 # The API loads apps/api/.env automatically (no manual export needed)
 npm run test:engines
@@ -35,6 +38,18 @@ npm run dev:worker # edge mirror — JWT required for leagues; mutations return 
 npm run deploy:worker
 npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftlab-api
 ```
+
+### Supabase
+
+Production/shared Postgres lives in Supabase project **draftlab** (`mvuwjtlcvsoamasbuirf`, `us-west-1`).
+Schema matches `db/schema.sql`. Set:
+
+```
+DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@db.mvuwjtlcvsoamasbuirf.supabase.co:5432/postgres?sslmode=require
+```
+
+Copy the DB password from [Database settings](https://supabase.com/dashboard/project/mvuwjtlcvsoamasbuirf/settings/database).
+The Node API connects as the Postgres role (not the Supabase JS anon client).
 
 ### Auth
 
@@ -48,7 +63,7 @@ npm run deploy:web    # Angular SPA Worker → proxies /api|/auth|/me to draftla
 
 You need **both** processes running, plus Postgres:
 
-1. `docker compose up -d postgres` (or any Postgres matching `DATABASE_URL` in `apps/api/.env`)
+1. Postgres up — Supabase `DATABASE_URL` **or** `docker compose up -d postgres`
 2. `npm run dev:api` — must listen on `:3001` (web proxies `/auth` here)
 3. `npm run dev:web` — `:4200`
 

@@ -10,7 +10,13 @@ export function getPool(): pg.Pool {
   if (!connectionString) {
     throw new Error('DATABASE_URL is required');
   }
-  pool = new Pool({ connectionString });
+  const useSsl =
+    connectionString.includes('sslmode=require') ||
+    connectionString.includes('supabase.co');
+  pool = new Pool({
+    connectionString,
+    ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  });
   return pool;
 }
 
