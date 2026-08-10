@@ -52,6 +52,11 @@ import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
 
+type CompareCacheEntry = {
+  at: number;
+  value: ReturnType<typeof compareStrategies>;
+};
+
 export class AppStore {
   private readonly seeds: SeedPlayer[];
   /** Global catalog evaluations (public /api/players). */
@@ -62,6 +67,8 @@ export class AppStore {
   private readonly drafts = new Map<string, DraftState>();
   private readonly targets = new Map<string, Set<string>>();
   private readonly avoids = new Map<string, Set<string>>();
+  /** Short-lived compare results — re-runs with the same knobs are common in the simulator UI. */
+  private readonly compareCache = new Map<string, CompareCacheEntry>();
   readonly formats = new FormatState();
 
   constructor(seeds: SeedPlayer[], opts?: { seedDemoUserId?: string }) {
@@ -566,22 +573,50 @@ export class AppStore {
         'zero_rb',
         'elite_qb',
       ] as StrategyId[])) as StrategyId[];
+    const slot = opts.draftSlot ?? league.draftSlot ?? 1;
+    const rounds = opts.rounds ?? 8;
+    // Compare is multi-strategy; keep iterations modest for Worker CPU limits.
+    const iterations = Math.min(clampIterations(opts.iterations ?? 40), 40);
+    const seed = opts.seed ?? 42;
+    const adpVarianceRatio = opts.adpVarianceRatio ?? 0.12;
+    const adpVarianceFloor = opts.adpVarianceFloor ?? 1.5;
+    const cacheKey = [
+      leagueId,
+      slot,
+      rounds,
+      iterations,
+      seed,
+      adpVarianceRatio,
+      adpVarianceFloor,
+      strategyIds.join(','),
+    ].join('|');
+    const cached = this.compareCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < 5 * 60_000) {
+      return cached.value;
+    }
+
     const pool = this.simPool(leagueId, league.teamCount);
     if (pool.length === 0) {
       throw new Error('Simulation pool is empty — player evaluations are not ready');
     }
-    return compareStrategies({
+    const value = compareStrategies({
       strategyIds,
-      slot: opts.draftSlot ?? league.draftSlot ?? 1,
+      slot,
       teamCount: league.teamCount,
-      rounds: opts.rounds ?? 8,
-      // Compare is multi-strategy; keep iterations modest for Worker CPU limits.
-      iterations: Math.min(clampIterations(opts.iterations ?? 120), 150),
-      seed: opts.seed ?? 42,
-      adpVarianceRatio: opts.adpVarianceRatio,
-      adpVarianceFloor: opts.adpVarianceFloor,
+      rounds,
+      iterations,
+      seed,
+      adpVarianceRatio,
+      adpVarianceFloor,
       players: pool,
     });
+    this.compareCache.set(cacheKey, { at: Date.now(), value });
+    // Bound cache size for long-lived isolates.
+    if (this.compareCache.size > 40) {
+      const oldest = [...this.compareCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) this.compareCache.delete(oldest[0]);
+    }
+    return value;
   }
 
   cheatSheet(leagueId: string) {
@@ -910,5 +945,5 @@ export class AppStore {
 /** Keep Monte Carlo runs inside Worker CPU budgets while still supporting Figma-scale controls. */
 function clampIterations(n: number): number {
   if (!Number.isFinite(n)) return 200;
-  return Math.max(20, Math.min(2000, Math.floor(n)));
+  return Math.max(20, Math.min(800, Math.floor(n)));
 }

@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, finalize, forkJoin, of, switchMap, tap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
   CommonRosterSlot,
@@ -56,7 +56,8 @@ const VARIANCE_OPTIONS: VarianceOption[] = [
   { id: 'loose', label: 'Loose / chaotic', ratio: 0.2, floor: 3 },
 ];
 
-const ITERATION_OPTIONS = [200, 500, 1000, 2000] as const;
+/** Worker CPU budgets prefer fewer iterations; server also clamps. */
+const ITERATION_OPTIONS = [100, 200, 400, 800] as const;
 
 @Component({
   selector: 'app-simulator',
@@ -77,7 +78,7 @@ export class SimulatorComponent implements OnInit {
 
   readonly strategyId = signal('balanced');
   readonly slot = signal(9);
-  readonly iterations = signal<number>(500);
+  readonly iterations = signal<number>(200);
   readonly varianceId = signal<VariancePreset>('fitted');
 
   readonly loading = signal(true);
@@ -85,6 +86,9 @@ export class SimulatorComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly result = signal<StrategySimResult | null>(null);
   readonly compare = signal<CompareStrategiesResult | null>(null);
+
+  /** Last compare knobs (strategy-independent). Skip re-compare when unchanged. */
+  private lastCompareKey: string | null = null;
 
   readonly selectedStrategy = computed(
     () => this.strategies().find((s) => s.id === this.strategyId()) ?? null,
@@ -160,7 +164,7 @@ export class SimulatorComponent implements OnInit {
     });
   }
 
-  runSimulation(): void {
+  runSimulation(opts?: { compare?: boolean }): void {
     if (!this.leagueId || this.running()) return;
     this.running.set(true);
     this.error.set(null);
@@ -173,29 +177,49 @@ export class SimulatorComponent implements OnInit {
       adpVarianceRatio: v.ratio,
       adpVarianceFloor: v.floor,
     };
+    const compareKey = [
+      body.draftSlot,
+      body.iterations,
+      body.adpVarianceRatio,
+      body.adpVarianceFloor,
+      body.rounds,
+    ].join('|');
+    // Compare is strategy-agnostic — only refresh when slot/variance/iterations change.
+    const needCompare =
+      opts?.compare !== false && (this.compare() == null || this.lastCompareKey !== compareKey);
     const compareIds = this.strategies().map((s) => s.id);
 
-    forkJoin({
-      result: this.api.simulate(this.leagueId, body),
-      compare: this.api
-        .compareStrategies(this.leagueId, {
-          ...body,
-          strategyIds: compareIds.length ? compareIds : undefined,
-          // Compare is multi-strategy — keep this light for Worker CPU budgets.
-          iterations: Math.min(this.iterations(), 120),
-        })
-        .pipe(catchError(() => of(null))),
-    }).subscribe({
-      next: ({ result, compare }) => {
-        this.result.set(result);
-        if (compare) this.compare.set(compare);
-        this.running.set(false);
-      },
-      error: (err: Error) => {
-        this.running.set(false);
-        this.error.set(err.message || 'Simulation failed.');
-      },
-    });
+    // Sequential: never overlap simulate + multi-strategy compare on the Worker.
+    this.api
+      .simulate(this.leagueId, body)
+      .pipe(
+        tap((result) => this.result.set(result)),
+        switchMap(() => {
+          if (!needCompare) return of(null);
+          return this.api
+            .compareStrategies(this.leagueId, {
+              draftSlot: body.draftSlot,
+              iterations: Math.min(body.iterations, 60),
+              rounds: body.rounds,
+              adpVarianceRatio: body.adpVarianceRatio,
+              adpVarianceFloor: body.adpVarianceFloor,
+              strategyIds: compareIds.length ? compareIds : undefined,
+            })
+            .pipe(catchError(() => of(null)));
+        }),
+        finalize(() => this.running.set(false)),
+      )
+      .subscribe({
+        next: (compare) => {
+          if (compare) {
+            this.compare.set(compare);
+            this.lastCompareKey = compareKey;
+          }
+        },
+        error: (err: Error) => {
+          this.error.set(err.message || 'Simulation failed.');
+        },
+      });
   }
 
   onStrategyChange(event: Event): void {
@@ -216,7 +240,8 @@ export class SimulatorComponent implements OnInit {
 
   selectCompareRow(id: string): void {
     this.strategyId.set(id);
-    this.runSimulation();
+    // Strategy change only needs a single-strategy simulate — reuse compare table.
+    this.runSimulation({ compare: false });
   }
 
   formatSlot(slot: number): string {
