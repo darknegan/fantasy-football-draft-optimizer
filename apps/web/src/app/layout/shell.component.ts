@@ -1,3 +1,4 @@
+import { NgOptimizedImage } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,12 +16,21 @@ import { ApiService } from '../core/api.service';
 import type { League } from '../core/api.types';
 import { AuthService } from '../core/auth.service';
 
+type NavIcon =
+  | 'dashboard'
+  | 'strategy'
+  | 'board'
+  | 'draft'
+  | 'auction'
+  | 'roster'
+  | 'research'
+  | 'connect';
+
 interface NavItem {
   label: string;
-  icon: string;
+  icon: NavIcon;
   link: string | string[];
   exact?: boolean;
-  requiresLeague?: boolean;
 }
 
 interface NavGroup {
@@ -45,7 +55,7 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgOptimizedImage],
   template: `
     <div class="shell dl-dark" [class.nav-open]="navOpen()">
       <button
@@ -100,11 +110,138 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
                   [routerLinkActiveOptions]="{ exact: item.exact === true }"
                   (click)="onNavClick()"
                 >
-                  <span
-                    class="nav-icon"
-                    aria-hidden="true"
-                    [style.--icon]="'url(/nav/' + item.icon + '.svg)'"
-                  ></span>
+                  <svg class="nav-icon" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                    @switch (item.icon) {
+                      @case ('dashboard') {
+                        <path
+                          d="M2.25 2.25H7.5V7.5H2.25V2.25ZM10.5 2.25H15.75V6H10.5V2.25ZM10.5 9H15.75V15.75H10.5V9ZM2.25 10.5H7.5V15.75H2.25V10.5Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('strategy') {
+                        <path
+                          d="M9 15.75C12.7279 15.75 15.75 12.7279 15.75 9C15.75 5.27208 12.7279 2.25 9 2.25C5.27208 2.25 2.25 5.27208 2.25 9C2.25 12.7279 5.27208 15.75 9 15.75Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M9 12.75C11.0711 12.75 12.75 11.0711 12.75 9C12.75 6.92893 11.0711 5.25 9 5.25C6.92893 5.25 5.25 6.92893 5.25 9C5.25 11.0711 6.92893 12.75 9 12.75Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M9 9.75C9.41421 9.75 9.75 9.41421 9.75 9C9.75 8.58579 9.41421 8.25 9 8.25C8.58579 8.25 8.25 8.58579 8.25 9C8.25 9.41421 8.58579 9.75 9 9.75Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('board') {
+                        <path
+                          d="M6 4.5H15.75M6 9H15.75M6 13.5H15.75M2.625 4.5H2.6325M2.625 9H2.6325M2.625 13.5H2.6325"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('draft') {
+                        <path
+                          d="M9 11.25C10.2426 11.25 11.25 10.2426 11.25 9C11.25 7.75736 10.2426 6.75 9 6.75C7.75736 6.75 6.75 7.75736 6.75 9C6.75 10.2426 7.75736 11.25 9 11.25Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M4.725 4.725C4.15809 5.28329 3.70789 5.94877 3.40059 6.6827C3.09329 7.41662 2.93503 8.20434 2.93503 9C2.93503 9.79566 3.09329 10.5834 3.40059 11.3173C3.70789 12.0512 4.15809 12.7167 4.725 13.275M13.275 13.275C13.8419 12.7167 14.2921 12.0512 14.5994 11.3173C14.9067 10.5834 15.065 9.79566 15.065 9C15.065 8.20434 14.9067 7.41662 14.5994 6.6827C14.2921 5.94877 13.8419 5.28329 13.275 4.725"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('auction') {
+                        <path
+                          d="M9 15V6.75M13.5 15V3M4.5 15V10.5"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('roster') {
+                        <path
+                          d="M12 15V13.5C12 12.7044 11.6839 11.9413 11.1213 11.3787C10.5587 10.8161 9.79565 10.5 9 10.5H4.5C3.70435 10.5 2.94129 10.8161 2.37868 11.3787C1.81607 11.9413 1.5 12.7044 1.5 13.5V15"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M6.75 7.875C8.19975 7.875 9.375 6.69975 9.375 5.25C9.375 3.80025 8.19975 2.625 6.75 2.625C5.30025 2.625 4.125 3.80025 4.125 5.25C4.125 6.69975 5.30025 7.875 6.75 7.875Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M16.5 15V13.5C16.4995 12.8353 16.2783 12.1896 15.871 11.6642C15.4638 11.1389 14.8936 10.7637 14.25 10.5975"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('research') {
+                        <path
+                          d="M8.25 13.5C11.1495 13.5 13.5 11.1495 13.5 8.25C13.5 5.35051 11.1495 3 8.25 3C5.35051 3 3 5.35051 3 8.25C3 11.1495 5.35051 13.5 8.25 13.5Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M15 15L11.625 11.625"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                      @case ('connect') {
+                        <path
+                          d="M7.5 9.75C7.82449 10.1736 8.23566 10.5231 8.70602 10.7751C9.17639 11.0272 9.69513 11.1759 10.2276 11.2114C10.76 11.2469 11.2939 11.1683 11.7936 10.981C12.2932 10.7936 12.7471 10.5018 13.125 10.125L14.625 8.625C15.1666 7.90285 15.4296 7.00958 15.3656 6.10917C15.3016 5.20876 14.9149 4.36164 14.2767 3.72335C13.6384 3.08506 12.7912 2.69842 11.8908 2.63443C10.9904 2.57044 10.0971 2.83339 9.375 3.375L8.475 4.275M10.5 8.25C10.1755 7.82637 9.76434 7.47687 9.29398 7.22486C8.82361 6.97284 8.30487 6.82412 7.77243 6.78862C7.23998 6.75313 6.70609 6.83167 6.20643 7.01902C5.70677 7.20636 5.25285 7.49819 4.875 7.875L3.375 9.375C2.83339 10.0971 2.57044 10.9904 2.63443 11.8908C2.69842 12.7912 3.08506 13.6384 3.72335 14.2767C4.36164 14.9149 5.20876 15.3016 6.10917 15.3656C7.00958 15.4296 7.90285 15.1666 8.625 14.625L9.525 13.725"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                    }
+                  </svg>
                   {{ item.label }}
                 </a>
               }
@@ -145,7 +282,13 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
           <div class="top-spacer" aria-hidden="true"></div>
 
           <form class="search" role="search" (submit)="onSearch($event)">
-            <img src="/nav/search.svg" width="16" height="16" alt="" />
+            <img
+              ngSrc="/nav/search.svg"
+              width="16"
+              height="16"
+              alt=""
+              aria-hidden="true"
+            />
             <input
               type="search"
               name="q"
@@ -241,72 +384,27 @@ export class ShellComponent implements OnInit {
         label: 'PLAN',
         items: [
           { label: 'Dashboard', icon: 'dashboard', link: '/', exact: true },
-          {
-            label: 'Strategy Planner',
-            icon: 'strategy',
-            link: leaguePath('strategy'),
-            requiresLeague: true,
-          },
-          {
-            label: 'Player Board',
-            icon: 'board',
-            link: leaguePath('board'),
-            requiresLeague: true,
-          },
-          {
-            label: 'Cheat Sheet',
-            icon: 'research',
-            link: leaguePath('cheat-sheet'),
-            requiresLeague: true,
-          },
+          { label: 'Strategy Planner', icon: 'strategy', link: leaguePath('strategy') },
+          { label: 'Player Board', icon: 'board', link: leaguePath('board') },
+          { label: 'Cheat Sheet', icon: 'research', link: leaguePath('cheat-sheet') },
         ],
       },
       {
         label: 'DRAFT',
         items: [
-          {
-            label: 'Live Draft Room',
-            icon: 'draft',
-            link: leaguePath('draft'),
-            requiresLeague: true,
-          },
-          {
-            label: 'Auction Room',
-            icon: 'auction',
-            link: leaguePath('auction'),
-            requiresLeague: true,
-          },
+          { label: 'Live Draft Room', icon: 'draft', link: leaguePath('draft') },
+          { label: 'Auction Room', icon: 'auction', link: leaguePath('auction') },
         ],
       },
       {
         label: 'MANAGE',
         items: [
-          {
-            label: 'Roster & Dynasty',
-            icon: 'roster',
-            link: leaguePath('roster'),
-            requiresLeague: true,
-          },
+          { label: 'Roster & Dynasty', icon: 'roster', link: leaguePath('roster') },
           { label: 'Connections', icon: 'connect', link: '/leagues/connect' },
           { label: 'Manual Setup', icon: 'connect', link: '/leagues/manual-setup' },
-          {
-            label: 'Scoring',
-            icon: 'auction',
-            link: leaguePath('scoring'),
-            requiresLeague: true,
-          },
-          {
-            label: 'Recap',
-            icon: 'board',
-            link: leaguePath('recap'),
-            requiresLeague: true,
-          },
-          {
-            label: 'Calibration',
-            icon: 'research',
-            link: leaguePath('calibration'),
-            requiresLeague: true,
-          },
+          { label: 'Scoring', icon: 'auction', link: leaguePath('scoring') },
+          { label: 'Recap', icon: 'board', link: leaguePath('recap') },
+          { label: 'Calibration', icon: 'research', link: leaguePath('calibration') },
         ],
       },
     ];
@@ -409,7 +507,5 @@ function formatLeagueMeta(league: League): string {
 }
 
 function titleCase(value: string): string {
-  return value
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

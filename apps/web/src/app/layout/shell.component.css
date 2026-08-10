@@ -182,9 +182,7 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  background-color: currentColor;
-  -webkit-mask: var(--icon) center / contain no-repeat;
-  mask: var(--icon) center / contain no-repeat;
+  display: block;
 }
 
 .side-foot {
