@@ -1,111 +1,256 @@
-import { Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Button } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
+import { ActiveLeagueService } from '../../core/active-league.service';
 import { ApiService } from '../../core/api.service';
 import type { League, ScoringSummary } from '../../core/api.types';
 
+type LeagueRow = League & { scoringSummary?: ScoringSummary };
+
+type StatusTone = 'imported' | 'ready' | 'warn';
+
+interface DiscoveredRow {
+  league: LeagueRow;
+  selected: boolean;
+  formatLabel: string;
+  scoringLabel: string;
+  draftLabel: string;
+  statusLabel: string;
+  statusTone: StatusTone;
+  externalLabel: string;
+}
+
+interface LineupPill {
+  label: string;
+  pos: 'qb' | 'rb' | 'wr' | 'te' | 'flex' | 'sf' | 'bench';
+}
+
 @Component({
   selector: 'app-connect',
-  imports: [FormsModule, RouterLink, Button, InputText],
-  template: `
-    <h1>Connect leagues</h1>
-    <p class="lede dl-muted">Sleeper sync for live drafts. Manual setup for everyone else.</p>
-
-    <div class="grid">
-      <article class="dl-panel card">
-        <h2>Sleeper</h2>
-        <p class="dl-muted">Import all leagues for a username. Polling stays on the server under a shared rate budget.</p>
-        <div class="row">
-          <input pInputText [(ngModel)]="username" placeholder="Sleeper username" />
-          <input pInputText type="number" [(ngModel)]="season" placeholder="Season" style="width:6rem" />
-          <p-button label="Connect" (onClick)="connectSleeper()" [loading]="loading()" />
-        </div>
-        @if (error()) {
-          <p class="err">{{ error() }}</p>
-        }
-        @if (imported().length) {
-          <div class="imports">
-            @for (l of imported(); track l.id) {
-              <div class="import">
-                <div>
-                  <strong>{{ l.name }}</strong>
-                  <div class="dl-muted">
-                    {{ l.teamCount }}-team · {{ l.draftType }} · slot {{ l.draftSlot ?? '—' }}
-                    @if (l.scoringSummary; as s) {
-                      · {{ s.plainLanguage.join(', ') }}
-                    }
-                  </div>
-                  @for (w of l.scoringSummary?.warnings ?? []; track w) {
-                    <div class="warn">{{ w }}</div>
-                  }
-                </div>
-                <a [routerLink]="['/leagues', l.id, 'board']">Open →</a>
-              </div>
-            }
-          </div>
-        }
-      </article>
-
-      <article class="dl-panel card">
-        <h2>Manual setup</h2>
-        <p class="dl-muted">Configure league shape, scoring presets (incl. TE premium / superflex), and draft slot.</p>
-        <a class="btn" routerLink="/leagues/manual-setup">Open setup wizard →</a>
-      </article>
-
-      <article class="dl-panel card note">
-        <h2>Why ESPN isn’t listed</h2>
-        <p class="dl-muted">
-          ESPN fantasy ToS blocks third-party draft tooling. Use manual setup — same board, same live room, picks entered by hand.
-        </p>
-      </article>
-    </div>
-  `,
-  styles: `
-    h1 { margin: 0 0 0.35rem; letter-spacing: -0.02em; }
-    .lede { margin: 0 0 1.25rem; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .card { padding: 1.1rem; display: grid; gap: 0.75rem; }
-    .note { grid-column: 1 / -1; }
-    h2 { margin: 0; font-size: 1.05rem; }
-    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-    .err { color: var(--dl-danger); margin: 0; }
-    .warn { color: var(--dl-warning); font-size: 0.8rem; margin-top: 0.25rem; }
-    .imports { display: grid; gap: 0.55rem; }
-    .import {
-      display: flex; justify-content: space-between; gap: 0.75rem; align-items: start;
-      padding: 0.55rem 0; border-top: 1px solid var(--dl-border-subtle);
-    }
-    .import:first-child { border-top: 0; }
-    a { color: var(--dl-accent); font-weight: 600; }
-    .btn {
-      display: inline-flex; width: fit-content; padding: 0.65rem 0.9rem; border-radius: 6px;
-      background: var(--dl-accent); color: var(--dl-text-inverse); font-weight: 600;
-    }
-    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } .note { grid-column: auto; } }
-  `,
+  imports: [FormsModule, RouterLink],
+  templateUrl: './connect.component.html',
+  styleUrl: './connect.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ConnectComponent {
+export class ConnectComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly active = inject(ActiveLeagueService);
+  private readonly router = inject(Router);
+
   username = '';
   season = new Date().getFullYear();
-  readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly imported = signal<Array<League & { scoringSummary?: ScoringSummary }>>([]);
 
-  connectSleeper() {
+  manualName = 'My League';
+  manualType = 'redraft';
+  manualTeams = 10;
+  scoringPresetId = 'preset-half-ppr';
+  roster = { qb: 1, rb: 2, wr: 2, te: 1, flex: 1, superflex: 0, bench: 6 };
+
+  readonly typeOptions = [
+    { label: 'Redraft', value: 'redraft' },
+    { label: 'Dynasty', value: 'dynasty' },
+    { label: 'Auction', value: 'auction' },
+  ];
+  readonly teamOptions = [8, 10, 12, 14];
+
+  readonly loading = signal(false);
+  readonly creating = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly manualError = signal<string | null>(null);
+  readonly connectedUser = signal<string | null>(null);
+  readonly presets = signal<Array<{ id: string; name: string }>>([]);
+  readonly rows = signal<DiscoveredRow[]>([]);
+
+  readonly foundCount = computed(() => this.rows().length);
+  readonly selectedCount = computed(() => this.rows().filter((r) => r.selected).length);
+  readonly connectionBanner = computed(() => {
+    const user = this.connectedUser();
+    const n = this.foundCount();
+    if (!user || !n) return null;
+    return `Connected · ${n} league${n === 1 ? '' : 's'} found for the ${this.season} season`;
+  });
+  readonly footerNote = computed(() => {
+    const warn = this.rows().find((r) => r.statusTone === 'warn');
+    if (!warn) {
+      return 'Format and scoring are detected automatically from Sleeper. Manual leagues stay in sync when you tap picks.';
+    }
+    const w = warn.league.scoringSummary?.warnings?.[0];
+    return (
+      w ??
+      `${warn.league.name} has scoring quirks that may change round guidance. We will flag it on its board.`
+    );
+  });
+  readonly lineupPills = computed((): LineupPill[] => {
+    const r = this.roster;
+    const pills: LineupPill[] = [];
+    for (let i = 0; i < r.qb; i++) pills.push({ label: 'QB', pos: 'qb' });
+    for (let i = 0; i < r.rb; i++) pills.push({ label: 'RB', pos: 'rb' });
+    for (let i = 0; i < r.wr; i++) pills.push({ label: 'WR', pos: 'wr' });
+    for (let i = 0; i < r.te; i++) pills.push({ label: 'TE', pos: 'te' });
+    for (let i = 0; i < r.flex; i++) pills.push({ label: 'FLEX', pos: 'flex' });
+    for (let i = 0; i < r.superflex; i++) pills.push({ label: 'SF', pos: 'sf' });
+    return pills.slice(0, 7);
+  });
+
+  ngOnInit() {
+    this.api.scoringPresets().subscribe({
+      next: (p) => {
+        this.presets.set(p);
+        if (p.some((x) => x.id === 'preset-half-ppr')) {
+          this.scoringPresetId = 'preset-half-ppr';
+        } else if (p[0]) {
+          this.scoringPresetId = p[0].id;
+        }
+      },
+    });
+    this.api.leagues().subscribe({
+      next: (leagues) => {
+        const sleeper = leagues.filter((l) => l.platform === 'sleeper');
+        if (sleeper.length) {
+          this.connectedUser.set('Sleeper');
+          this.rows.set(sleeper.map((l) => this.toRow(l, true)));
+        }
+      },
+    });
+  }
+
+  findLeagues() {
+    const username = this.username.trim();
+    if (!username) {
+      this.error.set('Enter a Sleeper username');
+      return;
+    }
     this.loading.set(true);
     this.error.set(null);
-    this.api.connectSleeper(this.username.trim(), Number(this.season) || undefined).subscribe({
+    this.api.connectSleeper(username, Number(this.season) || undefined).subscribe({
       next: (res) => {
-        this.imported.set(res.leagues);
+        this.connectedUser.set(res.user.username || res.user.display_name || username);
+        this.rows.set(res.leagues.map((l) => this.toRow(l, true)));
+        this.api.leagues().subscribe({
+          next: (all) => this.active.setLeagues(all),
+        });
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.detail ?? 'Could not connect to Sleeper');
+        this.error.set(err?.error?.detail ?? err?.error?.error ?? 'Could not connect to Sleeper');
         this.loading.set(false);
       },
     });
+  }
+
+  toggleRow(id: string) {
+    this.rows.update((list) =>
+      list.map((r) => (r.league.id === id ? { ...r, selected: !r.selected } : r)),
+    );
+  }
+
+  importSelected() {
+    const selected = this.rows().filter((r) => r.selected);
+    if (!selected.length) return;
+    const first = selected[0]!.league;
+    this.active.select(first.id);
+    void this.router.navigate(['/leagues', first.id, 'board']);
+  }
+
+  createManual() {
+    this.creating.set(true);
+    this.manualError.set(null);
+    const draftType = this.manualType === 'auction' ? 'auction' : 'snake';
+    this.api
+      .createManualLeague({
+        name: this.manualName.trim() || 'My League',
+        teamCount: Number(this.manualTeams) || 10,
+        draftSlot: 1,
+        season: Number(this.season) || new Date().getFullYear(),
+        strategyId: 'balanced',
+        scoringPresetId: this.scoringPresetId,
+        draftType,
+        type: this.manualType,
+        roster: {
+          ...this.roster,
+          totalStarters:
+            this.roster.qb +
+            this.roster.rb +
+            this.roster.wr +
+            this.roster.te +
+            this.roster.flex +
+            this.roster.superflex,
+        },
+        confirmSummary: true,
+      })
+      .subscribe({
+        next: (res) => {
+          this.creating.set(false);
+          this.api.leagues().subscribe({
+            next: (all) => {
+              this.active.setLeagues(all);
+              this.active.select(res.league.id);
+              void this.router.navigate(['/leagues', res.league.id, 'board']);
+            },
+          });
+        },
+        error: (err) => {
+          this.creating.set(false);
+          this.manualError.set(err?.error?.error ?? 'Could not create league');
+        },
+      });
+  }
+
+  private toRow(league: LeagueRow, selected: boolean): DiscoveredRow {
+    const summary = league.scoringSummary;
+    const warnings = summary?.warnings ?? [];
+    let statusTone: StatusTone = 'imported';
+    let statusLabel = 'Imported';
+    if (warnings.length) {
+      statusTone = 'warn';
+      statusLabel = this.shortWarn(warnings[0]!);
+    }
+    return {
+      league,
+      selected,
+      formatLabel: this.titleCase(league.type || league.draftType || 'League'),
+      scoringLabel: this.scoringLine(league),
+      draftLabel: this.draftLine(league),
+      statusLabel,
+      statusTone,
+      externalLabel: league.externalId ? `league_${league.externalId}` : league.id.slice(0, 14),
+    };
+  }
+
+  private scoringLine(league: LeagueRow): string {
+    const s = league.scoringSummary;
+    if (s?.plainLanguage?.length) {
+      return s.plainLanguage.slice(0, 3).join(' · ');
+    }
+    const bits: string[] = [];
+    if (s?.variant) bits.push(s.variant.toUpperCase().replace(/_/g, ' '));
+    if (s?.tePremium) bits.push('TE premium');
+    if (s?.superflex) bits.push('Superflex');
+    if (league.auctionBudget) bits.push(`$${league.auctionBudget} cap`);
+    return bits.join(' · ') || 'Scoring detected';
+  }
+
+  private draftLine(league: LeagueRow): string {
+    const kind = this.titleCase(league.draftType || 'Draft');
+    if (league.draftSlot != null) return `${kind} · slot ${league.draftSlot}`;
+    return kind;
+  }
+
+  private shortWarn(text: string): string {
+    if (text.length <= 22) return text;
+    const cut = text.slice(0, 20);
+    const space = cut.lastIndexOf(' ');
+    return `${(space > 8 ? cut.slice(0, space) : cut).trim()}…`;
+  }
+
+  private titleCase(value: string): string {
+    return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 }
