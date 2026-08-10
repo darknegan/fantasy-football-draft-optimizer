@@ -78,13 +78,23 @@ export class SleeperApiError extends Error {
 export class SleeperClient {
   constructor(
     private readonly baseUrl = DEFAULT_BASE,
-    private readonly fetchImpl: typeof fetch = fetch,
+    /**
+     * Optional override for tests. Do not default to a detached `fetch` reference —
+     * Cloudflare Workers throws Illegal invocation when `fetch` loses its receiver.
+     */
+    private readonly fetchImpl?: typeof fetch,
     private readonly limiter: SleeperRateLimiter = sharedSleeperLimiter,
   ) {}
 
+  private async request(url: string): Promise<Response> {
+    // Call the global as a free function (or the injected mock) — never store unbound `fetch`.
+    if (this.fetchImpl) return this.fetchImpl(url);
+    return fetch(url);
+  }
+
   private async get<T>(path: string): Promise<T> {
     await this.limiter.acquire();
-    const res = await this.fetchImpl(`${this.baseUrl}${path}`);
+    const res = await this.request(`${this.baseUrl}${path}`);
     if (res.status === 429) {
       this.limiter.record429();
       throw new SleeperApiError(`Sleeper rate limited: ${path}`, 429, path);
