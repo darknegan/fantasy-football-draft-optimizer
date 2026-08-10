@@ -52,6 +52,11 @@ import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
 
+type CompareCacheEntry = {
+  at: number;
+  value: ReturnType<typeof compareStrategies>;
+};
+
 export class AppStore {
   private readonly seeds: SeedPlayer[];
   /** Global catalog evaluations (public /api/players). */
@@ -62,6 +67,8 @@ export class AppStore {
   private readonly drafts = new Map<string, DraftState>();
   private readonly targets = new Map<string, Set<string>>();
   private readonly avoids = new Map<string, Set<string>>();
+  /** Short-lived compare results — re-runs with the same knobs are common in the simulator UI. */
+  private readonly compareCache = new Map<string, CompareCacheEntry>();
   readonly formats = new FormatState();
 
   constructor(seeds: SeedPlayer[], opts?: { seedDemoUserId?: string }) {
@@ -489,33 +496,54 @@ export class AppStore {
   }
 
   private simPool(leagueId: string, teamCount: number): SimPlayer[] {
-    return this.seeds.map((s) => {
-      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
-      return {
+    const pool: SimPlayer[] = [];
+    for (const s of this.seeds) {
+      const evaluation = this.getLeagueEvaluation(leagueId, s.player.id);
+      if (!evaluation) continue;
+      const adpOverall = adpToOverallPick(s.market.adpRoundPick, teamCount);
+      if (!Number.isFinite(adpOverall)) continue;
+      pool.push({
         id: s.player.id,
         name: s.player.name,
         position: s.player.position,
-        adpOverall: adpToOverallPick(s.market.adpRoundPick, teamCount),
+        adpOverall,
         draftScore: evaluation.draftScore,
-      };
-    });
+      });
+    }
+    return pool;
   }
 
   simulate(
     leagueId: string,
-    opts: { strategyId?: StrategyId; iterations?: number; rounds?: number; seed?: number },
+    opts: {
+      strategyId?: StrategyId;
+      iterations?: number;
+      rounds?: number;
+      seed?: number;
+      draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
+    },
   ) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
     const strategyId = (opts.strategyId ?? league.strategyId ?? 'balanced') as StrategyId;
+    const iterations = clampIterations(opts.iterations ?? 500);
+    const pool = this.simPool(leagueId, league.teamCount);
+    if (pool.length === 0) {
+      throw new Error('Simulation pool is empty — player evaluations are not ready');
+    }
     return simulateStrategy({
       strategyId,
-      slot: league.draftSlot ?? 1,
+      slot: opts.draftSlot ?? league.draftSlot ?? 1,
       teamCount: league.teamCount,
       rounds: opts.rounds ?? 8,
-      iterations: opts.iterations ?? 200,
+      iterations,
       seed: opts.seed ?? 42,
-      players: this.simPool(leagueId, league.teamCount),
+      adpVarianceRatio: opts.adpVarianceRatio,
+      adpVarianceFloor: opts.adpVarianceFloor,
+      includeDetails: true,
+      players: pool,
     });
   }
 
@@ -527,6 +555,8 @@ export class AppStore {
       rounds?: number;
       seed?: number;
       draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
     },
   ) {
     const league = this.leagues.get(leagueId);
@@ -537,17 +567,56 @@ export class AppStore {
         'hero_wr',
         'double_hero_rb',
         'elite_te',
+        'hero_rb',
+        'robust_rb',
+        'double_hero_wr',
         'zero_rb',
+        'elite_qb',
       ] as StrategyId[])) as StrategyId[];
-    return compareStrategies({
+    const slot = opts.draftSlot ?? league.draftSlot ?? 1;
+    const rounds = opts.rounds ?? 8;
+    // Compare is multi-strategy; keep iterations modest for Worker CPU limits.
+    const iterations = Math.min(clampIterations(opts.iterations ?? 40), 40);
+    const seed = opts.seed ?? 42;
+    const adpVarianceRatio = opts.adpVarianceRatio ?? 0.12;
+    const adpVarianceFloor = opts.adpVarianceFloor ?? 1.5;
+    const cacheKey = [
+      leagueId,
+      slot,
+      rounds,
+      iterations,
+      seed,
+      adpVarianceRatio,
+      adpVarianceFloor,
+      strategyIds.join(','),
+    ].join('|');
+    const cached = this.compareCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < 5 * 60_000) {
+      return cached.value;
+    }
+
+    const pool = this.simPool(leagueId, league.teamCount);
+    if (pool.length === 0) {
+      throw new Error('Simulation pool is empty — player evaluations are not ready');
+    }
+    const value = compareStrategies({
       strategyIds,
-      slot: opts.draftSlot ?? league.draftSlot ?? 1,
+      slot,
       teamCount: league.teamCount,
-      rounds: opts.rounds ?? 8,
-      iterations: opts.iterations ?? 150,
-      seed: opts.seed ?? 42,
-      players: this.simPool(leagueId, league.teamCount),
+      rounds,
+      iterations,
+      seed,
+      adpVarianceRatio,
+      adpVarianceFloor,
+      players: pool,
     });
+    this.compareCache.set(cacheKey, { at: Date.now(), value });
+    // Bound cache size for long-lived isolates.
+    if (this.compareCache.size > 40) {
+      const oldest = [...this.compareCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) this.compareCache.delete(oldest[0]);
+    }
+    return value;
   }
 
   cheatSheet(leagueId: string) {
@@ -871,4 +940,10 @@ export class AppStore {
       picksUntilUser: null,
     };
   }
+}
+
+/** Keep Monte Carlo runs inside Worker CPU budgets while still supporting Figma-scale controls. */
+function clampIterations(n: number): number {
+  if (!Number.isFinite(n)) return 200;
+  return Math.max(20, Math.min(800, Math.floor(n)));
 }

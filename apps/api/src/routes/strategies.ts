@@ -23,7 +23,15 @@ export async function strategyRoutes(app: FastifyInstance, store: AppStore, pool
 
   app.post<{
     Params: { id: string };
-    Body: { strategyId?: StrategyId; iterations?: number; rounds?: number; seed?: number };
+    Body: {
+      strategyId?: StrategyId;
+      iterations?: number;
+      rounds?: number;
+      seed?: number;
+      draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
+    };
   }>('/api/leagues/:id/simulate', { preHandler: authenticate }, async (req, reply) => {
     if (!(await requireOwnedLeague(req, reply, store, pool))) return;
     const result = store.simulate(req.params.id, req.body ?? {});
@@ -39,6 +47,8 @@ export async function strategyRoutes(app: FastifyInstance, store: AppStore, pool
       rounds?: number;
       seed?: number;
       draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
     };
   }>('/api/leagues/:id/compare-strategies', { preHandler: authenticate }, async (req, reply) => {
     if (!(await requireOwnedLeague(req, reply, store, pool))) return;

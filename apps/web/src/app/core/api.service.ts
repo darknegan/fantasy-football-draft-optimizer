@@ -106,13 +106,30 @@ export class ApiService {
     );
   }
 
-  simulate(leagueId: string, body: { strategyId?: string; iterations?: number; rounds?: number } = {}) {
+  simulate(
+    leagueId: string,
+    body: {
+      strategyId?: string;
+      iterations?: number;
+      rounds?: number;
+      draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
+    } = {},
+  ) {
     return this.http.post<StrategySimResult>(`/api/leagues/${leagueId}/simulate`, body);
   }
 
   compareStrategies(
     leagueId: string,
-    body: { strategyIds?: string[]; iterations?: number; rounds?: number; draftSlot?: number } = {},
+    body: {
+      strategyIds?: string[];
+      iterations?: number;
+      rounds?: number;
+      draftSlot?: number;
+      adpVarianceRatio?: number;
+      adpVarianceFloor?: number;
+    } = {},
   ) {
     return this.http.post<CompareStrategiesResult>(`/api/leagues/${leagueId}/compare-strategies`, body);
   }
