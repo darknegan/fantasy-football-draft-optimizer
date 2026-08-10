@@ -368,17 +368,20 @@ app.post('/api/leagues/:id/flags', async (c) => {
 app.post('/api/leagues/:id/dynasty/mode', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{ mode?: string }>();
+  if (!body.mode) return c.json({ error: 'mode required' }, 400);
   try {
-    const saved = await withDb(c.env, c.executionCtx, async (db) => {
-      if (!(await ownedLeague(store, db, user.sub, c.req.param('id')))) return null;
-      const persisted = await updateLeagueRow(db, user.sub, c.req.param('id'), {
+    const overview = await withDb(c.env, c.executionCtx, async (db) => {
+      const league = await ownedLeague(store, db, user.sub, c.req.param('id'));
+      if (!league) return null;
+      await updateLeagueRow(db, user.sub, league.id, {
         dynastyMode: body.mode as never,
+        type: 'dynasty',
       });
-      if (!persisted) return null;
-      return store.updateLeague(c.req.param('id'), persisted);
+      store.setDynastyMode(league.id, body.mode as never);
+      return store.dynastyOverview(league.id);
     });
-    if (!saved) return c.json({ error: 'League not found' }, 404);
-    return c.json(saved);
+    if (!overview) return c.json({ error: 'League not found' }, 404);
+    return c.json(overview);
   } catch (err) {
     return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
   }
