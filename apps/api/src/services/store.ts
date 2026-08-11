@@ -831,15 +831,16 @@ export class AppStore {
 
     const valueRows = pool.values
       .filter((v) => !pool.purchased.has(v.playerId))
-      .slice(0, 50)
       .map((v) => {
         const player = this.getPlayer(v.playerId)!;
+        const evaluation = this.getLeagueEvaluation(leagueId, v.playerId)!;
         return {
           ...v,
           name: player.name,
           position: player.position,
           age: player.age,
-          draftScore: this.getLeagueEvaluation(leagueId, v.playerId)!.draftScore,
+          draftScore: evaluation.draftScore,
+          archetype: evaluation.archetype.archetype,
         };
       });
 

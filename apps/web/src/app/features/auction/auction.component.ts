@@ -19,6 +19,8 @@ import type {
 } from '../../core/api.types';
 
 type ValueRow = AuctionState['values'][number];
+type PosFilter = Position | 'ALL';
+type MainTab = 'available' | 'room';
 
 interface BudgetCard {
   rosterId: string;
@@ -34,6 +36,8 @@ interface SpendSegment {
   pct: number;
 }
 
+const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
+
 @Component({
   selector: 'app-auction',
   templateUrl: './auction.component.html',
@@ -43,6 +47,9 @@ interface SpendSegment {
 export class AuctionComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
+
+  readonly posTabs = POS_TABS;
+  readonly Math = Math;
 
   leagueId = '';
   readonly loading = signal(true);
@@ -56,11 +63,40 @@ export class AuctionComponent implements OnInit {
   readonly contractYears = signal(4);
   /** Local bid ladder for the active nomination (starts just under inflated value). */
   readonly ladderBid = signal(1);
+  readonly posFilter = signal<PosFilter>('ALL');
+  readonly archetypeFilter = signal('all');
+  readonly mainTab = signal<MainTab>('available');
+
+  readonly availablePlayers = computed((): ValueRow[] => {
+    let list = this.state()?.values ?? [];
+    const pos = this.posFilter();
+    if (pos !== 'ALL') list = list.filter((v) => v.position === pos);
+    const arch = this.archetypeFilter();
+    if (arch !== 'all') list = list.filter((v) => (v.archetype ?? '') === arch);
+    return [...list].sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
+  });
+
+  readonly archetypes = computed(() => {
+    const set = new Set(
+      (this.state()?.values ?? [])
+        .map((v) => v.archetype)
+        .filter((a): a is string => Boolean(a)),
+    );
+    return [...set].sort();
+  });
+
+  readonly highlightedPlayerId = computed(() => {
+    const list = this.availablePlayers();
+    if (!list.length) return null;
+    const selected = this.selectedId();
+    if (selected && list.some((v) => v.playerId === selected)) return selected;
+    return list[0]!.playerId;
+  });
 
   readonly onBlock = computed((): ValueRow | null => {
     const s = this.state();
     if (!s?.values.length) return null;
-    const id = this.selectedId();
+    const id = this.highlightedPlayerId();
     return s.values.find((v) => v.playerId === id) ?? s.values[0] ?? null;
   });
 
@@ -111,8 +147,6 @@ export class AuctionComponent implements OnInit {
   readonly signedRoster = computed(
     (): AuctionSignedPlayer[] => this.state()?.signedRoster ?? [],
   );
-
-  readonly remainingValues = computed(() => (this.state()?.values ?? []).slice(0, 12));
 
   readonly nominations = computed(() => (this.state()?.nominations ?? []).slice(0, 4));
 
@@ -176,7 +210,8 @@ export class AuctionComponent implements OnInit {
 
   playerMeta(player: ValueRow): string {
     const vorp = Math.round(player.vorpShare * 1000) / 10;
-    return `Age ${player.age} · DraftScore ${Math.round(player.draftScore)} · ${vorp}% VORP share`;
+    const arch = player.archetype ? ` · ${this.formatArchetype(player.archetype)}` : '';
+    return `Age ${player.age} · DraftScore ${Math.round(player.draftScore)}${arch} · ${vorp}% VORP`;
   }
 
   ceilingCopy(): string {
@@ -190,9 +225,47 @@ export class AuctionComponent implements OnInit {
     return `You hold $${u.remaining} with ${spots} roster spots left. Reserving $${reserve} ($1 stubs for the rest of the roster) leaves $${max} as the most you can bid without stranding empty slots — about ${share}% of the starting cap on this nomination.`;
   }
 
+  onArchetype(ev: Event): void {
+    this.archetypeFilter.set((ev.target as HTMLSelectElement).value);
+    this.ensureSelectionVisible();
+  }
+
+  setPosFilter(tab: PosFilter): void {
+    this.posFilter.set(tab);
+    this.ensureSelectionVisible();
+  }
+
+  formatArchetype(a: string): string {
+    return a
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/\bWr\b/g, 'WR')
+      .replace(/\bRb\b/g, 'RB')
+      .replace(/\bTe\b/g, 'TE')
+      .replace(/\bQb\b/g, 'QB');
+  }
+
+  isSelected(row: ValueRow): boolean {
+    return this.highlightedPlayerId() === row.playerId;
+  }
+
   selectPlayer(playerId: string): void {
     this.selectedId.set(playerId);
     this.refreshLot(playerId);
+  }
+
+  private ensureSelectionVisible(): void {
+    const list = this.availablePlayers();
+    const selected = this.selectedId();
+    if (selected && list.some((v) => v.playerId === selected)) return;
+    const next = list[0]?.playerId ?? null;
+    this.selectedId.set(next);
+    if (next) this.refreshLot(next);
+    else {
+      this.maxBid.set(null);
+      this.contract.set(null);
+    }
   }
 
   setContractYears(years: number): void {

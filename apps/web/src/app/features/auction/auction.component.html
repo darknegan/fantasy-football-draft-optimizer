@@ -109,55 +109,163 @@
           </section>
         }
 
-        <section class="budgets-block">
-          <div class="section-head">
-            <h2>Budgets</h2>
-            <p>Dollars per remaining slot is the number that decides who can still outbid you</p>
-          </div>
-          <div class="budget-grid">
-            @for (team of budgetCards(); track team.rosterId) {
-              <article class="budget-card" [class.you]="team.isYou">
-                <div class="budget-name">{{ team.label }}</div>
-                <div class="budget-amt dl-mono">${{ team.remaining }}</div>
-                <div class="budget-meta">
-                  <span>{{ team.spotsLeft }} spots</span>
-                  <span class="dl-mono">${{ team.perSlot }}/slot</span>
-                </div>
-              </article>
-            }
-          </div>
-        </section>
+        <div class="panel-tabs" role="tablist" aria-label="Auction room panels">
+          <button
+            type="button"
+            role="tab"
+            class="panel-tab"
+            [class.active]="mainTab() === 'available'"
+            [attr.aria-selected]="mainTab() === 'available'"
+            (click)="mainTab.set('available')"
+          >
+            Available players
+            <span class="panel-tab-count dl-mono">{{ availablePlayers().length }}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="panel-tab"
+            [class.active]="mainTab() === 'room'"
+            [attr.aria-selected]="mainTab() === 'room'"
+            (click)="mainTab.set('room')"
+          >
+            Budgets & roster
+          </button>
+        </div>
 
-        <section class="roster-block">
-          <div class="section-head row">
-            <h2>Your signed roster</h2>
-            <span class="chip">${{ state()!.userBudget.spent }} of ${{ cap() }} committed</span>
-          </div>
-          <div class="spend-bar" aria-hidden="true">
-            @for (seg of spendSegments(); track seg.position) {
-              <span [style.width.%]="seg.pct" [class]="seg.position"></span>
-            }
-          </div>
-          <div class="signed-row">
-            @for (p of signedRoster(); track p.playerId) {
-              <article class="signed-card">
-                <span class="pos" [class]="p.position">{{ p.position }}</span>
-                <div>
-                  <strong>{{ p.name }}</strong>
-                  <div class="signed-meta">
-                    <span class="dl-mono">${{ p.amount }}/yr</span>
-                    <span
-                      >{{ p.contractYears }} yr · through
-                      {{ season() + p.contractYears }}</span
-                    >
+        @if (mainTab() === 'available') {
+          <section class="avail-block" role="tabpanel" aria-label="Available players">
+            <div class="avail-head">
+              <h2>Available players</h2>
+              <span class="chip">Ranked by draft score</span>
+              <span class="spacer"></span>
+              <span class="list-count dl-mono">{{ availablePlayers().length }} remaining</span>
+            </div>
+
+            <div class="list-filters">
+              <div class="pos-tabs" role="tablist" aria-label="Position">
+                @for (tab of posTabs; track tab) {
+                  <button
+                    type="button"
+                    role="tab"
+                    class="pos-tab"
+                    [class.active]="posFilter() === tab"
+                    [attr.aria-selected]="posFilter() === tab"
+                    (click)="setPosFilter(tab)"
+                  >
+                    {{ tab }}
+                  </button>
+                }
+              </div>
+
+              <label class="filter-btn">
+                <span class="sr-only">Archetype</span>
+                <select [value]="archetypeFilter()" (change)="onArchetype($event)">
+                  <option value="all">Archetype: all</option>
+                  @for (a of archetypes(); track a) {
+                    <option [value]="a">{{ formatArchetype(a) }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+
+            <div class="avail-col-head" aria-hidden="true">
+              <span class="c-rank">#</span>
+              <span class="c-pos">POS</span>
+              <span class="c-player">PLAYER</span>
+              <span class="c-arch">ARCHETYPE</span>
+              <span class="c-fair">FAIR</span>
+              <span class="c-inf">INFL</span>
+              <span class="c-score">SCORE</span>
+            </div>
+
+            <div class="avail-list" role="listbox" aria-label="Available auction players">
+              @for (row of availablePlayers(); track row.playerId; let i = $index) {
+                <article
+                  class="avail-row"
+                  role="option"
+                  tabindex="0"
+                  [attr.aria-selected]="isSelected(row)"
+                  [class.selected]="isSelected(row)"
+                  (click)="selectPlayer(row.playerId)"
+                  (keydown.enter)="selectPlayer(row.playerId)"
+                  (keydown.space)="$event.preventDefault(); selectPlayer(row.playerId)"
+                >
+                  <span class="c-rank dl-mono" [class.selected]="isSelected(row)">{{ i + 1 }}</span>
+                  <span class="c-pos">
+                    <span class="pos" [class]="row.position">{{ row.position }}</span>
+                  </span>
+                  <div class="c-player">
+                    <strong>{{ row.name }}</strong>
+                    <div class="meta">Age {{ row.age }} · {{ Math.round(row.vorpShare * 1000) / 10 }}% VORP</div>
                   </div>
+                  <span class="c-arch">{{
+                    row.archetype ? formatArchetype(row.archetype) : '—'
+                  }}</span>
+                  <span class="c-fair dl-mono">${{ row.fairValue }}</span>
+                  <span class="c-inf dl-mono warn">${{ row.inflatedValue }}</span>
+                  <span class="c-score dl-mono">{{ Math.round(row.draftScore) }}</span>
+                </article>
+              } @empty {
+                <div class="empty-recs">
+                  <p>No remaining players match these filters.</p>
                 </div>
-              </article>
-            } @empty {
-              <p class="empty-note">No contracts signed yet. Win a nomination to fill the roster.</p>
-            }
+              }
+            </div>
+          </section>
+        } @else {
+          <div class="room-panels" role="tabpanel" aria-label="Budgets and roster">
+            <section class="budgets-block">
+              <div class="section-head">
+                <h2>Budgets</h2>
+                <p>Dollars per remaining slot is the number that decides who can still outbid you</p>
+              </div>
+              <div class="budget-grid">
+                @for (team of budgetCards(); track team.rosterId) {
+                  <article class="budget-card" [class.you]="team.isYou">
+                    <div class="budget-name">{{ team.label }}</div>
+                    <div class="budget-amt dl-mono">${{ team.remaining }}</div>
+                    <div class="budget-meta">
+                      <span>{{ team.spotsLeft }} spots</span>
+                      <span class="dl-mono">${{ team.perSlot }}/slot</span>
+                    </div>
+                  </article>
+                }
+              </div>
+            </section>
+
+            <section class="roster-block">
+              <div class="section-head row">
+                <h2>Your signed roster</h2>
+                <span class="chip">${{ state()!.userBudget.spent }} of ${{ cap() }} committed</span>
+              </div>
+              <div class="spend-bar" aria-hidden="true">
+                @for (seg of spendSegments(); track seg.position) {
+                  <span [style.width.%]="seg.pct" [class]="seg.position"></span>
+                }
+              </div>
+              <div class="signed-row">
+                @for (p of signedRoster(); track p.playerId) {
+                  <article class="signed-card">
+                    <span class="pos" [class]="p.position">{{ p.position }}</span>
+                    <div>
+                      <strong>{{ p.name }}</strong>
+                      <div class="signed-meta">
+                        <span class="dl-mono">${{ p.amount }}/yr</span>
+                        <span
+                          >{{ p.contractYears }} yr · through
+                          {{ season() + p.contractYears }}</span
+                        >
+                      </div>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="empty-note">No contracts signed yet. Win a nomination to fill the roster.</p>
+                }
+              </div>
+            </section>
           </div>
-        </section>
+        }
       </div>
 
       <aside class="side-rail">
@@ -201,20 +309,6 @@
           } @else {
             <p class="curve-note">Select a player on the block to project multi-year surplus.</p>
           }
-        </section>
-
-        <section class="rail-card">
-          <h3>Remaining values</h3>
-          <ul class="value-list">
-            @for (v of remainingValues(); track v.playerId) {
-              <li [class.active]="v.playerId === selectedId()" (click)="selectPlayer(v.playerId)">
-                <span class="pos tiny" [class]="v.position">{{ v.position }}</span>
-                <span class="v-name">{{ v.name }}</span>
-                <span class="dl-mono muted">${{ v.fairValue }}</span>
-                <span class="dl-mono warn">${{ v.inflatedValue }}</span>
-              </li>
-            }
-          </ul>
         </section>
 
         <section class="rail-card">
