@@ -829,20 +829,28 @@ export class AppStore {
       userRemaining: user.remaining,
     });
 
-    const valueRows = pool.values
-      .filter((v) => !pool.purchased.has(v.playerId))
-      .map((v) => {
-        const player = this.getPlayer(v.playerId)!;
-        const evaluation = this.getLeagueEvaluation(leagueId, v.playerId)!;
+    // Same player universe as getBoard(): every seed not yet purchased.
+    // Dollar curve may omit edge cases; fall back to $1 stubs so the auction
+    // room never shows a truncated board vs the player board page.
+    const valueById = new Map(pool.values.map((v) => [v.playerId, v]));
+    const valueRows = this.seeds
+      .filter((s) => !pool.purchased.has(s.player.id))
+      .map((s) => {
+        const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
+        const priced = valueById.get(s.player.id);
         return {
-          ...v,
-          name: player.name,
-          position: player.position,
-          age: player.age,
+          playerId: s.player.id,
+          fairValue: priced?.fairValue ?? 1,
+          inflatedValue: priced?.inflatedValue ?? 1,
+          vorpShare: priced?.vorpShare ?? 0,
+          name: s.player.name,
+          position: s.player.position,
+          age: s.player.age,
           draftScore: evaluation.draftScore,
           archetype: evaluation.archetype.archetype,
         };
-      });
+      })
+      .sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
 
     const signedRoster = pool.bids
       .filter((b) => b.rosterId === user.rosterId)
