@@ -141,6 +141,7 @@ export class DraftComponent implements OnInit, OnDestroy {
   readonly posFilter = signal<PosFilter>('ALL');
   readonly archetypeFilter = signal('all');
   readonly mainTab = signal<MainTab>('available');
+  readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly teamCount = computed(() => this.league()?.teamCount ?? 12);
   readonly userSlot = computed(() => this.league()?.draftSlot ?? 1);
@@ -486,6 +487,20 @@ export class DraftComponent implements OnInit, OnDestroy {
     const adp = row.evaluation.value.adpRoundPick;
     const bits = [p.team, p.age != null ? String(p.age) : null, p.seasonsInLeague != null ? `Yr ${p.seasonsInLeague}` : null, adp || null];
     return bits.filter(Boolean).join(' · ');
+  }
+
+  headshotOf(row: BoardPlayer): string | null {
+    if (this.brokenHeadshots().has(row.player.id)) return null;
+    return row.player.headshotThumbUrl || row.player.headshotUrl || null;
+  }
+
+  onHeadshotError(playerId: string): void {
+    this.brokenHeadshots.update((prev) => {
+      if (prev.has(playerId)) return prev;
+      const next = new Set(prev);
+      next.add(playerId);
+      return next;
+    });
   }
 
   scoreLabel(row: BoardPlayer): string {

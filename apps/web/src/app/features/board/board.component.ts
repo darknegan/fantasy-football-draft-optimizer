@@ -159,11 +159,29 @@ const RISK_MAX = 100;
                 class="c-player player"
                 [routerLink]="['/leagues', leagueId, 'board', row.player.id]"
               >
-                <span class="name">{{ row.player.name }}</span>
-                <span class="meta"
-                  >{{ row.player.team }} · Age {{ row.player.age }} · Yr
-                  {{ row.player.seasonsInLeague }}</span
-                >
+                @if (headshotOf(row); as src) {
+                  <img
+                    class="headshot"
+                    [src]="src"
+                    [alt]=""
+                    width="28"
+                    height="28"
+                    loading="lazy"
+                    decoding="async"
+                    (error)="onHeadshotError(row.player.id)"
+                  />
+                } @else {
+                  <span class="headshot fallback" aria-hidden="true">{{
+                    row.player.position
+                  }}</span>
+                }
+                <span class="player-text">
+                  <span class="name">{{ row.player.name }}</span>
+                  <span class="meta"
+                    >{{ row.player.team }} · Age {{ row.player.age }} · Yr
+                    {{ row.player.seasonsInLeague }}</span
+                  >
+                </span>
               </a>
 
               <span class="c-adp mono">{{ row.evaluation.value.adpRoundPick }}</span>
@@ -267,6 +285,7 @@ export class BoardComponent implements OnInit {
   readonly valueFilter = signal<ValueFilter>('any');
   readonly hideDrafted = signal(true);
   readonly sortKey = signal<SortKey>('draft');
+  readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly archetypes = computed(() => {
     const set = new Set(this.rows().map((r) => r.evaluation.archetype.archetype));
@@ -334,6 +353,20 @@ export class BoardComponent implements OnInit {
   rankOf(row: BoardPlayer): number {
     const idx = this.filteredSorted().findIndex((r) => r.player.id === row.player.id);
     return idx >= 0 ? idx + 1 : 0;
+  }
+
+  headshotOf(row: BoardPlayer): string | null {
+    if (this.brokenHeadshots().has(row.player.id)) return null;
+    return row.player.headshotThumbUrl || row.player.headshotUrl || null;
+  }
+
+  onHeadshotError(playerId: string): void {
+    this.brokenHeadshots.update((prev) => {
+      if (prev.has(playerId)) return prev;
+      const next = new Set(prev);
+      next.add(playerId);
+      return next;
+    });
   }
 
   formatArchetype(a: string): string {
