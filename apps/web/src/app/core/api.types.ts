@@ -260,30 +260,6 @@ export interface CompareStrategiesResult {
   }>;
 }
 
-export interface CheatSheetPlayerRow {
-  id: string;
-  name: string;
-  position: Position;
-  draftScore: number;
-  ceilingScore: number | null;
-  provisional: boolean;
-  ceilingKnownFactors: number;
-  adpRoundPick: string;
-  target?: boolean;
-  avoid?: boolean;
-}
-
-export interface CheatSheetGroup {
-  position: Position;
-  tiers: Array<{
-    tier: string;
-    label: string;
-    players: CheatSheetPlayerRow[];
-  }>;
-  /** No measured production at all (usually a rookie/backup) — excluded from S-D tiers. */
-  unranked: CheatSheetPlayerRow[];
-}
-
 export type DynastyMode = 'contend' | 'rebuild' | 'neutral';
 
 export type DynastyTrend = 'rising' | 'hold' | 'watch' | 'sell';
