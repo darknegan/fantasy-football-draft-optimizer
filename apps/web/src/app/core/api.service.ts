@@ -6,7 +6,6 @@ import type {
   BoardPlayer,
   CalibrationProposal,
   CalibrationSummary,
-  CheatSheetGroup,
   CompareStrategiesResult,
   ContractValuation,
   DraftRecap,
@@ -132,10 +131,6 @@ export class ApiService {
     } = {},
   ) {
     return this.http.post<CompareStrategiesResult>(`/api/leagues/${leagueId}/compare-strategies`, body);
-  }
-
-  cheatSheet(leagueId: string) {
-    return this.http.get<CheatSheetGroup[]>(`/api/leagues/${leagueId}/cheat-sheet`);
   }
 
   scoringSummary(leagueId: string) {

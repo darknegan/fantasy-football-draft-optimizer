@@ -44,7 +44,6 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /\/leagues\/manual-setup$/, title: 'Manual Setup' },
   { match: /\/strategy$/, title: 'Strategy Planner' },
   { match: /\/simulator$/, title: 'Strategy Simulator' },
-  { match: /\/cheat-sheet$/, title: 'Cheat Sheet' },
   { match: /\/board(\/|$)/, title: 'Player Board' },
   { match: /\/draft$/, title: 'Live Draft Room' },
   { match: /\/auction$/, title: 'Auction Room' },
@@ -400,7 +399,6 @@ export class ShellComponent implements OnInit {
           { label: 'Strategy Planner', icon: 'strategy', link: leaguePath('strategy') },
           { label: 'Strategy Simulator', icon: 'research', link: leaguePath('simulator') },
           { label: 'Player Board', icon: 'board', link: leaguePath('board') },
-          { label: 'Cheat Sheet', icon: 'research', link: leaguePath('cheat-sheet') },
         ],
       },
       {
