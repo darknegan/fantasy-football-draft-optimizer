@@ -120,6 +120,7 @@ export interface League {
   userId: string;
   name: string;
   platform: 'sleeper' | 'manual';
+  externalId?: string;
   type: string;
   draftType: string;
   teamCount: number;

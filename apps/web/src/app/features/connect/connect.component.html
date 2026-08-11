@@ -1,0 +1,193 @@
+<div class="connect">
+  <div class="platforms">
+    <section class="card sleeper" aria-labelledby="sleeper-title">
+      <div class="card-head">
+        <span class="mark sleeper-mark" aria-hidden="true">S</span>
+        <h2 id="sleeper-title">Sleeper</h2>
+        <span class="chip rec">Recommended</span>
+      </div>
+      <p class="card-lede">
+        A public, documented API. Enter your username and we find every league you are in — no
+        password, no cookies, nothing to copy.
+      </p>
+      <div class="sleeper-form">
+        <label class="field grow">
+          <span class="cap">Sleeper username</span>
+          <input
+            class="input accent"
+            type="text"
+            name="username"
+            autocomplete="username"
+            [(ngModel)]="username"
+            placeholder="drakedavis"
+            (keydown.enter)="findLeagues()"
+          />
+        </label>
+        <label class="field season">
+          <span class="cap">Season</span>
+          <input class="input" type="number" name="season" [(ngModel)]="season" />
+        </label>
+        <button type="button" class="btn primary" [disabled]="loading()" (click)="findLeagues()">
+          {{ loading() ? 'Finding…' : 'Find my leagues' }}
+        </button>
+      </div>
+      @if (error()) {
+        <p class="err" role="alert">{{ error() }}</p>
+      }
+      @if (connectionBanner(); as banner) {
+        <div class="result-banner" role="status">
+          <img class="live-dot" src="/connect/live-dot.svg" width="7" height="7" alt="" />
+          <span>{{ banner }}</span>
+        </div>
+      }
+    </section>
+
+    <section class="card manual" aria-labelledby="manual-title">
+      <div class="card-head">
+        <span class="mark manual-mark" aria-hidden="true">M</span>
+        <h2 id="manual-title">Manual setup</h2>
+        <span class="chip any">Any platform</span>
+      </div>
+      <p class="card-lede">
+        Not on Sleeper? Configure the league yourself in about a minute. Manual leagues get the full
+        board, strategy planner and Live Draft Team Builder — they simply do not auto-sync, so you
+        tap picks in as they come off the board.
+      </p>
+
+      <div class="manual-form">
+        <label class="field">
+          <span class="cap">Format</span>
+          <select class="input select" [(ngModel)]="manualType" name="manualType">
+            @for (opt of typeOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="cap">Teams</span>
+          <select class="input select" [(ngModel)]="manualTeams" name="manualTeams">
+            @for (n of teamOptions; track n) {
+              <option [ngValue]="n">{{ n }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="cap">Scoring preset</span>
+          <select class="input select" [(ngModel)]="scoringPresetId" name="scoringPresetId">
+            @for (p of presets(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="lineup">
+        <span class="cap">Starting lineup</span>
+        <div class="pills" aria-label="Starting lineup shape">
+          @for (pill of lineupPills(); track $index) {
+            <span class="pos-pill" [attr.data-pos]="pill.pos">{{ pill.label }}</span>
+          }
+          <a class="pos-pill add" routerLink="/leagues/manual-setup" title="Edit full roster shape">+</a>
+        </div>
+      </div>
+
+      <div class="manual-actions">
+        <button type="button" class="btn primary" [disabled]="creating()" (click)="createManual()">
+          {{ creating() ? 'Creating…' : 'Create league' }}
+        </button>
+        <a class="btn ghost" routerLink="/leagues/manual-setup">Start from a preset</a>
+      </div>
+      @if (manualError()) {
+        <p class="err" role="alert">{{ manualError() }}</p>
+      }
+
+      <aside class="espn-note">
+        <span class="info-mark" aria-hidden="true">i</span>
+        <div>
+          <strong>Why ESPN is not listed</strong>
+          <p>
+            ESPN has no official API. Connecting a private ESPN league would mean copying your
+            account session cookies out of your browser and sending them to undocumented endpoints,
+            so we left it out rather than put your account or their terms of service at risk. Set
+            ESPN leagues up manually instead — you lose auto-sync and nothing else.
+          </p>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <section class="discovered" aria-labelledby="discovered-title">
+    <div class="table-head">
+      <h2 id="discovered-title">Leagues found on Sleeper</h2>
+      @if (foundCount()) {
+        <span class="chip count">{{ foundCount() }} found</span>
+      }
+      <span class="spacer"></span>
+      <span class="hint">Format and scoring are detected automatically</span>
+    </div>
+
+    @if (!foundCount()) {
+      <div class="empty">
+        <p>Enter a Sleeper username above to discover leagues for this season.</p>
+      </div>
+    } @else {
+      <div class="table-scroll">
+        <div class="col-head" aria-hidden="true">
+          <span class="c check"></span>
+          <span class="c league">League</span>
+          <span class="c format">Format</span>
+          <span class="c teams">Teams</span>
+          <span class="c scoring">Scoring</span>
+          <span class="c draft">Draft</span>
+          <span class="c status">Status</span>
+        </div>
+
+        @for (row of rows(); track row.league.id) {
+          <div class="row" [class.selected]="row.selected">
+            <span class="c check">
+              <button
+                type="button"
+                class="check-btn"
+                [class.on]="row.selected"
+                [attr.aria-pressed]="row.selected"
+                [attr.aria-label]="(row.selected ? 'Deselect ' : 'Select ') + row.league.name"
+                (click)="toggleRow(row.league.id)"
+              >
+                @if (row.selected) {
+                  ✓
+                }
+              </button>
+            </span>
+            <span class="c league">
+              <strong>{{ row.league.name }}</strong>
+              <span class="ext dl-mono">{{ row.externalLabel }}</span>
+            </span>
+            <span class="c format">
+              <span class="chip format">{{ row.formatLabel }}</span>
+            </span>
+            <span class="c teams dl-mono">{{ row.league.teamCount }}</span>
+            <span class="c scoring">{{ row.scoringLabel }}</span>
+            <span class="c draft">{{ row.draftLabel }}</span>
+            <span class="c status">
+              <span class="chip status" [attr.data-tone]="row.statusTone">{{ row.statusLabel }}</span>
+            </span>
+          </div>
+        }
+      </div>
+
+      <div class="table-foot">
+        <img class="live-dot muted" src="/connect/live-dot.svg" width="7" height="7" alt="" />
+        <p>{{ footerNote() }}</p>
+        <span class="spacer"></span>
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="!selectedCount()"
+          (click)="importSelected()"
+        >
+          Import {{ selectedCount() }} selected
+        </button>
+      </div>
+    }
+  </section>
+</div>

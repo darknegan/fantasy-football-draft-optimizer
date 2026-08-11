@@ -40,7 +40,7 @@ interface NavGroup {
 
 const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/$/, title: 'Dashboard' },
-  { match: /\/leagues\/connect$/, title: 'Connections' },
+  { match: /\/leagues\/connect$/, title: 'Connect leagues' },
   { match: /\/leagues\/manual-setup$/, title: 'Manual Setup' },
   { match: /\/strategy$/, title: 'Strategy Planner' },
   { match: /\/simulator$/, title: 'Strategy Simulator' },
@@ -334,6 +334,7 @@ export class ShellComponent implements OnInit {
   readonly isCompact = signal(false);
   readonly searchQuery = signal('');
   readonly pageTitle = signal('Dashboard');
+  readonly currentPath = signal('/');
 
   readonly initials = computed(() => {
     const name = this.auth.user()?.displayName?.trim() || 'DL';
@@ -368,6 +369,10 @@ export class ShellComponent implements OnInit {
   });
 
   readonly pageSubtitle = computed(() => {
+    const path = this.router.url.split('?')[0] ?? '/';
+    if (/\/leagues\/connect$/.test(path)) {
+      return 'Import your real leagues so every projection is denominated in your own scoring';
+    }
     const count = this.active.leagues().length;
     if (!count) return 'Connect a league to get started';
     const selected = this.active.selected()?.name;
