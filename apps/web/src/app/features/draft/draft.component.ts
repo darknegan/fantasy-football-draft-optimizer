@@ -141,6 +141,8 @@ export class DraftComponent implements OnInit, OnDestroy {
   readonly posFilter = signal<PosFilter>('ALL');
   readonly archetypeFilter = signal('all');
   readonly mainTab = signal<MainTab>('available');
+  /** Explicit row selection in the available list; falls back to top score. */
+  readonly selectedPlayerId = signal<string | null>(null);
 
   readonly teamCount = computed(() => this.league()?.teamCount ?? 12);
   readonly userSlot = computed(() => this.league()?.draftSlot ?? 1);
@@ -191,6 +193,15 @@ export class DraftComponent implements OnInit, OnDestroy {
       list = list.filter((b) => b.evaluation.archetype.archetype === arch);
     }
     return [...list].sort((a, b) => draftScoreOf(b) - draftScoreOf(a));
+  });
+
+  /** Selected row for highlight / primary draft action. */
+  readonly highlightedPlayerId = computed(() => {
+    const list = this.availablePlayers();
+    if (!list.length) return null;
+    const selected = this.selectedPlayerId();
+    if (selected && list.some((r) => r.player.id === selected)) return selected;
+    return list[0]!.player.id;
   });
 
   readonly boardColumns = computed((): BoardColumn[] => {
@@ -494,6 +505,14 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   onArchetype(ev: Event) {
     this.archetypeFilter.set((ev.target as HTMLSelectElement).value);
+  }
+
+  selectPlayer(row: BoardPlayer) {
+    this.selectedPlayerId.set(row.player.id);
+  }
+
+  isSelected(row: BoardPlayer): boolean {
+    return this.highlightedPlayerId() === row.player.id;
   }
 
   formatArchetype(a: string): string {
