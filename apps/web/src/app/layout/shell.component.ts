@@ -40,6 +40,7 @@ interface NavGroup {
 
 const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/$/, title: 'Dashboard' },
+  { match: /^\/profile$/, title: 'Profile' },
   { match: /\/leagues\/connect$/, title: 'Connect leagues' },
   { match: /\/leagues\/manual-setup$/, title: 'Manual Setup' },
   { match: /\/strategy$/, title: 'Strategy Planner' },
@@ -251,7 +252,9 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
 
         <div class="side-foot">
           <div class="account-row">
-            <div class="account">{{ auth.user()?.displayName }}</div>
+            <a class="account" routerLink="/profile" (click)="onNavClick()">{{
+              auth.user()?.displayName
+            }}</a>
             <button type="button" class="logout" (click)="logout()">Log out</button>
           </div>
           <div class="sync-chip" role="status">
@@ -304,9 +307,14 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
             {{ liveChipLabel() }}
           </div>
 
-          <div class="avatar" [attr.aria-label]="auth.user()?.displayName ?? 'Account'">
+          <a
+            class="avatar"
+            routerLink="/profile"
+            [attr.aria-label]="(auth.user()?.displayName ?? 'Account') + ' profile'"
+            [style.--avatar-color]="avatarColor()"
+          >
             {{ initials() }}
-          </div>
+          </a>
         </header>
 
         <main class="content">
@@ -344,6 +352,23 @@ export class ShellComponent implements OnInit {
     return name.slice(0, 2).toUpperCase();
   });
 
+  readonly avatarColor = computed(() => {
+    switch (this.auth.user()?.initialsColor) {
+      case 'pos-qb':
+        return 'var(--dl-pos-qb)';
+      case 'pos-rb':
+        return 'var(--dl-pos-rb)';
+      case 'pos-wr':
+        return 'var(--dl-pos-wr)';
+      case 'pos-te':
+        return 'var(--dl-pos-te)';
+      case 'accent-secondary':
+        return 'var(--dl-accent-secondary)';
+      default:
+        return 'var(--dl-accent)';
+    }
+  });
+
   readonly leagueMeta = computed(() => {
     const league = this.active.selected();
     return league ? formatLeagueMeta(league) : null;
@@ -369,6 +394,10 @@ export class ShellComponent implements OnInit {
 
   readonly pageSubtitle = computed(() => {
     const path = this.currentPath();
+    if (/^\/profile$/.test(path)) {
+      const name = this.auth.user()?.displayName ?? 'Account';
+      return `${name} · account settings apply to every league you connect`;
+    }
     if (/\/leagues\/connect$/.test(path)) {
       return 'Import your real leagues so every projection is denominated in your own scoring';
     }

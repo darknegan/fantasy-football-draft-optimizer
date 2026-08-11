@@ -6,11 +6,11 @@ PrimeNG Aura preset already configured in `src/app/app.config.ts`.
 
 **Mocks:** [Fantasy Football Draft Optimizer — Mocks](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z)
 
-The Figma file has two pages. **Components** holds the token swatches and the seven variant
-component sets; **Screens** holds the ten 1600×1000 desktop mocks listed in §6. Every colour,
-spacing value and radius in the mocks is a bound Figma variable rather than a hardcoded value,
-and every typographic style is a named text style, so the file can be read directly as the
-implementation spec.
+The Figma file has two pages. **Components** holds the token swatches and the eight variant
+component sets; **Screens** holds the thirteen 1600×1000 desktop mocks listed in §6, plus one
+smaller detail frame for the account menu. Every colour, spacing value and radius in the mocks
+is a bound Figma variable rather than a hardcoded value, and every typographic style is a named
+text style, so the file can be read directly as the implementation spec.
 
 ---
 
@@ -177,13 +177,17 @@ and a 12px cell gutter.
 
 ## 5. Core Components
 
-Seven of these exist as variant component sets in the Figma file's **Components** page and are
+Eight of these exist as variant component sets in the Figma file's **Components** page and are
 instanced throughout the mocks: `Cell/FactorGrade` (green / yellow / orange / red / unknown),
 `Badge/Position` (QB / RB / WR / TE), `Chip/Tier` (S / A / B / C / D / F / Unrated),
 `Badge/Archetype` (Prime WR1 / Prime WR2 / Prime RB / Prime / Breakout / Trusty Vet),
-`Chip/ValueDelta` (Discount / Neutral / Premium), `Row/Player`, `Nav/Sidebar` and `Nav/TopBar`.
+`Chip/ValueDelta` (Discount / Neutral / Premium), `Control/Toggle` (On / Off / Locked),
+`Row/Player`, `Nav/Sidebar` and `Nav/TopBar`.
 Each carries a description explaining what it encodes, and the archetype badges carry their
-historical outcome rates. The remainder below are specified but composed inline in the mocks.
+historical outcome rates. `Control/Toggle` has a third `Locked` state for settings the product
+deliberately refuses to turn off, the colour-blind shape indicators of §2.3 being the case that
+motivated it: showing them as permanently on is more honest than offering a switch that should
+never be flipped. The remainder below are specified but composed inline in the mocks.
 
 Components that carry the model's semantics and must be built once and reused everywhere:
 
@@ -240,7 +244,7 @@ inflation rate, and the max-bid figure that is the auction room's most valuable 
 
 ## 6. Screen Inventory
 
-Twelve screens, ordered by the flow a new user follows. All are built in the Figma file.
+Thirteen screens, ordered by the flow a new user follows. All are built in the Figma file.
 
 | # | Screen | Purpose |
 | --- | --- | --- |
@@ -256,6 +260,13 @@ Twelve screens, ordered by the flow a new user follows. All are built in the Fig
 | 8 | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108) | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert |
 | 9 | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108) | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector |
 | 10 | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149) | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets |
+| — | [**User Profile**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=62-1285) | Account customisation: identity strip, account details, account-wide draft preferences, password and active sessions, notification lead times, the Sleeper connection in summary, and a danger zone that names what deletion removes |
+
+The profile screen is reached from the top bar avatar rather than the left navigation, since the
+sidebar is league-scoped and the account is not. The menu is drawn separately as
+[**Account menu**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=72-1367).
+The Angular route is `/profile`, backed by `GET/PATCH /me`, password, sessions, export and delete
+endpoints on the API and Worker.
 
 A post-draft recap screen (`05-architecture.md` §4, `/leagues/:id/recap`) is specified but
 deferred out of the first mock set, since its content depends on decisions made in the live

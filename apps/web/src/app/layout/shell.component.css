@@ -213,6 +213,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
+}
+
+.account:hover {
+  color: var(--dl-text-primary);
 }
 
 .logout {
@@ -375,8 +380,10 @@
   width: 2.375rem;
   height: 2.375rem;
   border-radius: 999px;
-  background: var(--dl-accent-secondary);
-  color: var(--dl-text-primary);
+  background: color-mix(in srgb, var(--avatar-color, var(--dl-accent)) 18%, transparent);
+  color: var(--avatar-color, var(--dl-accent));
+  text-decoration: none;
+  border: 1px solid color-mix(in srgb, var(--avatar-color, var(--dl-accent)) 40%, transparent);
   font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;

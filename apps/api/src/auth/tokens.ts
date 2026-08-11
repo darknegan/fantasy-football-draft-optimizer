@@ -56,7 +56,8 @@ export function refreshCookieOptions() {
     httpOnly: true,
     secure,
     sameSite: 'lax' as const,
-    path: '/auth',
+    // Available site-wide so /me/sessions can mark the current device; still httpOnly.
+    path: '/',
     maxAge: REFRESH_DAYS * 24 * 60 * 60,
   };
 }
