@@ -5,6 +5,10 @@ import {
   activateBenchmarkArtifact,
   type BenchmarksArtifact,
 } from '@draftlab/evaluation-engine';
+import {
+  artifactMetaFromLoaded,
+  type ArtifactsHealthMeta,
+} from './data/artifact-meta.js';
 import { loadArtifacts } from './data/artifact-provider.js';
 import { createFsArtifactCache } from './data/fs-artifact-cache.js';
 import {
@@ -13,6 +17,12 @@ import {
 } from './data/load-artifact.js';
 import { SEED_PLAYERS } from './data/seed-players.js';
 import { AppStore } from './services/store.js';
+
+let lastArtifactMeta: ArtifactsHealthMeta | null = null;
+
+export function getArtifactMeta(): ArtifactsHealthMeta | null {
+  return lastArtifactMeta;
+}
 
 function readJsonFile<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf-8')) as T;
@@ -24,6 +34,7 @@ function readJsonFile<T>(path: string): T {
  * Workers use the same loadArtifacts helper with an R2 binding — see apps/worker.
  */
 export async function createAppStore(): Promise<AppStore> {
+  lastArtifactMeta = null;
   const moduleDir = fileURLToPath(new URL('.', import.meta.url));
   const bundledFactorsPath = resolve(moduleDir, '../data/player_factors.json');
   const bundledBenchmarksPath = resolve(moduleDir, '../data/benchmarks.json');
@@ -70,6 +81,7 @@ export async function createAppStore(): Promise<AppStore> {
     bootstrapBenchmarks,
   });
 
+  lastArtifactMeta = artifactMetaFromLoaded(loaded);
   activateBenchmarkArtifact(loaded.benchmarks);
   const { players, skipped } = seedPlayersFromArtifact(loaded.factors);
   if (players.length === 0) {

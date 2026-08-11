@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
-import { createAppStore } from './create-store.js';
+import { createAppStore, getArtifactMeta } from './create-store.js';
 import type { AppStore } from './services/store.js';
 import { assertDbReady, getPool, isDbConnectionError, requireEnv } from './db/pool.js';
 import { createUser, findUserByEmail } from './db/users.js';
@@ -107,9 +107,19 @@ async function main() {
   app.get('/api/health', async () => {
     try {
       await pool.query('SELECT 1');
-      return { ok: true, service: 'draftlab-api', database: 'up' };
+      return {
+        ok: true,
+        service: 'draftlab-api',
+        database: 'up',
+        artifacts: getArtifactMeta() ?? undefined,
+      };
     } catch {
-      return { ok: false, service: 'draftlab-api', database: 'down' };
+      return {
+        ok: false,
+        service: 'draftlab-api',
+        database: 'down',
+        artifacts: getArtifactMeta() ?? undefined,
+      };
     }
   });
 

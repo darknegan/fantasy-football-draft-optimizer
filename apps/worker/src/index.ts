@@ -20,6 +20,11 @@ import { getDraftSlotInfo } from '@draftlab/strategy-engine';
 import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
 import benchmarksBootstrap from '../../api/data/benchmarks.json' with { type: 'json' };
 import { createR2ArtifactCache } from '../../api/src/data/artifact-cache.js';
+import {
+  artifactMetaFromLoaded,
+  bootstrapArtifactMeta,
+  type ArtifactsHealthMeta,
+} from '../../api/src/data/artifact-meta.js';
 import { loadArtifacts } from '../../api/src/data/artifact-provider.js';
 import {
   seedPlayersFromArtifact,
@@ -47,6 +52,10 @@ function storeFromFactors(factors: PlayerFactorsArtifact, label: string): AppSto
 // Sync bootstrap so the isolate always has a draftable board before R2 loads.
 activateBenchmarkArtifact(benchmarksBootstrap as unknown as BenchmarksArtifact);
 let store = storeFromFactors(playerFactors as unknown as PlayerFactorsArtifact, 'bundled bootstrap');
+let artifactMeta: ArtifactsHealthMeta = bootstrapArtifactMeta(
+  playerFactors as { generated_at?: string },
+  benchmarksBootstrap as { generated_at?: string },
+);
 
 let storeInit: Promise<void> | null = null;
 
@@ -61,6 +70,7 @@ async function refreshStoreFromArtifacts(env: Env): Promise<void> {
     loaded.factors,
     `provider (factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource})`,
   );
+  artifactMeta = artifactMetaFromLoaded(loaded);
 }
 
 function ensureStore(env: Env): Promise<void> {
@@ -126,6 +136,7 @@ app.get('/api/health', async (c) => {
     service: c.env.SERVICE_NAME,
     runtime: 'cloudflare-workers',
     deployedAt,
+    artifacts: artifactMeta,
     database,
     ...(databaseError ? { databaseError } : {}),
     dbBinding: c.env.SUPABASE_SERVICE_ROLE_KEY
