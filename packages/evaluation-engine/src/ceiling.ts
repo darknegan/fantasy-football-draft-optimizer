@@ -34,7 +34,7 @@ export function computeCeilingScore(
   const byId = new Map(inputs.map((i) => [i.factorId, i]));
   const factors = config.factors
     .filter((f) => !(options.excludeAdp && f.id === 'adp'))
-    .map((def) => gradeFactor(def, byId.get(def.id), config.bands));
+    .map((def) => gradeFactor(def, byId.get(def.id), config.bands, { softCapSerious: true }));
 
   const knownFactors = factors.filter((f) => f.grade !== 'unknown').length;
   // Derived from the position's own factor list, not a hardcoded constant — RB has 16

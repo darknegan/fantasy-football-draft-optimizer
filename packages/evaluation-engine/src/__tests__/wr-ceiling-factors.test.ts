@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { PositionBenchmarkConfig } from '@draftlab/domain';
+import { computeCeilingScore } from '../ceiling.js';
 import { getBenchmarkConfig } from '../config/benchmarks.js';
 import { CEILING_RANGE } from '../config/grade-weights.js';
 import { gradeFactor, gradeInjuryConcern } from '../grade-factor.js';
@@ -9,22 +11,46 @@ describe('injury ceiling soft-cap', () => {
     expect(gradeInjuryConcern('serious')).toBe('red');
   });
 
-  it('applies the soft-cap in ceiling factor grading', () => {
-    const graded = gradeFactor(
-      {
-        id: 'injury_concern',
-        label: 'Injury Concern',
-        category: 'profile',
-        direction: 'lowerBetter',
-        benchmark: 1,
-        categorical: 'injuryConcern',
-      },
-      { factorId: 'injury_concern', value: 1, categorical: 'serious' },
-      { greenMin: 1.05, yellowMin: 0.9, orangeMin: 0.75 },
-    );
+  const injuryFactor = {
+    id: 'injury_concern',
+    label: 'Injury Concern',
+    category: 'profile',
+    direction: 'lowerBetter',
+    benchmark: 1,
+    categorical: 'injuryConcern',
+  } as const;
+  const bands = { greenMin: 1.05, yellowMin: 0.9, orangeMin: 0.75 };
+  const seriousInjury = {
+    factorId: 'injury_concern',
+    value: 1,
+    categorical: 'serious',
+  } as const;
+
+  it('defaults gradeFactor serious injuries to red', () => {
+    expect(gradeFactor(injuryFactor, seriousInjury, bands).grade).toBe('red');
+  });
+
+  it('soft-caps serious injuries only when explicitly requested', () => {
+    const graded = gradeFactor(injuryFactor, seriousInjury, bands, {
+      softCapSerious: true,
+    });
 
     expect(graded.grade).toBe('orange');
     expect(graded.weight).toBe(-1);
+  });
+
+  it('requests the serious-injury soft-cap from the ceiling path', () => {
+    const config: PositionBenchmarkConfig = {
+      position: 'WR',
+      season: 2025,
+      provisional: false,
+      bands,
+      factors: [injuryFactor],
+    };
+
+    const result = computeCeilingScore('WR', [seriousInjury], { config });
+
+    expect(result.factors[0]?.grade).toBe('orange');
   });
 });
 
