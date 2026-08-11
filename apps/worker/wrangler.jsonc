@@ -17,6 +17,12 @@
       "binding": "DRAFTLAB_KV",
       "id": "c17fff5dd30b4102a61d2e4c11f5d101"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ARTIFACTS",
+      "bucket_name": "draftlab-artifacts"
+    }
   ]
   // Secrets (set via `wrangler secret put`):
   //   DATABASE_URL          — Supabase pooler, e.g.

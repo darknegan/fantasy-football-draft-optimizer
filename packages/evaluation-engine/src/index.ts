@@ -1,5 +1,6 @@
 export * from './config/grade-weights.js';
 export * from './config/benchmarks.js';
+export * from './config/load-benchmarks.js';
 export * from './grade-factor.js';
 export * from './ceiling.js';
 export * from './archetype.js';

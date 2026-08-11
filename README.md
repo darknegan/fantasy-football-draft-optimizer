@@ -84,6 +84,21 @@ You need **both** processes running, plus Postgres:
 
 If Postgres is down, `/api/health` reports `"database":"down"` and auth returns **503** with a clear message instead of a bare `ECONNREFUSED`.
 
+## Player factors / benchmarks data
+
+sleeperMCP publishes artifacts via **GitHub Actions → R2** (`draftlab-artifacts`).
+DraftLab loads cache-first (7-day freshness on R2 upload time):
+
+1. R2 (Worker) or `apps/api/.cache/artifacts` (Node)
+2. Stale (>7d) still served; log reminds you to run the Action
+3. Missing → bundled JSON under `apps/api/data/`
+
+Offline override: `SLEEPER_MCP_ARTIFACT_PATH` → local `player_factors.json`.
+
+Numeric ceilings come from `benchmarks.json`; factor labels/directions stay in
+`@draftlab/evaluation-engine`. Horizon MCP / Fly are never on this path.
+See sleeperMCP `docs/GO_LIVE_ACTIONS_R2.md`.
+
 ## Verified model fixtures
 
 Unit tests in `@draftlab/evaluation-engine` reproduce spreadsheet CeilingScores:
@@ -129,11 +144,11 @@ so a position with fewer sourced factors isn't structurally capped below one wit
 | Position | Sourced | Raw range | Notes                                                                                                            |
 | -------- | ------- | --------- | ---------------------------------------------------------------------------------------------------------------- |
 | QB       | 8 / 12  | −24 … +40 | 5 nflverse + 3 play-by-play (deep ball, red zone, neutral pace); still missing PFF/ESPN/FTN-licensed factors     |
-| RB       | 7 / 16  | −21 … +35 | Least covered — 4 of the video-sourced benchmarks (receptions, YPC, YPT, team wins) have no data behind them yet |
+| RB       | 10 / 16 | −30 … +50 | 6 nflverse + 3 play-by-play (RZ/GL share, neutral run) + archetype; still missing PFF + 4 DraftLab-only extras   |
 | TE       | 7 / 12  | −21 … +35 | 7 nflverse-sourced, including within-team target/TD rank                                                         |
 | WR       | 6 / 12  | −18 … +30 | 5 nflverse + archetype; the rest are PFF/Reception-Perception-licensed                                           |
 
-RB CeilingScore is no longer provisional — it ships graded on its 7 sourced factors like
+RB CeilingScore is no longer provisional — it ships graded on its 10 sourced factors like
 every other position, with unsourced factors honestly `unknown` rather than gated entirely.
 
 See [`docs/01-player-evaluation-model.md`](docs/01-player-evaluation-model.md) for the full

@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20260801.1 2026-08-09 nodejs_compat
 interface __BaseEnv_Env {
 	DRAFTLAB_KV: KVNamespace;
+	ARTIFACTS: R2Bucket;
 	SERVICE_NAME: "draftlab-api";
 	JWT_ACCESS_SECRET?: string;
 	JWT_REFRESH_SECRET?: string;

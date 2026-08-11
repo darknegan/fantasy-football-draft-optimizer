@@ -295,15 +295,10 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
     position: 'RB',
     season: 2025,
     // No longer provisional. rz_touch_share, gl_carry_share, and neutral_run_rate are
-    // still unsourced (benchmark 0, gradeByRatio's honest 'unknown' — same graceful
-    // degradation QB/WR/TE already rely on for their own unlicensed factors: QB has
-    // 3 unsourced nflverse:pbp factors, WR has 4 licensed:PFF ones, TE has 3. RB is no
-    // longer a special case — 6/12 factors are real nflverse data (the best-sourced
-    // position of the four; QB and WR are 5/12), so it gets the same partial-coverage
-    // treatment they've always had rather than an all-or-nothing gate. See
-    // docs/01-player-evaluation-model.md §1.5 for why that gate existed in the first
-    // place: it was never about RB specifically, it was that every RB factor was
-    // fabricated. That stopped being true once real benchmarks landed.
+    // sourced from sleeperMCP nflverse play-by-play (top-3 cohort, 11-season half-PPR
+    // means; relative SE 2.0–3.5%). Remaining honest unknowns: ol_run_block_rank (PFF),
+    // the four DraftLab-only extras with no sleeperMCP emit (receptions/YPC/YPT/team_wins),
+    // and injury_concern. Same partial-coverage treatment QB/WR/TE already use.
     bands: { ...DEFAULT_GRADING_BANDS },
     // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
     // (20+ PPR ppg, 12+ games, averaged across those seasons).
@@ -380,14 +375,14 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         direction: 'higherBetter',
         benchmark: 9.85,
       },
-      // No video data — nflverse (get_player_stats / get_snap_counts per sleeperMCP
-      // HANDOFF.md) is the intended source for these, not this benchmark.
+      // sleeperMCP-computed from nflverse play-by-play (top-3 RB cohort,
+      // 11-season half-PPR means). Was benchmark: 0 until ITEM-001 / TDD-001.
       {
         id: 'rz_touch_share',
         label: 'Red zone touch share',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 0,
+        benchmark: 0.4,
       },
       {
         id: 'snap_share',
@@ -401,14 +396,14 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         label: 'Goal-line carry share',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 0,
+        benchmark: 0.664,
       },
       {
         id: 'neutral_run_rate',
         label: 'Neutral run rate',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 0,
+        benchmark: 0.435,
       },
       {
         id: 'archetype',
@@ -430,13 +425,31 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   },
 };
 
+/**
+ * Static metadata + last-known ceilings. Prefer numbers from sleeperMCP
+ * `benchmarks.json` via `activateBenchmarkArtifact` / `setActiveBenchmarks`.
+ * These embedded values remain the offline bootstrap / test fallback only.
+ */
+let activeBenchmarks: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmarkConfig> =
+  BENCHMARKS_2025;
+
+export function setActiveBenchmarks(
+  next: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmarkConfig>,
+): void {
+  activeBenchmarks = next;
+}
+
+export function resetActiveBenchmarks(): void {
+  activeBenchmarks = BENCHMARKS_2025;
+}
+
 export function getBenchmarkConfig(
   position: 'QB' | 'WR' | 'TE' | 'RB',
   season = 2025,
 ): PositionBenchmarkConfig {
   if (season !== 2025) {
     // Future seasons can version independently; fall back to latest for now.
-    return BENCHMARKS_2025[position];
+    return activeBenchmarks[position] ?? BENCHMARKS_2025[position];
   }
-  return BENCHMARKS_2025[position];
+  return activeBenchmarks[position];
 }

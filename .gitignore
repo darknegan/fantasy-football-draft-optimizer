@@ -28,6 +28,9 @@ yarn-error.log
 .dev.vars
 .mf
 
+# Node API local artifact cache (R2 stand-in)
+apps/api/.cache/
+
 # IDEs and editors
 .idea/
 .project
