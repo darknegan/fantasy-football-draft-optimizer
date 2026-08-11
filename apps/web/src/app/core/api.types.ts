@@ -382,6 +382,12 @@ export interface AuctionState {
   }>;
   userBudget: AuctionState['budgets'][number];
   signedRoster?: AuctionSignedPlayer[];
+  /** Signed contracts for every team in the auction. */
+  teamRosters?: Array<{
+    rosterId: string;
+    name: string;
+    players: AuctionSignedPlayer[];
+  }>;
   lotNumber?: number;
   lotTotal?: number;
   cap?: number;

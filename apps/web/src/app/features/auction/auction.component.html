@@ -215,55 +215,79 @@
           </section>
         } @else {
           <div class="room-panels" role="tabpanel" aria-label="Budgets and roster">
-            <section class="budgets-block">
-              <div class="section-head">
-                <h2>Budgets</h2>
-                <p>Dollars per remaining slot is the number that decides who can still outbid you</p>
-              </div>
-              <div class="budget-grid">
-                @for (team of budgetCards(); track team.rosterId) {
-                  <article class="budget-card" [class.you]="team.isYou">
-                    <div class="budget-name">{{ team.label }}</div>
-                    <div class="budget-amt dl-mono">${{ team.remaining }}</div>
-                    <div class="budget-meta">
-                      <span>{{ team.spotsLeft }} spots</span>
-                      <span class="dl-mono">${{ team.perSlot }}/slot</span>
-                    </div>
-                  </article>
-                }
-              </div>
-            </section>
+            <div class="section-head">
+              <h2>Budgets & rosters</h2>
+              <p>Remaining budget, signed contracts, and what each team still needs to finish the roster</p>
+            </div>
 
-            <section class="roster-block">
-              <div class="section-head row">
-                <h2>Your signed roster</h2>
-                <span class="chip">${{ state()!.userBudget.spent }} of ${{ cap() }} committed</span>
-              </div>
-              <div class="spend-bar" aria-hidden="true">
-                @for (seg of spendSegments(); track seg.position) {
-                  <span [style.width.%]="seg.pct" [class]="seg.position"></span>
-                }
-              </div>
-              <div class="signed-row">
-                @for (p of signedRoster(); track p.playerId) {
-                  <article class="signed-card">
-                    <span class="pos" [class]="p.position">{{ p.position }}</span>
+            <div class="team-room-list">
+              @for (team of teamRooms(); track team.rosterId) {
+                <article class="team-room" [class.you]="team.isYou">
+                  <header class="team-room-head">
                     <div>
-                      <strong>{{ p.name }}</strong>
-                      <div class="signed-meta">
-                        <span class="dl-mono">${{ p.amount }}/yr</span>
-                        <span
-                          >{{ p.contractYears }} yr · through
-                          {{ season() + p.contractYears }}</span
-                        >
+                      <h3>{{ team.label }}</h3>
+                      <p class="team-need-summary">{{ team.needSummary }}</p>
+                    </div>
+                    <div class="team-budget">
+                      <div class="team-budget-amt dl-mono">${{ team.remaining }}</div>
+                      <div class="team-budget-meta">
+                        ${{ team.spent }} spent · {{ team.spotsLeft }} spots · ${{ team.perSlot }}/slot
                       </div>
                     </div>
-                  </article>
-                } @empty {
-                  <p class="empty-note">No contracts signed yet. Win a nomination to fill the roster.</p>
-                }
-              </div>
-            </section>
+                  </header>
+
+                  <div class="team-room-body">
+                    <section class="team-signed">
+                      <h4>Signed</h4>
+                      <ul>
+                        @for (p of team.players; track p.playerId) {
+                          <li>
+                            <span class="pos tiny" [class]="p.position">{{ p.position }}</span>
+                            <span class="signed-name">{{ p.name }}</span>
+                            <span class="dl-mono">${{ p.amount }}</span>
+                            <span class="signed-years">{{ p.contractYears }}yr</span>
+                          </li>
+                        } @empty {
+                          <li class="empty-note">No players signed yet</li>
+                        }
+                      </ul>
+                    </section>
+
+                    <section class="team-needs">
+                      <h4>Needs</h4>
+                      <ul>
+                        @for (need of team.needs; track need.position) {
+                          <li>
+                            <span class="pos tiny" [class]="need.position">{{ need.position }}</span>
+                            <span class="need-detail">{{ need.detail }}</span>
+                            <span class="need-level" [class]="need.urgency">{{ need.label }}</span>
+                          </li>
+                        }
+                      </ul>
+                    </section>
+
+                    <section class="team-targets">
+                      <h4>Recommended next</h4>
+                      @if (team.targets.length) {
+                        <ul>
+                          @for (t of team.targets; track t.playerId) {
+                            <li>
+                              <button type="button" class="target-btn" (click)="selectPlayer(t.playerId)">
+                                <span class="pos tiny" [class]="t.position">{{ t.position }}</span>
+                                <span class="target-name">{{ t.name }}</span>
+                                <span class="dl-mono warn">${{ t.inflatedValue }}</span>
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      } @else {
+                        <p class="empty-note">No clear targets at current budget pace.</p>
+                      }
+                    </section>
+                  </div>
+                </article>
+              }
+            </div>
           </div>
         }
       </div>
