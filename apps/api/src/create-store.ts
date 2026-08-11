@@ -2,52 +2,88 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  activateBenchmarkArtifact,
+  type BenchmarksArtifact,
+} from '@draftlab/evaluation-engine';
+import { loadArtifacts } from './data/artifact-provider.js';
+import { createFsArtifactCache } from './data/fs-artifact-cache.js';
+import {
   seedPlayersFromArtifact,
   type PlayerFactorsArtifact,
 } from './data/load-artifact.js';
 import { SEED_PLAYERS } from './data/seed-players.js';
 import { AppStore } from './services/store.js';
 
+function readJsonFile<T>(path: string): T {
+  return JSON.parse(readFileSync(path, 'utf-8')) as T;
+}
+
 /**
- * Node-only bootstrap: prefer sleeperMCP player_factors.json, else the bundled
- * snapshot under data/, else in-repo hand seeds.
- * Workers must import the JSON artifact (no filesystem) — see apps/worker.
+ * Node bootstrap: FS cache (R2 stand-in) + bundled JSON safety net.
+ * Populate the FS cache with `wrangler r2 object get` or a local build copy.
+ * Workers use the same loadArtifacts helper with an R2 binding — see apps/worker.
  */
-export function createAppStore(): AppStore {
+export async function createAppStore(): Promise<AppStore> {
   const moduleDir = fileURLToPath(new URL('.', import.meta.url));
+  const bundledFactorsPath = resolve(moduleDir, '../data/player_factors.json');
+  const bundledBenchmarksPath = resolve(moduleDir, '../data/benchmarks.json');
 
-  // Local dev: sleeperMCP checked out as a sibling of this repo.
-  const checkoutArtifactPath = resolve(
-    moduleDir,
-    '../../../../../sleeperMCP/artifacts/player_factors.json',
-  );
-  // Deploy hosts only check out THIS repo — committed snapshot for that case.
-  const bundledArtifactPath = resolve(moduleDir, '../data/player_factors.json');
+  const bootstrapFactors = existsSync(bundledFactorsPath)
+    ? readJsonFile<PlayerFactorsArtifact>(bundledFactorsPath)
+    : null;
+  const bootstrapBenchmarks = existsSync(bundledBenchmarksPath)
+    ? readJsonFile<BenchmarksArtifact>(bundledBenchmarksPath)
+    : null;
 
-  const artifactPath =
-    process.env['SLEEPER_MCP_ARTIFACT_PATH'] ??
-    (existsSync(checkoutArtifactPath) ? checkoutArtifactPath : bundledArtifactPath);
-
-  if (existsSync(artifactPath)) {
-    const doc = JSON.parse(readFileSync(artifactPath, 'utf-8')) as PlayerFactorsArtifact;
-    const { players, skipped } = seedPlayersFromArtifact(doc);
-    if (players.length === 0) {
-      throw new Error(`[store] loaded 0 players from ${artifactPath} — every entry was skipped`);
+  // Offline override: point at a local sleeperMCP artifact for hacking.
+  const overridePath = process.env['SLEEPER_MCP_ARTIFACT_PATH'];
+  if (overridePath && existsSync(overridePath)) {
+    const doc = readJsonFile<PlayerFactorsArtifact>(overridePath);
+    if (bootstrapBenchmarks) {
+      activateBenchmarkArtifact(bootstrapBenchmarks);
     }
+    const { players, skipped } = seedPlayersFromArtifact(doc);
     if (skipped.length) {
       console.warn(
         `[store] ${skipped.length} artifact player(s) skipped (incomplete bio): ` +
           skipped.map((s) => s.name).join(', '),
       );
     }
-    console.log(`[store] loaded ${players.length} players from ${artifactPath}`);
+    console.log(`[store] loaded ${players.length} players from SLEEPER_MCP_ARTIFACT_PATH`);
     return new AppStore(players);
   }
 
-  console.warn(
-    `[store] sleeperMCP artifact not found at ${artifactPath}; using in-repo SEED_PLAYERS ` +
-      `(${SEED_PLAYERS.length}). Set SLEEPER_MCP_ARTIFACT_PATH or regenerate: ` +
-      `cd sleeperMCP && python tools/build_factors.py`,
+  if (!bootstrapFactors || !bootstrapBenchmarks) {
+    console.warn(
+      `[store] bundled bootstrap missing; using in-repo SEED_PLAYERS (${SEED_PLAYERS.length})`,
+    );
+    return new AppStore(SEED_PLAYERS);
+  }
+
+  const cacheDir =
+    process.env['DRAFTLAB_ARTIFACT_CACHE_DIR'] ??
+    resolve(moduleDir, '../.cache/artifacts');
+
+  const loaded = await loadArtifacts({
+    cache: createFsArtifactCache(cacheDir),
+    bootstrapFactors,
+    bootstrapBenchmarks,
+  });
+
+  activateBenchmarkArtifact(loaded.benchmarks);
+  const { players, skipped } = seedPlayersFromArtifact(loaded.factors);
+  if (players.length === 0) {
+    throw new Error('[store] loaded 0 players from artifact provider — every entry was skipped');
+  }
+  if (skipped.length) {
+    console.warn(
+      `[store] ${skipped.length} artifact player(s) skipped (incomplete bio): ` +
+        skipped.map((s) => s.name).join(', '),
+    );
+  }
+  console.log(
+    `[store] loaded ${players.length} players ` +
+      `(factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource})`,
   );
-  return new AppStore(SEED_PLAYERS);
+  return new AppStore(players);
 }

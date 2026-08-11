@@ -3,6 +3,10 @@ import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { DraftType, LeagueType, RosterShape, StrategyId } from '@draftlab/domain';
 import {
+  activateBenchmarkArtifact,
+  type BenchmarksArtifact,
+} from '@draftlab/evaluation-engine';
+import {
   createManualLeague,
   mapSleeperLeague,
   resolveDraftSlot,
@@ -14,6 +18,9 @@ import {
 } from '@draftlab/integrations';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
 import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
+import benchmarksBootstrap from '../../api/data/benchmarks.json' with { type: 'json' };
+import { createR2ArtifactCache } from '../../api/src/data/artifact-cache.js';
+import { loadArtifacts } from '../../api/src/data/artifact-provider.js';
 import {
   seedPlayersFromArtifact,
   type PlayerFactorsArtifact,
@@ -25,19 +32,51 @@ import { updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
 import { loadUserLeagues, ownedLeague, withDb } from './leagues.js';
 import { authRoutes } from './routes/auth.js';
 
-const { players: ARTIFACT_PLAYERS, skipped: artifactSkipped } = seedPlayersFromArtifact(
-  playerFactors as unknown as PlayerFactorsArtifact,
-);
-if (ARTIFACT_PLAYERS.length === 0) {
-  throw new Error('[worker] loaded 0 players from bundled player_factors.json');
+function storeFromFactors(factors: PlayerFactorsArtifact, label: string): AppStore {
+  const { players, skipped } = seedPlayersFromArtifact(factors);
+  if (players.length === 0) {
+    throw new Error(`[worker] loaded 0 players from ${label}`);
+  }
+  if (skipped.length) {
+    console.warn(`[worker] ${skipped.length} artifact player(s) skipped (incomplete bio)`);
+  }
+  console.log(`[worker] loaded ${players.length} players from ${label}`);
+  return new AppStore(players);
 }
-if (artifactSkipped.length) {
-  console.warn(
-    `[worker] ${artifactSkipped.length} artifact player(s) skipped (incomplete bio)`,
+
+// Sync bootstrap so the isolate always has a draftable board before R2 loads.
+activateBenchmarkArtifact(benchmarksBootstrap as unknown as BenchmarksArtifact);
+let store = storeFromFactors(playerFactors as unknown as PlayerFactorsArtifact, 'bundled bootstrap');
+
+let storeInit: Promise<void> | null = null;
+
+async function refreshStoreFromArtifacts(env: Env): Promise<void> {
+  const loaded = await loadArtifacts({
+    cache: createR2ArtifactCache(env.ARTIFACTS),
+    bootstrapFactors: playerFactors as unknown as PlayerFactorsArtifact,
+    bootstrapBenchmarks: benchmarksBootstrap as unknown as BenchmarksArtifact,
+  });
+  activateBenchmarkArtifact(loaded.benchmarks);
+  store = storeFromFactors(
+    loaded.factors,
+    `provider (factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource})`,
   );
 }
 
-const store = new AppStore(ARTIFACT_PLAYERS);
+function ensureStore(env: Env): Promise<void> {
+  if (!storeInit) {
+    storeInit = refreshStoreFromArtifacts(env).catch((err) => {
+      console.warn(
+        `[worker] artifact refresh failed; keeping bootstrap store: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+      // Allow a later request to retry.
+      storeInit = null;
+    });
+  }
+  return storeInit ?? Promise.resolve();
+}
 
 const app = new Hono<{ Bindings: Env; Variables: { user: WorkerUser } }>();
 
@@ -53,6 +92,11 @@ app.route('/', authRoutes);
 
 app.use('/api/leagues/*', requireAccessJwt);
 app.use('/api/leagues', requireAccessJwt);
+
+app.use('*', async (c, next) => {
+  await ensureStore(c.env);
+  await next();
+});
 
 app.get('/api/health', async (c) => {
   let deployedAt = await c.env.DRAFTLAB_KV.get('deployedAt');

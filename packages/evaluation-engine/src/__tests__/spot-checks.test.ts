@@ -111,13 +111,16 @@ describe('computeCeilingScore with engineered factor values', () => {
 
   it('RB with real sourced values grades correctly, unsourced factors honestly unknown', () => {
     // Bijan Robinson's real sleeperMCP-measured values against the real nflverse-derived
-    // RB benchmarks (see benchmarks.ts). rz_touch_share/gl_carry_share/neutral_run_rate,
-    // archetype and injury_concern are deliberately omitted — no source yet, same honest
-    // gap QB/WR/TE already tolerate for their own unlicensed factors.
+    // RB benchmarks (see benchmarks.ts), including the three ITEM-001 pbp factors.
+    // injury_concern and the DraftLab-only extras (receptions/YPC/YPT/team_wins) remain
+    // omitted — same honest gap QB/WR/TE already tolerate for unlicensed factors.
     const inputs: FactorInput[] = [
       { factorId: 'touches', value: 21.529 }, // benchmark 21.5 -> ratio ~1.001 -> yellow
       { factorId: 'off_ppg_rank', value: 24 }, // benchmark 9.5, lowerBetter -> ratio ~0.396 -> red
       { factorId: 'snap_share', value: 0.782 }, // benchmark 0.717 -> ratio ~1.091 -> green
+      { factorId: 'rz_touch_share', value: 0.485 }, // benchmark 0.4 -> ratio ~1.213 -> green
+      { factorId: 'gl_carry_share', value: 0.5 }, // benchmark 0.664 -> ratio ~0.753 -> orange
+      { factorId: 'neutral_run_rate', value: 0.449 }, // benchmark 0.435 -> ratio ~1.032 -> yellow
     ];
     const result = computeCeilingScore('RB', inputs);
     expect(result.provisional).toBe(false);
@@ -125,12 +128,20 @@ describe('computeCeilingScore with engineered factor values', () => {
     expect(byId.get('touches')).toBe('yellow');
     expect(byId.get('off_ppg_rank')).toBe('red');
     expect(byId.get('snap_share')).toBe('green');
-    expect(byId.get('rz_touch_share')).toBe('unknown');
-    expect(result.knownFactors).toBe(3);
+    expect(byId.get('rz_touch_share')).toBe('green');
+    expect(byId.get('gl_carry_share')).toBe('orange');
+    expect(byId.get('neutral_run_rate')).toBe('yellow');
+    expect(byId.get('injury_concern')).toBe('unknown');
+    expect(result.knownFactors).toBe(6);
     expect(result.ceilingScore).toBe(
-      GRADE_WEIGHTS.yellow + GRADE_WEIGHTS.red + GRADE_WEIGHTS.green,
+      GRADE_WEIGHTS.yellow +
+        GRADE_WEIGHTS.red +
+        GRADE_WEIGHTS.green +
+        GRADE_WEIGHTS.green +
+        GRADE_WEIGHTS.orange +
+        GRADE_WEIGHTS.yellow,
     );
-    expect(result.confidenceScore).toBeCloseTo(3 / 16, 5);
+    expect(result.confidenceScore).toBeCloseTo(6 / 16, 5);
   });
 
   it('draftScore alone still separates zero-data from a real bad grade (the robust fix is in buildCheatSheet, though — see tiers.test)', () => {

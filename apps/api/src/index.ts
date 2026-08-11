@@ -4,6 +4,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import { createAppStore } from './create-store.js';
+import type { AppStore } from './services/store.js';
 import { assertDbReady, getPool, isDbConnectionError, requireEnv } from './db/pool.js';
 import { createUser, findUserByEmail } from './db/users.js';
 import { upsertLeagueRow } from './db/leagues.js';
@@ -23,7 +24,7 @@ function corsOrigins(): boolean | string[] {
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
-async function maybeSeedDemoUser(pool: ReturnType<typeof getPool>, store: ReturnType<typeof createAppStore>) {
+async function maybeSeedDemoUser(pool: ReturnType<typeof getPool>, store: AppStore) {
   if (process.env['SEED_DEMO_USER'] !== 'true') return;
   const email = process.env['DEMO_USER_EMAIL'] ?? 'demo@draftlab.local';
   const password = process.env['DEMO_USER_PASSWORD'] ?? 'demopassword';
@@ -53,7 +54,7 @@ async function main() {
 
   const pool = getPool();
   await assertDbReady(pool);
-  const store = createAppStore();
+  const store = await createAppStore();
   await maybeSeedDemoUser(pool, store);
 
   const app = Fastify({ logger: true });
