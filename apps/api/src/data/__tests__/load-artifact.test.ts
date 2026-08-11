@@ -90,6 +90,12 @@ describe('seedPlayersFromArtifact', () => {
               note: null,
               categorical: 'concerned',
             },
+            secondary_target: {
+              value: 85.788,
+              provenance: 'measured',
+              note: null,
+              categorical: 'less',
+            },
           },
         },
       ],
@@ -142,6 +148,9 @@ describe('seedPlayersFromArtifact', () => {
     // Injury concern is artifact-sourced when its categorical value is present.
     expect(sp.factors.find((f) => f.factorId === 'injury_concern')).toEqual(
       expect.objectContaining({ categorical: 'concerned', value: 1 }),
+    );
+    expect(sp.factors.find((f) => f.factorId === 'secondary_target')).toEqual(
+      expect.objectContaining({ categorical: 'less', value: 85.788 }),
     );
     // A null placeholder must remain absent rather than becoming a known
     // categorical factor.

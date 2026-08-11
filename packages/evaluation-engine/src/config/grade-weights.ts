@@ -20,7 +20,7 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  * benchmark. These counts are the number of factors real players actually get
  * graded on today, checked against live board data: QB 10/12, RB 11/16
  * (12 original + 4 RB-only additions; 11 sourced after ITEM-001 pbp factors
- * and injury concern), TE 10/12, WR 7/12.
+ * and injury concern), TE 10/12, WR 10/13.
  *
  * A single global range (assuming every position eventually sources all its
  * factors) structurally capped whichever position had fewest sourced factors
@@ -34,7 +34,7 @@ const CEILING_KNOWN_FACTORS: Record<Position, number> = {
   QB: 10,
   RB: 11,
   TE: 10,
-  WR: 7,
+  WR: 10,
 };
 
 export const CEILING_RANGE: Record<Position, { min: number; max: number }> = Object.fromEntries(
