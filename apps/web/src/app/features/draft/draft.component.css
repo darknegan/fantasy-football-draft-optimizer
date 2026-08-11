@@ -384,9 +384,14 @@
   background: var(--dl-surface-raised);
   border: 1px solid var(--dl-border-subtle);
   animation: rise 0.3s ease both;
+  cursor: pointer;
 }
 
-.avail-row.best {
+.avail-row:hover {
+  border-color: color-mix(in srgb, var(--dl-accent) 35%, var(--dl-border-subtle));
+}
+
+.avail-row.selected {
   border: 2px solid var(--dl-accent);
   background: color-mix(in srgb, var(--dl-accent) 6%, var(--dl-surface-raised));
 }
@@ -407,7 +412,7 @@
   font-weight: 600;
 }
 
-.avail-row .c-rank.best {
+.avail-row .c-rank.selected {
   background: var(--dl-accent);
   color: var(--dl-text-inverse);
 }
