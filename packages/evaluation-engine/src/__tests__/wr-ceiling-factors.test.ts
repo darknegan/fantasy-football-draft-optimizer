@@ -55,10 +55,10 @@ describe('injury ceiling soft-cap', () => {
 });
 
 describe('WR ceiling config', () => {
-  it('includes route_participation and known-factor range for 10', () => {
+  it('includes route_participation and known-factor range for 15', () => {
     const cfg = getBenchmarkConfig('WR', 2025);
     expect(cfg.factors.some((factor) => factor.id === 'route_participation')).toBe(true);
-    expect(CEILING_RANGE.WR.max).toBe(50);
-    expect(CEILING_RANGE.WR.min).toBe(-30);
+    expect(CEILING_RANGE.WR.max).toBe(75);
+    expect(CEILING_RANGE.WR.min).toBe(-45);
   });
 });
