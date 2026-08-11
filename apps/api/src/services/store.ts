@@ -9,6 +9,7 @@ import type {
   Position,
   StrategyId,
 } from '@draftlab/domain';
+import { withHeadshot } from '@draftlab/integrations';
 import {
   applyBidToBudgets,
   applyInflation,
@@ -411,7 +412,7 @@ export class AppStore {
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
     return this.seeds.map((s) => ({
-      player: s.player,
+      player: withHeadshot(s.player),
       evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
       recommendation: recById.get(s.player.id),
       drafted: draftedIds.has(s.player.id),

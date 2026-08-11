@@ -13,14 +13,18 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
   FactorGrade,
+  GameLogTone,
+  GameLogWeek,
   GradedFactor,
   League,
   Player,
   PlayerEvaluation,
+  PlayerGameLog,
   Position,
 } from '../../core/api.types';
 
 type FactorCategory = 'volume' | 'situational' | 'profile';
+type DetailTab = 'summary' | 'game-log';
 
 interface FactorGroup {
   category: FactorCategory;
@@ -114,6 +118,7 @@ export class PlayerDetailComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   leagueId = '';
+  private playerId = '';
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly player = signal<Player | null>(null);
@@ -121,6 +126,15 @@ export class PlayerDetailComponent implements OnInit {
   readonly league = signal<League | null>(null);
   readonly isTarget = signal(false);
   readonly flagBusy = signal(false);
+
+  readonly activeTab = signal<DetailTab>('summary');
+  readonly gameLogLoading = signal(false);
+  readonly gameLogError = signal<string | null>(null);
+  readonly gameLog = signal<PlayerGameLog | null>(null);
+  readonly availableSeasons = signal<number[]>([]);
+  readonly selectedSeason = signal<number | null>(null);
+  readonly seasonType = signal<'regular' | 'post'>('regular');
+  readonly headshotBroken = signal(false);
 
   readonly factorGroups = computed(() => {
     const factors = this.evaluation()?.ceiling.factors ?? [];
@@ -187,6 +201,27 @@ export class PlayerDetailComponent implements OnInit {
     return `Benchmarks are the average profile of ${POS_BENCH_LABEL[pos]}`;
   });
 
+  readonly showPassing = computed(() => {
+    const p = this.player();
+    const weeks = this.gameLog()?.weeks ?? [];
+    if (p?.position === 'QB') return true;
+    return weeks.some((w) => (w.passing.att ?? 0) > 0);
+  });
+
+  readonly showRushing = computed(() => {
+    const p = this.player();
+    const weeks = this.gameLog()?.weeks ?? [];
+    if (p?.position === 'QB' || p?.position === 'RB') return true;
+    return weeks.some((w) => (w.rushing.att ?? 0) > 0);
+  });
+
+  readonly showReceiving = computed(() => {
+    const p = this.player();
+    const weeks = this.gameLog()?.weeks ?? [];
+    if (p?.position === 'WR' || p?.position === 'TE' || p?.position === 'RB') return true;
+    return weeks.some((w) => (w.receiving.tgt ?? 0) > 0 || (w.receiving.rec ?? 0) > 0);
+  });
+
   ngOnInit(): void {
     this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     const pid = this.route.snapshot.paramMap.get('pid');
@@ -195,6 +230,7 @@ export class PlayerDetailComponent implements OnInit {
       this.loading.set(false);
       return;
     }
+    this.playerId = pid;
 
     forkJoin({
       detail: this.api.player(pid).pipe(
@@ -219,7 +255,43 @@ export class PlayerDetailComponent implements OnInit {
         this.evaluation.set(detail.evaluation);
         const row = board.find((r) => r.player.id === detail.player.id);
         this.isTarget.set(!!row?.target);
+        this.loadGameLog();
       });
+  }
+
+  setTab(tab: DetailTab): void {
+    this.activeTab.set(tab);
+  }
+
+  selectSeason(season: number): void {
+    if (this.selectedSeason() === season) return;
+    this.selectedSeason.set(season);
+    this.loadGameLog({ season });
+  }
+
+  setSeasonType(type: 'regular' | 'post'): void {
+    if (this.seasonType() === type) return;
+    this.seasonType.set(type);
+    this.loadGameLog({ seasonType: type });
+  }
+
+  onHeadshotError(): void {
+    this.headshotBroken.set(true);
+  }
+
+  oppLabel(week: GameLogWeek): string {
+    if (!week.opponent) return '—';
+    return week.isAway ? `@${week.opponent}` : week.opponent;
+  }
+
+  fmt(n: number | null | undefined, digits = 0): string {
+    if (n == null || Number.isNaN(n)) return '—';
+    if (digits === 0) return Number.isInteger(n) ? String(n) : n.toFixed(0);
+    return n.toFixed(digits);
+  }
+
+  toneClass(tone: GameLogTone): string {
+    return `tone-${tone}`;
   }
 
   toggleTarget(): void {
@@ -280,6 +352,45 @@ export class PlayerDetailComponent implements OnInit {
     const rounded = Math.round(n * 10) / 10;
     const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
     return rounded > 0 ? `+${text}` : text.replace('-', '−');
+  }
+
+  private loadGameLog(opts: { season?: number; seasonType?: 'regular' | 'post' } = {}): void {
+    if (!this.playerId) return;
+    this.gameLogLoading.set(true);
+    this.gameLogError.set(null);
+
+    const scoring = this.league()?.scoring?.variant;
+    const mappedScoring =
+      scoring === 'standard'
+        ? 'std'
+        : scoring === 'half_ppr' || scoring === 'ppr'
+          ? scoring
+          : undefined;
+    this.api
+      .playerGameLog(this.playerId, {
+        season: opts.season ?? this.selectedSeason() ?? undefined,
+        seasonType: opts.seasonType ?? this.seasonType(),
+        scoring: mappedScoring,
+        leagueId: this.leagueId || undefined,
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError((err: Error) => {
+          this.gameLogError.set(err.message || 'Failed to load game log.');
+          this.gameLogLoading.set(false);
+          return of(null);
+        }),
+      )
+      .subscribe((res) => {
+        this.gameLogLoading.set(false);
+        if (!res) return;
+        this.gameLog.set(res.gameLog);
+        this.availableSeasons.set(res.availableSeasons);
+        this.selectedSeason.set(res.gameLog.season);
+        if (res.gameLog.seasonType === 'post' || res.gameLog.seasonType === 'regular') {
+          this.seasonType.set(res.gameLog.seasonType);
+        }
+      });
   }
 
   private groupFactors(factors: GradedFactor[]): FactorGroup[] {

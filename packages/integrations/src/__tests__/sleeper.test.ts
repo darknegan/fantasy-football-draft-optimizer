@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nextPollIntervalMs } from '../sleeper/client.js';
+import { mapWeeklyGameLog } from '../sleeper/game-log.js';
+import { sleeperHeadshotThumbUrl, sleeperHeadshotUrl } from '../sleeper/headshot.js';
 import { SleeperRateLimiter } from '../sleeper/rate-limiter.js';
 import { mapRosterPositions, mapScoring, mapDraftType } from '../sleeper/map-league.js';
 import { summarizeScoring, isSuperflex } from '../sleeper/scoring-summary.js';
@@ -66,5 +68,127 @@ describe('scoring summary', () => {
     expect(summary.superflex).toBe(true);
     expect(summary.warnings.some((w) => w.includes('Superflex'))).toBe(true);
     expect(summary.plainLanguage.join(' ')).toMatch(/PPR/i);
+  });
+});
+
+describe('headshots', () => {
+  it('builds CDN urls from sleeper id', () => {
+    expect(sleeperHeadshotUrl('6797')).toBe(
+      'https://sleepercdn.com/content/nfl/players/6797.jpg',
+    );
+    expect(sleeperHeadshotThumbUrl('6797')).toBe(
+      'https://sleepercdn.com/content/nfl/players/thumb/6797.jpg',
+    );
+  });
+});
+
+describe('mapWeeklyGameLog', () => {
+  it('normalizes weekly rows with snap pct and tones', () => {
+    const log = mapWeeklyGameLog({
+      sleeperId: '4046',
+      season: 2024,
+      seasonType: 'regular',
+      scoring: 'ppr',
+      weekly: {
+        '1': {
+          week: 1,
+          opponent: 'BAL',
+          is_away_team: false,
+          team: 'KC',
+          date: '2024-09-05',
+          stats: {
+            pts_ppr: 16.14,
+            off_snp: 54,
+            tm_off_snp: 54,
+            pos_rank_ppr: 12,
+            pass_att: 28,
+            pass_cmp: 20,
+            pass_yd: 291,
+            pass_td: 1,
+            pass_int: 1,
+            rush_att: 2,
+            rush_yd: 3,
+            rush_td: 0,
+          },
+        },
+        '2': {
+          week: 2,
+          opponent: 'CIN',
+          is_away_team: true,
+          team: 'KC',
+          stats: {
+            pts_ppr: 28.5,
+            off_snp: 60,
+            tm_off_snp: 65,
+            pos_rank_ppr: 3,
+            pass_att: 35,
+            pass_cmp: 26,
+            pass_yd: 320,
+            pass_td: 3,
+            pass_int: 0,
+            rush_att: 4,
+            rush_yd: 25,
+            rush_td: 0,
+          },
+        },
+      },
+      seasonTotals: {
+        week: null,
+        stats: {
+          gp: 2,
+          pts_ppr: 44.64,
+          off_snp: 114,
+          tm_off_snp: 119,
+          pos_rank_ppr: 8,
+          pass_att: 63,
+          pass_cmp: 46,
+          pass_yd: 611,
+          pass_td: 4,
+          pass_int: 1,
+          rush_att: 6,
+          rush_yd: 28,
+          rush_td: 0,
+        },
+      },
+    });
+
+    expect(log.weeks).toHaveLength(2);
+    expect(log.weeks[0]?.opponent).toBe('BAL');
+    expect(log.weeks[0]?.snapPct).toBe(100);
+    expect(log.weeks[1]?.isAway).toBe(true);
+    expect(log.weeks[1]?.snapPct).toBe(92.3);
+    expect(log.weeks[1]?.tone).toBe('good');
+    expect(log.totals?.games).toBe(2);
+    expect(log.totals?.passing.td).toBe(4);
+  });
+
+  it('labels postseason weeks', () => {
+    const log = mapWeeklyGameLog({
+      sleeperId: '6797',
+      season: 2025,
+      seasonType: 'post',
+      weekly: {
+        '1': {
+          week: 1,
+          opponent: 'NE',
+          stats: { pts_ppr: 20, pass_att: 30, pass_cmp: 20, pass_yd: 250, pass_td: 2 },
+        },
+      },
+    });
+    expect(log.weeks[0]?.label).toBe('WC');
+  });
+
+  it('skips null bye-week entries', () => {
+    const log = mapWeeklyGameLog({
+      sleeperId: '4046',
+      season: 2025,
+      seasonType: 'regular',
+      weekly: {
+        '1': { week: 1, opponent: 'LAC', stats: { pts_ppr: 12, pass_att: 30 } },
+        '10': null,
+      },
+    });
+    expect(log.weeks).toHaveLength(1);
+    expect(log.weeks[0]?.week).toBe(1);
   });
 });

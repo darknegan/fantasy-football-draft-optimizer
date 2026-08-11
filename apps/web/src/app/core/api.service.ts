@@ -18,6 +18,7 @@ import type {
   MaxBidResult,
   Player,
   PlayerEvaluation,
+  PlayerGameLogResponse,
   ScoringSummary,
   StrategyDefinition,
   StrategySimResult,
@@ -43,6 +44,18 @@ export class ApiService {
 
   player(id: string) {
     return this.http.get<{ player: Player; evaluation: PlayerEvaluation }>(`/api/players/${id}`);
+  }
+
+  playerGameLog(
+    id: string,
+    opts: { season?: number; seasonType?: string; scoring?: string; leagueId?: string } = {},
+  ) {
+    const params: Record<string, string> = {};
+    if (opts.season != null) params['season'] = String(opts.season);
+    if (opts.seasonType) params['season_type'] = opts.seasonType;
+    if (opts.scoring) params['scoring'] = opts.scoring;
+    if (opts.leagueId) params['leagueId'] = opts.leagueId;
+    return this.http.get<PlayerGameLogResponse>(`/api/players/${id}/game-log`, { params });
   }
 
   leagues() {
