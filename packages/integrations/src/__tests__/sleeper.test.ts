@@ -177,4 +177,18 @@ describe('mapWeeklyGameLog', () => {
     });
     expect(log.weeks[0]?.label).toBe('WC');
   });
+
+  it('skips null bye-week entries', () => {
+    const log = mapWeeklyGameLog({
+      sleeperId: '4046',
+      season: 2025,
+      seasonType: 'regular',
+      weekly: {
+        '1': { week: 1, opponent: 'LAC', stats: { pts_ppr: 12, pass_att: 30 } },
+        '10': null,
+      },
+    });
+    expect(log.weeks).toHaveLength(1);
+    expect(log.weeks[0]?.week).toBe(1);
+  });
 });

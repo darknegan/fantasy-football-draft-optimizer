@@ -88,9 +88,13 @@ export interface PlayerGameLog {
   source: 'sleeper';
 }
 
-function num(stats: Record<string, number | null | undefined> | undefined, key: string): number | null {
+function num(
+  stats: Record<string, number | null | undefined> | undefined,
+  key: string,
+  fallback: number | null = null,
+): number | null {
   const v = stats?.[key];
-  if (v == null || Number.isNaN(Number(v))) return null;
+  if (v == null || Number.isNaN(Number(v))) return fallback;
   return Number(v);
 }
 
@@ -124,33 +128,45 @@ function snapPct(stats: Record<string, number | null | undefined> | undefined): 
 }
 
 function passing(stats: Record<string, number | null | undefined> | undefined): GameLogPassing {
+  // Sleeper omits zero-valued keys; treat missing counting stats as 0 when any pass volume exists.
+  const att = num(stats, 'pass_att');
+  const hasPass = att != null || num(stats, 'pass_cmp') != null || num(stats, 'pass_yd') != null;
+  const z = hasPass ? 0 : null;
   return {
-    att: num(stats, 'pass_att'),
-    cmp: num(stats, 'pass_cmp'),
-    yd: num(stats, 'pass_yd'),
-    td: num(stats, 'pass_td'),
-    int: num(stats, 'pass_int'),
+    att: att ?? z,
+    cmp: num(stats, 'pass_cmp', z),
+    yd: num(stats, 'pass_yd', z),
+    td: num(stats, 'pass_td', z),
+    int: num(stats, 'pass_int', z),
   };
 }
 
 function rushing(stats: Record<string, number | null | undefined> | undefined): GameLogRushing {
   const att = num(stats, 'rush_att');
   const yd = num(stats, 'rush_yd');
-  const ypc = num(stats, 'rush_ypa') ?? (att && yd != null && att > 0 ? yd / att : null);
+  const hasRush = att != null || yd != null;
+  const z = hasRush ? 0 : null;
+  const attV = att ?? z;
+  const ydV = yd ?? z;
+  const ypc = num(stats, 'rush_ypa') ?? (attV && ydV != null && attV > 0 ? ydV / attV : null);
   return {
-    att,
-    yd,
+    att: attV,
+    yd: ydV,
     ypc: round2(ypc),
-    td: num(stats, 'rush_td'),
+    td: num(stats, 'rush_td', z),
   };
 }
 
 function receiving(stats: Record<string, number | null | undefined> | undefined): GameLogReceiving {
+  const tgt = num(stats, 'rec_tgt');
+  const rec = num(stats, 'rec');
+  const hasRec = tgt != null || rec != null || num(stats, 'rec_yd') != null;
+  const z = hasRec ? 0 : null;
   return {
-    tgt: num(stats, 'rec_tgt'),
-    rec: num(stats, 'rec'),
-    yd: num(stats, 'rec_yd'),
-    td: num(stats, 'rec_td'),
+    tgt: tgt ?? z,
+    rec: rec ?? z,
+    yd: num(stats, 'rec_yd', z),
+    td: num(stats, 'rec_td', z),
   };
 }
 
@@ -191,15 +207,17 @@ export function mapWeeklyGameLog(opts: {
   season: number;
   seasonType: string;
   scoring?: ScoringVariant;
-  weekly: Record<string, SleeperWeekStatRow> | SleeperWeekStatRow[] | null | undefined;
+  weekly: Record<string, SleeperWeekStatRow | null | undefined> | SleeperWeekStatRow[] | null | undefined;
   seasonTotals?: SleeperWeekStatRow | null;
 }): PlayerGameLog {
   const scoring = opts.scoring ?? 'ppr';
-  const rows: SleeperWeekStatRow[] = Array.isArray(opts.weekly)
-    ? opts.weekly
-    : opts.weekly
-      ? Object.values(opts.weekly)
-      : [];
+  const rows: SleeperWeekStatRow[] = (
+    Array.isArray(opts.weekly)
+      ? opts.weekly
+      : opts.weekly
+        ? Object.values(opts.weekly)
+        : []
+  ).filter((r): r is SleeperWeekStatRow => r != null && typeof r === 'object');
 
   const prelim = rows
     .filter((r) => r.week != null && Number(r.week) > 0)
