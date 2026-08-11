@@ -304,8 +304,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
     // No longer provisional. rz_touch_share, gl_carry_share, and neutral_run_rate are
     // sourced from sleeperMCP nflverse play-by-play (top-3 cohort, 11-season half-PPR
     // means; relative SE 2.0–3.5%). Remaining honest unknowns: ol_run_block_rank (PFF),
-    // the four DraftLab-only extras with no sleeperMCP emit (receptions/YPC/YPT/team_wins),
-    // and injury_concern. Same partial-coverage treatment QB/WR/TE already use.
+    // Remaining honest unknown: ol_run_block_rank (PFF). receptions, YPC, YPT,
+    // and team_wins sourced from sleeperMCP nflverse (ITEM-004).
     bands: { ...DEFAULT_GRADING_BANDS },
     // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
     // (20+ PPR ppg, 12+ games, averaged across those seasons).
@@ -336,7 +336,7 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         label: 'Receptions / g',
         category: 'volume',
         direction: 'higherBetter',
-        benchmark: 4.25,
+        benchmark: 3.874,
       },
       {
         id: 'touchdowns',
@@ -366,21 +366,21 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         label: 'Yards per carry',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 4.89,
+        benchmark: 4.859,
       },
       {
         id: 'yards_per_touch',
         label: 'Yards per touch',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 5.82,
+        benchmark: 5.606,
       },
       {
         id: 'team_wins',
         label: 'Team wins',
         category: 'situational',
         direction: 'higherBetter',
-        benchmark: 9.85,
+        benchmark: 9.848,
       },
       // sleeperMCP-computed from nflverse play-by-play (top-3 RB cohort,
       // 11-season half-PPR means). Was benchmark: 0 until ITEM-001 / TDD-001.
