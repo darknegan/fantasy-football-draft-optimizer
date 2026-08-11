@@ -10,6 +10,10 @@ import type {
 } from '@draftlab/domain';
 import { GRADE_WEIGHTS } from './config/grade-weights.js';
 
+export interface GradeFactorOptions {
+  softCapSerious?: boolean;
+}
+
 export function gradeByRatio(
   value: number,
   benchmark: number,
@@ -37,7 +41,10 @@ export function gradeSecondaryCompetition(label: SecondaryTargetCompetition): Fa
   }
 }
 
-export function gradeInjuryConcern(level: InjurySeverity): FactorGrade {
+export function gradeInjuryConcern(
+  level: InjurySeverity,
+  options?: { softCapSerious?: boolean },
+): FactorGrade {
   switch (level) {
     case 'minimal':
       return 'green';
@@ -46,7 +53,7 @@ export function gradeInjuryConcern(level: InjurySeverity): FactorGrade {
     case 'concerned':
       return 'orange';
     case 'serious':
-      return 'red';
+      return options?.softCapSerious ? 'orange' : 'red';
     default:
       return 'unknown';
   }
@@ -76,6 +83,7 @@ export function gradeFactor(
   def: FactorDefinition,
   input: FactorInput | undefined,
   bands: GradingBands,
+  options: GradeFactorOptions = {},
 ): GradedFactor {
   if (
     !input ||
@@ -99,7 +107,7 @@ export function gradeFactor(
       (input.categorical as SecondaryTargetCompetition) ?? 'unknown',
     );
   } else if (def.categorical === 'injuryConcern') {
-    grade = gradeInjuryConcern((input.categorical as InjurySeverity) ?? 'some');
+    grade = gradeInjuryConcern((input.categorical as InjurySeverity) ?? 'some', options);
   } else if (def.categorical === 'archetypeGrade') {
     grade = gradeArchetypeFactor(input.categorical as ArchetypeId);
   } else if (input.value !== null && input.value !== undefined) {

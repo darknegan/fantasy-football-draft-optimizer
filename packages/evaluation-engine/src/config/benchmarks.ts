@@ -140,10 +140,10 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
       },
       {
         id: 'qb_pff_rank',
-        label: 'QB PFF pass grade rank',
+        label: 'QB QBR rank (proxy)',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 10.36,
+        benchmark: 21.545,
       },
       {
         id: 'team_pass_attempts',
@@ -151,6 +151,13 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         category: 'situational',
         direction: 'higherBetter',
         benchmark: 594.94,
+      },
+      {
+        id: 'route_participation',
+        label: 'Route participation %',
+        category: 'situational',
+        direction: 'higherBetter',
+        benchmark: 90.781,
       },
       {
         id: 'secondary_target',
