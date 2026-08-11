@@ -51,7 +51,7 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /\/roster$/, title: 'Roster & Dynasty' },
   { match: /\/recap$/, title: 'Recap' },
   { match: /\/calibration$/, title: 'Calibration' },
-  { match: /\/scoring$/, title: 'Scoring' },
+  { match: /\/scoring$/, title: 'Scoring settings' },
 ];
 
 @Component({
@@ -369,9 +369,16 @@ export class ShellComponent implements OnInit {
   });
 
   readonly pageSubtitle = computed(() => {
-    const path = this.router.url.split('?')[0] ?? '/';
+    const path = this.currentPath();
     if (/\/leagues\/connect$/.test(path)) {
       return 'Import your real leagues so every projection is denominated in your own scoring';
+    }
+    if (/\/scoring$/.test(path)) {
+      const league = this.active.selected();
+      if (!league) return 'Every projection on your board uses these rules';
+      const source =
+        league.platform === 'sleeper' ? 'imported from Sleeper' : 'manual league profile';
+      return `${league.name} · ${source} · every projection on your board uses these rules`;
     }
     const count = this.active.leagues().length;
     if (!count) return 'Connect a league to get started';
@@ -486,6 +493,7 @@ export class ShellComponent implements OnInit {
 
   private updateTitle(url: string) {
     const path = url.split('?')[0] ?? '/';
+    this.currentPath.set(path);
     const hit = PAGE_TITLES.find((entry) => entry.match.test(path));
     this.pageTitle.set(hit?.title ?? 'DraftLab');
   }

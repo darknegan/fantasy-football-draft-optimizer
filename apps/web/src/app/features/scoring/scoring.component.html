@@ -1,0 +1,113 @@
+@if (loading()) {
+  <p class="lede dl-muted">Loading scoring settings…</p>
+} @else if (!league()) {
+  <div class="empty">
+    <p class="err">{{ error() ?? 'Select a league to view scoring settings.' }}</p>
+    <a class="btn ghost" routerLink="/leagues/connect">Connect a league</a>
+  </div>
+} @else {
+  <div class="scoring">
+    <aside
+      class="validation"
+      [class.warn]="!verified()"
+      role="status"
+    >
+      <span class="check-mark" aria-hidden="true">{{ verified() ? '✓' : '!' }}</span>
+      <div class="validation-copy">
+        <strong>{{ validationTitle() }}</strong>
+        <p>{{ validationBody() }}</p>
+      </div>
+      <button type="button" class="btn ghost" [disabled]="checking()" (click)="recheck()">
+        {{ checking() ? 'Checking…' : 'Re-run check' }}
+      </button>
+    </aside>
+
+    <div class="columns">
+      <section class="card profile" aria-labelledby="profile-title">
+        <div class="profile-head">
+          <h2 id="profile-title">{{ profileTitle() }}</h2>
+          <span class="chip accent">{{ variantLabel() }}</span>
+          @if (summary()?.tePremium) {
+            <span class="chip te">TE premium</span>
+          }
+          @if (summary()?.superflex) {
+            <span class="chip sf">Superflex</span>
+          }
+          <span class="spacer"></span>
+          <a class="btn ghost" routerLink="/leagues/manual-setup">Override manually</a>
+        </div>
+
+        <div class="groups">
+          @for (group of groups(); track group.title) {
+            <div class="group">
+              <div class="cap">{{ group.title }}</div>
+              @for (row of group.rows; track row.label) {
+                <div class="kv">
+                  <span class="k">{{ row.label }}</span>
+                  <span
+                    class="v"
+                    [class.muted]="row.tone === 'muted'"
+                    [class.te]="row.tone === 'te'"
+                    [class.dl-mono]="group.title !== 'Roster' || row.label !== 'Starters'"
+                  >
+                    {{ row.value }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        @if (summary()?.plainLanguage?.length) {
+          <ul class="plain">
+            @for (line of summary()!.plainLanguage; track line) {
+              <li>{{ line }}</li>
+            }
+          </ul>
+        }
+      </section>
+
+      <div class="right">
+        <section class="card impacts" aria-labelledby="impacts-title">
+          <h2 id="impacts-title">What these settings change</h2>
+          @for (card of impacts(); track card.title) {
+            <article class="impact">
+              <div class="impact-title">
+                <img class="dw" [src]="card.icon" width="7" height="13" alt="" />
+                <strong>{{ card.title }}</strong>
+              </div>
+              <p>{{ card.body }}</p>
+            </article>
+          }
+        </section>
+
+        <section class="card replacement" aria-labelledby="replacement-title">
+          <div class="repl-head">
+            <h2 id="replacement-title">Replacement level</h2>
+            <span class="hint">VORP baseline</span>
+          </div>
+          <div class="repl-table">
+            <div class="repl-cols" aria-hidden="true">
+              <span>Pos</span>
+              <span>Started</span>
+              <span>Baseline</span>
+              <span>PPG</span>
+            </div>
+            @for (row of replacementRows(); track row.pos) {
+              <div class="repl-row">
+                <span class="pos" [attr.data-pos]="row.pos">{{ row.pos }}</span>
+                <span class="started">{{ row.startedLabel }}</span>
+                <span class="baseline dl-mono">{{ row.baselineLabel }}</span>
+                <span class="ppg dl-mono">{{ row.ppg }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="err" role="alert">{{ error() }}</p>
+    }
+  </div>
+}
