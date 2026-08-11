@@ -115,6 +115,22 @@ export interface ScoringSummary {
   warnings: string[];
 }
 
+export interface ScoringProfile {
+  id: string;
+  name: string;
+  variant: string;
+  passYd: number;
+  passTd: number;
+  interception: number;
+  rushYd: number;
+  rushTd: number;
+  reception: number;
+  tePremiumBonus?: number;
+  recYd: number;
+  recTd: number;
+  fumbleLost: number;
+}
+
 export interface League {
   id: string;
   userId: string;
@@ -128,6 +144,7 @@ export interface League {
   draftSlot?: number;
   strategyId?: string;
   sleeperDraftId?: string;
+  scoring?: ScoringProfile;
   scoringSummary?: ScoringSummary;
   roster?: RosterShape;
   auctionBudget?: number;
