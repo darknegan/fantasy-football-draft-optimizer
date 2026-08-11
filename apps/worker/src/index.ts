@@ -14,7 +14,12 @@ import {
   scoringConfirmation,
   SCORING_PRESETS,
   sharedSleeperLimiter,
+  sharedSleeperStatsClient,
+  SleeperApiError,
   SleeperClient,
+  withHeadshot,
+  type ScoringVariant,
+  type SeasonType,
 } from '@draftlab/integrations';
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
 import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
@@ -152,7 +157,7 @@ app.get('/api/health', async (c) => {
 app.get('/api/players', (c) =>
   c.json(
     store.listPlayers().map((player) => ({
-      player,
+      player: withHeadshot(player),
       evaluation: store.getEvaluation(player.id),
     })),
   ),
@@ -161,7 +166,85 @@ app.get('/api/players', (c) =>
 app.get('/api/players/:id', (c) => {
   const player = store.getPlayer(c.req.param('id'));
   if (!player) return c.json({ error: 'Player not found' }, 404);
-  return c.json({ player, evaluation: store.getEvaluation(player.id) });
+  return c.json({ player: withHeadshot(player), evaluation: store.getEvaluation(player.id) });
+});
+
+app.get('/api/players/:id/game-log', async (c) => {
+  const player = store.getPlayer(c.req.param('id'));
+  if (!player) return c.json({ error: 'Player not found' }, 404);
+  const sleeperId = player.externalIds?.sleeper;
+  if (!sleeperId) return c.json({ error: 'Player has no Sleeper id' }, 404);
+
+  const q = c.req.query();
+  let season: number;
+  let seasonType: SeasonType =
+    q['season_type'] === 'post' || q['season_type'] === 'pre' || q['season_type'] === 'off'
+      ? q['season_type']
+      : 'regular';
+
+  if (q['season']) {
+    season = Number(q['season']);
+    if (!Number.isFinite(season) || season < 2000 || season > 2100) {
+      return c.json({ error: 'Invalid season' }, 400);
+    }
+  } else {
+    try {
+      const defaults = await sharedSleeperStatsClient.defaultGameLogSeason();
+      season = defaults.season;
+      if (!q['season_type']) seasonType = defaults.seasonType;
+    } catch (err) {
+      const status: ContentfulStatusCode =
+        err instanceof SleeperApiError && err.status === 429 ? 503 : 502;
+      return c.json(
+        {
+          error: 'Failed to resolve NFL season from Sleeper',
+          detail: err instanceof Error ? err.message : String(err),
+        },
+        status,
+      );
+    }
+  }
+
+  let scoring: ScoringVariant = 'ppr';
+  if (q['scoring'] === 'std' || q['scoring'] === 'standard') {
+    scoring = 'std';
+  } else if (q['scoring'] === 'half_ppr' || q['scoring'] === 'ppr') {
+    scoring = q['scoring'];
+  } else if (q['leagueId']) {
+    const league = store.getLeague(q['leagueId']);
+    const variant = league?.scoring?.variant;
+    if (variant === 'standard') scoring = 'std';
+    else if (variant === 'half_ppr' || variant === 'ppr') scoring = variant;
+  }
+
+  try {
+    const gameLog = await sharedSleeperStatsClient.getPlayerGameLog({
+      sleeperPlayerId: sleeperId,
+      season,
+      seasonType,
+      scoring,
+    });
+    const seasons: number[] = [];
+    for (let y = season; y >= season - 4 && y >= 2015; y -= 1) seasons.push(y);
+    return c.json({
+      playerId: player.id,
+      sleeperId,
+      headshotUrl: withHeadshot(player).headshotUrl,
+      availableSeasons: seasons,
+      gameLog,
+      scoring,
+    });
+  } catch (err) {
+    const status: ContentfulStatusCode =
+      err instanceof SleeperApiError && err.status === 429 ? 503 : 502;
+    return c.json(
+      {
+        error: 'Failed to load game log from Sleeper',
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      status,
+    );
+  }
 });
 
 app.get('/api/leagues', async (c) => {

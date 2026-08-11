@@ -7,6 +7,20 @@
     <a class="pd-back" [routerLink]="['/leagues', leagueId, 'board']">← Player board</a>
 
     <header class="pd-header">
+      @if (p.headshotUrl && !headshotBroken()) {
+        <img
+          class="pd-headshot"
+          [src]="p.headshotUrl"
+          [alt]="p.name"
+          width="72"
+          height="72"
+          loading="lazy"
+          (error)="onHeadshotError()"
+        />
+      } @else {
+        <div class="pd-headshot fallback" aria-hidden="true">{{ p.position }}</div>
+      }
+
       <div class="pd-identity">
         <div class="pd-name-row">
           <span class="pos" [class]="p.position">{{ p.position }}</span>
@@ -52,7 +66,26 @@
       </div>
     </header>
 
-    @if (evaluation(); as e) {
+    <nav class="pd-tabs" aria-label="Player sections">
+      <button
+        type="button"
+        class="pd-tab"
+        [class.active]="activeTab() === 'summary'"
+        (click)="setTab('summary')"
+      >
+        Summary
+      </button>
+      <button
+        type="button"
+        class="pd-tab"
+        [class.active]="activeTab() === 'game-log'"
+        (click)="setTab('game-log')"
+      >
+        Game Log
+      </button>
+    </nav>
+
+    @if (activeTab() === 'summary' && evaluation(); as e) {
       <div class="pd-columns">
         <section class="pd-panel factors" aria-labelledby="factor-title">
           <div class="pd-panel-head">
@@ -182,6 +215,199 @@
           </section>
         </div>
       </div>
+    }
+
+    @if (activeTab() === 'game-log') {
+      <section class="pd-panel game-log" aria-labelledby="gamelog-title">
+        <div class="pd-panel-head">
+          <h2 id="gamelog-title">Game Log</h2>
+          <div class="gl-controls">
+            <div class="gl-season-type" role="group" aria-label="Season type">
+              <button
+                type="button"
+                class="gl-chip"
+                [class.active]="seasonType() === 'regular'"
+                (click)="setSeasonType('regular')"
+              >
+                Regular
+              </button>
+              <button
+                type="button"
+                class="gl-chip"
+                [class.active]="seasonType() === 'post'"
+                (click)="setSeasonType('post')"
+              >
+                Playoffs
+              </button>
+            </div>
+            <div class="gl-seasons" role="group" aria-label="Season">
+              @for (year of availableSeasons(); track year) {
+                <button
+                  type="button"
+                  class="gl-chip"
+                  [class.active]="selectedSeason() === year"
+                  (click)="selectSeason(year)"
+                >
+                  {{ year }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (gameLogLoading()) {
+          <p class="pd-muted">Loading game log from Sleeper…</p>
+        } @else if (gameLogError()) {
+          <p class="pd-error">{{ gameLogError() }}</p>
+        } @else if (gameLog(); as log) {
+          @if (!log.weeks.length) {
+            <p class="pd-muted">No {{ seasonType() }} games found for {{ log.season }}.</p>
+          } @else {
+            <div class="gl-scroll">
+              <table class="gl-table">
+                <thead>
+                  <tr class="gl-group-labels" aria-hidden="true">
+                    <th colspan="2"></th>
+                    <th class="group-start" colspan="3">Fantasy</th>
+                    @if (showPassing()) {
+                      <th class="group-start" colspan="5">Pass</th>
+                    }
+                    @if (showRushing()) {
+                      <th class="group-start" colspan="4">Rush</th>
+                    }
+                    @if (showReceiving()) {
+                      <th class="group-start" colspan="4">Rec</th>
+                    }
+                  </tr>
+                  <tr>
+                    <th scope="col">WK</th>
+                    <th scope="col">OPP</th>
+                    <th scope="col" class="group-start">FPTS</th>
+                    <th scope="col">SNP%</th>
+                    <th scope="col">RANK</th>
+                    @if (showPassing()) {
+                      <th scope="col" class="group-start">ATT</th>
+                      <th scope="col">CMP</th>
+                      <th scope="col">YD</th>
+                      <th scope="col">TD</th>
+                      <th scope="col">INT</th>
+                    }
+                    @if (showRushing()) {
+                      <th scope="col" class="group-start">ATT</th>
+                      <th scope="col">YD</th>
+                      <th scope="col">YPC</th>
+                      <th scope="col">TD</th>
+                    }
+                    @if (showReceiving()) {
+                      <th scope="col" class="group-start">TGT</th>
+                      <th scope="col">REC</th>
+                      <th scope="col">YD</th>
+                      <th scope="col">TD</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (week of log.weeks; track week.week) {
+                    <tr>
+                      <td class="mono">{{ week.label }}</td>
+                      <td class="mono">{{ oppLabel(week) }}</td>
+                      <td class="mono group-start" [class]="toneClass(week.tone)">
+                        {{ fmt(week.fpts, 2) }}
+                      </td>
+                      <td class="mono" [class]="toneClass(week.tone)">
+                        {{ week.snapPct != null ? fmt(week.snapPct, 0) + '%' : '—' }}
+                      </td>
+                      <td class="mono" [class]="toneClass(week.tone)">{{ fmt(week.rank) }}</td>
+                      @if (showPassing()) {
+                        <td class="mono group-start" [class]="toneClass(week.tone)">
+                          {{ fmt(week.passing.att) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.passing.cmp) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.passing.yd) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.passing.td) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.passing.int) }}
+                        </td>
+                      }
+                      @if (showRushing()) {
+                        <td class="mono group-start" [class]="toneClass(week.tone)">
+                          {{ fmt(week.rushing.att) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.rushing.yd) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.rushing.ypc, 1) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.rushing.td) }}
+                        </td>
+                      }
+                      @if (showReceiving()) {
+                        <td class="mono group-start" [class]="toneClass(week.tone)">
+                          {{ fmt(week.receiving.tgt) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.receiving.rec) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.receiving.yd) }}
+                        </td>
+                        <td class="mono" [class]="toneClass(week.tone)">
+                          {{ fmt(week.receiving.td) }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+                @if (log.totals; as t) {
+                  <tfoot>
+                    <tr>
+                      <td colspan="2" class="mono">TOTAL</td>
+                      <td class="mono group-start">{{ fmt(t.fpts, 2) }}</td>
+                      <td class="mono">
+                        {{ t.snapPct != null ? fmt(t.snapPct, 0) + '%' : '—' }}
+                      </td>
+                      <td class="mono">{{ fmt(t.rank) }}</td>
+                      @if (showPassing()) {
+                        <td class="mono group-start">{{ fmt(t.passing.att) }}</td>
+                        <td class="mono">{{ fmt(t.passing.cmp) }}</td>
+                        <td class="mono">{{ fmt(t.passing.yd) }}</td>
+                        <td class="mono">{{ fmt(t.passing.td) }}</td>
+                        <td class="mono">{{ fmt(t.passing.int) }}</td>
+                      }
+                      @if (showRushing()) {
+                        <td class="mono group-start">{{ fmt(t.rushing.att) }}</td>
+                        <td class="mono">{{ fmt(t.rushing.yd) }}</td>
+                        <td class="mono">{{ fmt(t.rushing.ypc, 1) }}</td>
+                        <td class="mono">{{ fmt(t.rushing.td) }}</td>
+                      }
+                      @if (showReceiving()) {
+                        <td class="mono group-start">{{ fmt(t.receiving.tgt) }}</td>
+                        <td class="mono">{{ fmt(t.receiving.rec) }}</td>
+                        <td class="mono">{{ fmt(t.receiving.yd) }}</td>
+                        <td class="mono">{{ fmt(t.receiving.td) }}</td>
+                      }
+                    </tr>
+                  </tfoot>
+                }
+              </table>
+            </div>
+            <p class="pd-muted gl-source">
+              Stats via Sleeper · {{ log.scoring.replace('_', ' ') }} scoring
+              @if (log.totals; as t) {
+                · {{ t.games }} games
+              }
+            </p>
+          }
+        }
+      </section>
     }
   </article>
 }

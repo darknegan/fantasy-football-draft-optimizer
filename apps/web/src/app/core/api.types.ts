@@ -10,6 +10,9 @@ export interface Player {
   age: number;
   seasonsInLeague: number;
   status: string;
+  externalIds?: { sleeper?: string; gsis?: string };
+  headshotUrl?: string | null;
+  headshotThumbUrl?: string | null;
 }
 
 export interface GradedFactor {
@@ -439,4 +442,61 @@ export interface CalibrationSummary {
   proposal: CalibrationProposal | null;
   activeBands: CalibrationProposal['currentBands'];
   activeWeights: CalibrationProposal['currentWeights'];
+}
+
+export type GameLogTone = 'good' | 'avg' | 'bad' | 'neutral';
+
+export interface GameLogStatLine {
+  att: number | null;
+  cmp?: number | null;
+  yd: number | null;
+  td: number | null;
+  int?: number | null;
+  ypc?: number | null;
+  tgt?: number | null;
+  rec?: number | null;
+}
+
+export interface GameLogWeek {
+  week: number;
+  label: string;
+  opponent: string | null;
+  isAway: boolean;
+  team: string | null;
+  date: string | null;
+  fpts: number | null;
+  snapPct: number | null;
+  rank: number | null;
+  passing: GameLogStatLine;
+  rushing: GameLogStatLine;
+  receiving: GameLogStatLine;
+  tone: GameLogTone;
+}
+
+export interface PlayerGameLog {
+  sleeperId: string;
+  season: number;
+  seasonType: string;
+  scoring: 'ppr' | 'half_ppr' | 'std';
+  weeks: GameLogWeek[];
+  totals: {
+    games: number;
+    fpts: number | null;
+    fptsPerGame: number | null;
+    snapPct: number | null;
+    rank: number | null;
+    passing: GameLogStatLine;
+    rushing: GameLogStatLine;
+    receiving: GameLogStatLine;
+  } | null;
+  source: 'sleeper';
+}
+
+export interface PlayerGameLogResponse {
+  playerId: string;
+  sleeperId: string;
+  headshotUrl: string | null;
+  availableSeasons: number[];
+  gameLog: PlayerGameLog;
+  scoring: 'ppr' | 'half_ppr' | 'std';
 }
