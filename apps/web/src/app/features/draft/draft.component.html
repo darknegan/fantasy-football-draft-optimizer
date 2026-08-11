@@ -50,86 +50,29 @@
 
   <div class="body">
     <div class="main-col">
-      <section class="recs-block">
-        <div class="recs-head">
-          <h1>Recommended at {{ formatPick(nextUserPickOverall()) }}</h1>
-          <span class="chip">{{ strategyLabel() }} · round {{ round() }}</span>
-          <span class="spacer"></span>
-          <p class="rerank">
-            Re-ranked {{ draft()?.lastSyncedAt | dateAgo }} against your roster and the live board
-          </p>
-        </div>
-
-        <div class="rec-cards">
-          @for (card of topRecs(); track card.player.id; let i = $index) {
-            <article class="rec-card" [class.best]="i === 0">
-              <div class="rec-top">
-                <span class="rank" [class.best]="i === 0">{{ i + 1 }}</span>
-                <span class="pos" [class]="card.player.position">{{ card.player.position }}</span>
-                @if (i === 0) {
-                  <span class="spacer"></span>
-                  <span class="best-chip">Best pick</span>
-                }
-              </div>
-
-              <div class="name-row">
-                <div class="identity">
-                  <strong>{{ card.player.name }}</strong>
-                  <div class="meta">{{ playerMeta(card) }}</div>
-                </div>
-                <span class="score dl-mono">{{ scoreLabel(card) }}</span>
-              </div>
-
-              <ul class="reasons">
-                @for (reason of cardReasons(card); track reason) {
-                  <li>
-                    <img
-                      class="bullet"
-                      [src]="reasonIcon(reason, $index)"
-                      width="6"
-                      height="12"
-                      alt=""
-                    />
-                    <span>{{ reason }}</span>
-                  </li>
-                }
-              </ul>
-
-              <div class="survival">
-                <div class="surv-head">
-                  <span>SURVIVES TO {{ formatPick(survivalTargetPick()) }}</span>
-                  <span class="dl-mono" [class]="survivalTone(card)">{{
-                    formatPct(survivalOf(card))
-                  }}</span>
-                </div>
-                <div class="surv-bar">
-                  <span
-                    [style.width.%]="survivalOf(card) * 100"
-                    [class]="survivalTone(card)"
-                  ></span>
-                </div>
-                <p class="surv-note">{{ survivalNote(card) }}</p>
-              </div>
-
-              <button
-                type="button"
-                class="draft-btn"
-                [class.primary]="i === 0"
-                [disabled]="picking() || !canUserDraft()"
-                [title]="canUserDraft() ? 'Draft this player' : 'Not your pick yet — use Sim to my pick'"
-                (click)="pick(card)"
-              >
-                {{ i === 0 ? 'Draft ' + card.player.name : 'Draft' }}
-              </button>
-            </article>
-          } @empty {
-            <div class="empty-recs dl-panel">
-              <p>No available recommendations yet. Sync the board or enter a pick manually.</p>
-              <button type="button" class="manual-btn" (click)="reload()">Refresh board</button>
-            </div>
-          }
-        </div>
-      </section>
+      <div class="panel-tabs" role="tablist" aria-label="Draft room panels">
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="mainTab() === 'available'"
+          [attr.aria-selected]="mainTab() === 'available'"
+          (click)="mainTab.set('available')"
+        >
+          Available players
+          <span class="panel-tab-count dl-mono">{{ availablePlayers().length }}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="panel-tab"
+          [class.active]="mainTab() === 'board'"
+          [attr.aria-selected]="mainTab() === 'board'"
+          (click)="mainTab.set('board')"
+        >
+          Draft board
+        </button>
+      </div>
 
       @if (positionRun(); as run) {
         <aside class="run-alert" role="status">
@@ -141,60 +84,161 @@
         </aside>
       }
 
-      <section class="board-block">
-        <div class="board-head">
-          <h2>Draft board</h2>
-          <span class="chip muted"
-            >Snake · {{ teamCount() }} teams · {{ totalRounds }} rounds</span
-          >
-          <span class="spacer"></span>
-          <span class="slot-note">Your slot is column {{ userSlot() }}</span>
-        </div>
+      @if (mainTab() === 'available') {
+        <section class="recs-block" role="tabpanel" aria-label="Available players">
+          <div class="recs-head">
+            <h1>Available at {{ formatPick(nextUserPickOverall()) }}</h1>
+            <span class="chip">{{ strategyLabel() }} · round {{ round() }}</span>
+            <span class="spacer"></span>
+            <p class="rerank">
+              Ranked by draft score · re-ranked {{ draft()?.lastSyncedAt | dateAgo }}
+            </p>
+          </div>
 
-        <div class="board-scroll">
-          <table class="snake-board">
-            <thead>
-              <tr>
-                <th class="round-h"></th>
-                @for (col of boardColumns(); track col.slot) {
-                  <th [class.you]="col.isYou">{{ col.label }}</th>
+          <div class="list-filters">
+            <div class="pos-tabs" role="tablist" aria-label="Position">
+              @for (tab of posTabs; track tab) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="pos-tab"
+                  [class.active]="posFilter() === tab"
+                  [attr.aria-selected]="posFilter() === tab"
+                  (click)="posFilter.set(tab)"
+                >
+                  {{ tab }}
+                </button>
+              }
+            </div>
+
+            <label class="filter-btn">
+              <span class="sr-only">Archetype</span>
+              <select [value]="archetypeFilter()" (change)="onArchetype($event)">
+                <option value="all">Archetype: all</option>
+                @for (a of archetypes(); track a) {
+                  <option [value]="a">{{ formatArchetype(a) }}</option>
                 }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of boardRows(); track row.round) {
+              </select>
+            </label>
+
+            <span class="list-count dl-mono">{{ availablePlayers().length }} available</span>
+          </div>
+
+          <div class="avail-col-head" aria-hidden="true">
+            <span class="c-rank">#</span>
+            <span class="c-pos">POS</span>
+            <span class="c-player">PLAYER</span>
+            <span class="c-arch">ARCHETYPE</span>
+            <span class="c-adp">ADP</span>
+            <span class="c-surv">SURV</span>
+            <span class="c-score">SCORE</span>
+            <span class="c-action"></span>
+          </div>
+
+          <div class="avail-list" role="list">
+            @for (row of availablePlayers(); track row.player.id; let i = $index) {
+              <article
+                class="avail-row"
+                role="listitem"
+                [class.best]="i === 0"
+                [class.target]="row.target"
+              >
+                <span class="c-rank dl-mono" [class.best]="i === 0">{{ i + 1 }}</span>
+                <span class="c-pos">
+                  <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
+                </span>
+                <div class="c-player">
+                  <strong>{{ row.player.name }}</strong>
+                  <div class="meta">{{ playerMeta(row) }}</div>
+                  @if (i === 0 && primaryReason(row); as reason) {
+                    <p class="primary-reason">{{ reason }}</p>
+                  }
+                </div>
+                <span class="c-arch">{{ formatArchetype(row.evaluation.archetype.archetype) }}</span>
+                <span class="c-adp dl-mono">{{ row.evaluation.value.adpRoundPick || '—' }}</span>
+                <span class="c-surv dl-mono" [class]="survivalTone(row)">{{
+                  formatPct(survivalOf(row))
+                }}</span>
+                <span class="c-score dl-mono">{{ scoreLabel(row) }}</span>
+                <div class="c-action">
+                  <button
+                    type="button"
+                    class="draft-btn"
+                    [class.primary]="i === 0"
+                    [disabled]="picking() || !canUserDraft()"
+                    [title]="
+                      canUserDraft() ? 'Draft this player' : 'Not your pick yet — use Sim to my pick'
+                    "
+                    (click)="pick(row)"
+                  >
+                    Draft
+                  </button>
+                </div>
+              </article>
+            } @empty {
+              <div class="empty-recs dl-panel">
+                <p>No available players match these filters. Clear a filter or refresh the board.</p>
+                <button type="button" class="manual-btn" (click)="reload()">Refresh board</button>
+              </div>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="board-block" role="tabpanel" aria-label="Draft board">
+          <div class="board-head">
+            <h2>Draft board</h2>
+            <span class="chip muted"
+              >Snake · {{ teamCount() }} teams · {{ totalRounds }} rounds</span
+            >
+            <span class="spacer"></span>
+            <span class="slot-note">Your slot is column {{ userSlot() }}</span>
+          </div>
+
+          <div class="board-scroll">
+            <table class="snake-board">
+              <thead>
                 <tr>
-                  <th class="round-h">{{ row.round }}</th>
-                  @for (cell of row.cells; track cell.pickNumber) {
-                    <td
-                      [class.you-col]="cell.isYouCol"
-                      [class.on-clock]="cell.isOnClock"
-                      [class.your-pick]="cell.isYourPick"
-                      [class.filled]="cell.filled"
-                    >
-                      @if (cell.filled) {
-                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
-                        <div class="cell-player">
-                          <span class="pos tiny" [class]="cell.position">{{ cell.position }}</span>
-                          <span>{{ cell.playerName }}</span>
-                        </div>
-                      } @else if (cell.isOnClock) {
-                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
-                        <div class="cell-state warn">On the clock</div>
-                      } @else if (cell.isYourPick) {
-                        <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
-                        <div class="cell-state accent">Your pick</div>
-                      } @else {
-                        <div class="cell-pick dl-mono muted">{{ formatPick(cell.pickNumber) }}</div>
-                      }
-                    </td>
+                  <th class="round-h"></th>
+                  @for (col of boardColumns(); track col.slot) {
+                    <th [class.you]="col.isYou">{{ col.label }}</th>
                   }
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                @for (row of boardRows(); track row.round) {
+                  <tr>
+                    <th class="round-h">{{ row.round }}</th>
+                    @for (cell of row.cells; track cell.pickNumber) {
+                      <td
+                        [class.you-col]="cell.isYouCol"
+                        [class.on-clock]="cell.isOnClock"
+                        [class.your-pick]="cell.isYourPick"
+                        [class.filled]="cell.filled"
+                      >
+                        @if (cell.filled) {
+                          <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                          <div class="cell-player">
+                            <span class="pos tiny" [class]="cell.position">{{ cell.position }}</span>
+                            <span>{{ cell.playerName }}</span>
+                          </div>
+                        } @else if (cell.isOnClock) {
+                          <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                          <div class="cell-state warn">On the clock</div>
+                        } @else if (cell.isYourPick) {
+                          <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
+                          <div class="cell-state accent">Your pick</div>
+                        } @else {
+                          <div class="cell-pick dl-mono muted">{{ formatPick(cell.pickNumber) }}</div>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
     </div>
 
     <aside class="side-rail">

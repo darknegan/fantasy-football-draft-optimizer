@@ -109,6 +109,11 @@ const STRATEGY_NAMES: Record<string, string> = {
   double_hero_wr: 'Double Hero WR',
 };
 
+type PosFilter = Position | 'ALL';
+type MainTab = 'available' | 'board';
+
+const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
+
 @Component({
   selector: 'app-draft',
   imports: [DateAgoPipe],
@@ -124,6 +129,7 @@ export class DraftComponent implements OnInit, OnDestroy {
   private onlineHandler?: () => void;
 
   readonly totalRounds = 16;
+  readonly posTabs = POS_TABS;
 
   leagueId = '';
   readonly league = signal<League | null>(null);
@@ -132,6 +138,9 @@ export class DraftComponent implements OnInit, OnDestroy {
   readonly adherence = signal<AdherenceResult | null>(null);
   readonly strategies = signal<StrategyDefinition[]>([]);
   readonly picking = signal(false);
+  readonly posFilter = signal<PosFilter>('ALL');
+  readonly archetypeFilter = signal('all');
+  readonly mainTab = signal<MainTab>('available');
 
   readonly teamCount = computed(() => this.league()?.teamCount ?? 12);
   readonly userSlot = computed(() => this.league()?.draftSlot ?? 1);
@@ -163,16 +172,26 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   readonly isUserTurn = computed(() => this.picksUntilUser() === 0);
 
-  readonly topRecs = computed(() =>
-    this.board()
-      .filter((b) => !b.drafted && b.recommendation)
-      .sort(
-        (a, b) =>
-          (a.recommendation?.rank ?? 99) - (b.recommendation?.rank ?? 99) ||
-          (b.recommendation?.contextualScore ?? 0) - (a.recommendation?.contextualScore ?? 0),
-      )
-      .slice(0, 3),
-  );
+  readonly archetypes = computed(() => {
+    const set = new Set(
+      this.board()
+        .filter((b) => !b.drafted)
+        .map((b) => b.evaluation.archetype.archetype),
+    );
+    return [...set].sort();
+  });
+
+  /** Full available board: position + archetype filters, highest draft score first. */
+  readonly availablePlayers = computed(() => {
+    let list = this.board().filter((b) => !b.drafted);
+    const pos = this.posFilter();
+    if (pos !== 'ALL') list = list.filter((b) => b.player.position === pos);
+    const arch = this.archetypeFilter();
+    if (arch !== 'all') {
+      list = list.filter((b) => b.evaluation.archetype.archetype === arch);
+    }
+    return [...list].sort((a, b) => draftScoreOf(b) - draftScoreOf(a));
+  });
 
   readonly boardColumns = computed((): BoardColumn[] => {
     const n = this.teamCount();
@@ -470,24 +489,30 @@ export class DraftComponent implements OnInit, OnDestroy {
   }
 
   scoreLabel(row: BoardPlayer): string {
-    return String(Math.round(row.recommendation?.contextualScore ?? row.evaluation.draftScore));
+    return String(Math.round(draftScoreOf(row)));
   }
 
-  cardReasons(row: BoardPlayer): string[] {
-    const reasons = row.recommendation?.reasons?.map((r) => r.message) ?? [];
-    if (reasons.length >= 3) return reasons.slice(0, 3);
-    const extras = [
-      `Contextual score ${this.scoreLabel(row)} after strategy fit and roster need`,
-      row.target ? 'On your target list' : null,
-      `ADP ${row.evaluation.value.adpRoundPick || '—'}`,
-    ].filter(Boolean) as string[];
-    return [...reasons, ...extras].slice(0, 3);
+  onArchetype(ev: Event) {
+    this.archetypeFilter.set((ev.target as HTMLSelectElement).value);
   }
 
-  reasonIcon(_reason: string, index: number): string {
-    if (index === 1) return '/draft/reason-mid.svg';
-    if (index >= 2) return '/draft/reason-down.svg';
-    return '/draft/reason-up.svg';
+  formatArchetype(a: string): string {
+    return a
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/\bWr\b/g, 'WR')
+      .replace(/\bRb\b/g, 'RB')
+      .replace(/\bTe\b/g, 'TE')
+      .replace(/\bQb\b/g, 'QB');
+  }
+
+  primaryReason(row: BoardPlayer): string | null {
+    const reasons = row.recommendation?.reasons ?? [];
+    if (reasons[0]?.message) return reasons[0].message;
+    if (row.target) return 'On your target list';
+    const adp = row.evaluation.value.adpRoundPick;
+    return adp ? `ADP ${adp}` : null;
   }
 
   survivalOf(row: BoardPlayer): number {
@@ -499,14 +524,6 @@ export class DraftComponent implements OnInit, OnDestroy {
     if (p < 0.25) return 'red';
     if (p < 0.4) return 'yellow';
     return 'green';
-  }
-
-  survivalNote(row: BoardPlayer): string {
-    const p = this.survivalOf(row);
-    const label = this.formatPick(this.survivalTargetPick());
-    if (p < 0.25) return `Unlikely to reach ${label}`;
-    if (p < 0.4) return `Coin-flip to reach ${label}`;
-    return `Reasonable shot to reach ${label}`;
   }
 
   formatPct(rate: number): string {
@@ -714,4 +731,9 @@ function adpRank(row: BoardPlayer, teamCount: number): number {
   const m = /^(\d+)\.(\d+)$/.exec(label ?? '');
   if (!m) return 999;
   return (Number(m[1]) - 1) * teamCount + Number(m[2]);
+}
+
+/** Same ordering as the player board's default "Draft score" sort. */
+function draftScoreOf(row: BoardPlayer): number {
+  return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
 }
