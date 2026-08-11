@@ -135,15 +135,20 @@
             <span class="c-action"></span>
           </div>
 
-          <div class="avail-list" role="list">
+          <div class="avail-list" role="listbox" aria-label="Available players">
             @for (row of availablePlayers(); track row.player.id; let i = $index) {
               <article
                 class="avail-row"
-                role="listitem"
-                [class.best]="i === 0"
+                role="option"
+                tabindex="0"
+                [attr.aria-selected]="isSelected(row)"
+                [class.selected]="isSelected(row)"
                 [class.target]="row.target"
+                (click)="selectPlayer(row)"
+                (keydown.enter)="selectPlayer(row)"
+                (keydown.space)="$event.preventDefault(); selectPlayer(row)"
               >
-                <span class="c-rank dl-mono" [class.best]="i === 0">{{ i + 1 }}</span>
+                <span class="c-rank dl-mono" [class.selected]="isSelected(row)">{{ i + 1 }}</span>
                 <span class="c-pos">
                   <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
                 </span>
@@ -167,7 +172,7 @@
                   <div class="player-text">
                     <strong>{{ row.player.name }}</strong>
                     <div class="meta">{{ playerMeta(row) }}</div>
-                    @if (i === 0 && primaryReason(row); as reason) {
+                    @if (isSelected(row) && primaryReason(row); as reason) {
                       <p class="primary-reason">{{ reason }}</p>
                     }
                   </div>
@@ -182,12 +187,12 @@
                   <button
                     type="button"
                     class="draft-btn"
-                    [class.primary]="i === 0"
+                    [class.primary]="isSelected(row)"
                     [disabled]="picking() || !canUserDraft()"
                     [title]="
                       canUserDraft() ? 'Draft this player' : 'Not your pick yet — use Sim to my pick'
                     "
-                    (click)="pick(row)"
+                    (click)="selectPlayer(row); pick(row); $event.stopPropagation()"
                   >
                     Draft
                   </button>
