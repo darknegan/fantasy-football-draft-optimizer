@@ -852,8 +852,7 @@
     grid-template-areas:
       'rank pos player score'
       'rank pos player action'
-      '. . arch arch'
-      '. . meta meta';
+      '. . arch arch';
     gap: 0.35rem 0.5rem;
   }
 
