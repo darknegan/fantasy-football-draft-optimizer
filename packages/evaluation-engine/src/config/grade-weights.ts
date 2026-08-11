@@ -18,9 +18,9 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  * (licensed data DraftLab doesn't have, or a factor load-artifact.ts doesn't
  * wire up yet), so they always grade 'unknown' regardless of having a
  * benchmark. These counts are the number of factors real players actually get
- * graded on today, checked against live board data: QB 10/12, RB 11/16
- * (12 original + 4 RB-only additions; 11 sourced after ITEM-001 pbp factors
- * and injury concern), TE 10/12, WR 10/13.
+ * graded on today, checked against live board data: QB 10/12, RB 15/16
+ * (receptions, yards_per_carry, yards_per_touch, team_wins sourced from
+ * nflverse 2026-08-11; ol_run_block_rank still licensed), TE 10/12, WR 10/13.
  *
  * A single global range (assuming every position eventually sources all its
  * factors) structurally capped whichever position had fewest sourced factors
@@ -32,7 +32,7 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  */
 const CEILING_KNOWN_FACTORS: Record<Position, number> = {
   QB: 10,
-  RB: 11,
+  RB: 15,
   TE: 10,
   WR: 10,
 };
