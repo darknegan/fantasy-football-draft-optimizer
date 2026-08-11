@@ -154,6 +154,7 @@ describe('seedPlayersFromArtifact', () => {
       fseRank: null,
       espnProjectionRank: null,
       projectedRank: null,
+      projectedPoints: null,
     });
   });
 
