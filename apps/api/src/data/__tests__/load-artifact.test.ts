@@ -85,9 +85,10 @@ describe('seedPlayersFromArtifact', () => {
               note: 'categorical, graded by DraftLab rather than benchmarked',
             },
             injury_concern: {
-              value: null,
-              provenance: 'unsourced',
-              note: 'categorical, graded by DraftLab rather than benchmarked',
+              value: 1,
+              provenance: 'measured',
+              note: null,
+              categorical: 'concerned',
             },
           },
         },
@@ -138,10 +139,15 @@ describe('seedPlayersFromArtifact', () => {
       categorical: 'PRIME_RB1',
       provenance: 'computed:classifyArchetype',
     });
-    // No injury data source yet — the artifact's null placeholder is dropped
-    // rather than carried over, so the factor is genuinely absent (grades
-    // 'unknown'), not present-but-permanently-null.
-    expect(sp.factors.some((f) => f.factorId === 'injury_concern')).toBe(false);
+    // Injury concern is artifact-sourced when its categorical value is present.
+    expect(sp.factors.find((f) => f.factorId === 'injury_concern')).toEqual(
+      expect.objectContaining({ categorical: 'concerned', value: 1 }),
+    );
+    // A null placeholder must remain absent rather than becoming a known
+    // categorical factor.
+    doc.players[0].factors.injury_concern.categorical = null;
+    const { players: nullInjuryPlayers } = seedPlayersFromArtifact(doc);
+    expect(nullInjuryPlayers[0].factors.some((f) => f.factorId === 'injury_concern')).toBe(false);
 
     expect(sp.market).toEqual({
       adpRoundPick: '1.02',

@@ -9,19 +9,19 @@ import type { SeedPlayer } from './seed-players.js';
  * measurements and where they came from; this file is the "that side" — it
  * decides what a measurement MEANS, which for archetype is a call to
  * classifyArchetype rather than trusting a categorical value from the artifact
- * (the artifact never supplies one — archetype and injury_concern are always
- * emitted null there, explicitly marked "graded by DraftLab rather than
- * benchmarked").
+ * (the artifact never supplies one).
  *
- * injury_concern has no data source yet on either side, so it is omitted
- * rather than guessed. grade-factor.ts already treats a missing factor as
- * grade 'unknown' with its own weight — an honest gap, not a silent zero.
+ * injury_concern is artifact-sourced when it has a categorical value. A null
+ * placeholder remains omitted rather than guessed. grade-factor.ts treats a
+ * missing factor as grade 'unknown' with its own weight — an honest gap, not a
+ * silent zero.
  */
 
 interface ArtifactFactor {
   value: number | null;
   provenance: string;
   note: string | null;
+  categorical?: string | null;
 }
 
 interface ArtifactBio {
@@ -135,18 +135,22 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
       teamPositionRank: p.team_position_rank ?? null,
     };
 
-    // The artifact always emits 'archetype' and 'injury_concern' entries — both
-    // permanently null there ("categorical, graded by DraftLab rather than
-    // benchmarked"), never a real measurement. Drop them from the passthrough:
-    // archetype gets a real computed value below, and injury_concern has no data
-    // source on either side yet, so it's omitted rather than carried over as a
-    // duplicate, permanently-unknown placeholder.
+    // Archetype is DraftLab-computed below, never trusted from the artifact.
+    // Injury concern is passed through only when the artifact supplies a
+    // categorical value; its null placeholder remains genuinely unknown.
     const factors: FactorInput[] = Object.entries(p.factors)
-      .filter(([factorId]) => factorId !== 'archetype' && factorId !== 'injury_concern')
+      .filter(([factorId, f]) => {
+        if (factorId === 'archetype') return false;
+        if (factorId === 'injury_concern') {
+          return f.categorical != null && f.categorical !== '';
+        }
+        return true;
+      })
       .map(([factorId, f]) => ({
         factorId,
         value: f.value,
         provenance: f.provenance,
+        ...(f.categorical ? { categorical: f.categorical as FactorInput['categorical'] } : {}),
       }));
 
     factors.push({

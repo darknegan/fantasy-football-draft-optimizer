@@ -18,9 +18,9 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  * (licensed data DraftLab doesn't have, or a factor load-artifact.ts doesn't
  * wire up yet), so they always grade 'unknown' regardless of having a
  * benchmark. These counts are the number of factors real players actually get
- * graded on today, checked against live board data: QB 8/12, RB 10/16
- * (12 original + 4 RB-only additions; 10 sourced after ITEM-001 pbp factors),
- * TE 7/12, WR 6/12.
+ * graded on today, checked against live board data: QB 10/12, RB 11/16
+ * (12 original + 4 RB-only additions; 11 sourced after ITEM-001 pbp factors
+ * and injury concern), TE 10/12, WR 7/12.
  *
  * A single global range (assuming every position eventually sources all its
  * factors) structurally capped whichever position had fewest sourced factors
@@ -31,10 +31,10 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  * build_benchmarks.py).
  */
 const CEILING_KNOWN_FACTORS: Record<Position, number> = {
-  QB: 8,
-  RB: 10,
-  TE: 7,
-  WR: 6,
+  QB: 10,
+  RB: 11,
+  TE: 10,
+  WR: 7,
 };
 
 export const CEILING_RANGE: Record<Position, { min: number; max: number }> = Object.fromEntries(
