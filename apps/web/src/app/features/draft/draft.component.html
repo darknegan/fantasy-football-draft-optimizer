@@ -152,12 +152,30 @@
                 <span class="c-pos">
                   <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
                 </span>
-                <div class="c-player">
-                  <strong>{{ row.player.name }}</strong>
-                  <div class="meta">{{ playerMeta(row) }}</div>
-                  @if (isSelected(row) && primaryReason(row); as reason) {
-                    <p class="primary-reason">{{ reason }}</p>
+                <div class="c-player player-cell">
+                  @if (headshotOf(row); as src) {
+                    <img
+                      class="headshot"
+                      [src]="src"
+                      [alt]=""
+                      width="28"
+                      height="28"
+                      loading="lazy"
+                      decoding="async"
+                      (error)="onHeadshotError(row.player.id)"
+                    />
+                  } @else {
+                    <span class="headshot fallback" aria-hidden="true">{{
+                      row.player.position
+                    }}</span>
                   }
+                  <div class="player-text">
+                    <strong>{{ row.player.name }}</strong>
+                    <div class="meta">{{ playerMeta(row) }}</div>
+                    @if (isSelected(row) && primaryReason(row); as reason) {
+                      <p class="primary-reason">{{ reason }}</p>
+                    }
+                  </div>
                 </div>
                 <span class="c-arch">{{ formatArchetype(row.evaluation.archetype.archetype) }}</span>
                 <span class="c-adp dl-mono">{{ row.evaluation.value.adpRoundPick || '—' }}</span>

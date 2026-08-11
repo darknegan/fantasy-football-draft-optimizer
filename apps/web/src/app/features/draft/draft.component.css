@@ -346,7 +346,7 @@
 .avail-row {
   display: grid;
   grid-template-columns:
-    2rem 2.4rem minmax(140px, 1.4fr) minmax(100px, 0.9fr) 3.25rem 3.25rem 3.5rem 5.5rem;
+    2rem 2.4rem minmax(168px, 1.4fr) minmax(100px, 0.9fr) 3.25rem 3.25rem 3.5rem 5.5rem;
   gap: 0.65rem;
   align-items: center;
   padding: 0 0.75rem;
@@ -415,6 +415,37 @@
 .avail-row .c-rank.selected {
   background: var(--dl-accent);
   color: var(--dl-text-inverse);
+}
+
+.avail-row .c-player.player-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.avail-row .headshot {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  background: var(--dl-surface-overlay);
+}
+
+.avail-row .headshot.fallback {
+  display: grid;
+  place-items: center;
+  font: 600 0.5625rem var(--dl-font-mono);
+  letter-spacing: 0.02em;
+  color: var(--dl-text-tertiary);
+  border: 1px solid var(--dl-border-subtle);
+}
+
+.avail-row .player-text {
+  min-width: 0;
 }
 
 .avail-row .c-player strong {
