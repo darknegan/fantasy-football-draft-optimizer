@@ -257,6 +257,22 @@
   line-height: 1.5;
 }
 
+.artifact-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0 0.125rem;
+  color: var(--dl-text-secondary);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.artifact-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dot {
   width: 7px;
   height: 7px;
