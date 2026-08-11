@@ -110,6 +110,7 @@ const STRATEGY_NAMES: Record<string, string> = {
 };
 
 type PosFilter = Position | 'ALL';
+type MainTab = 'available' | 'board';
 
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 
@@ -139,6 +140,7 @@ export class DraftComponent implements OnInit, OnDestroy {
   readonly picking = signal(false);
   readonly posFilter = signal<PosFilter>('ALL');
   readonly archetypeFilter = signal('all');
+  readonly mainTab = signal<MainTab>('available');
 
   readonly teamCount = computed(() => this.league()?.teamCount ?? 12);
   readonly userSlot = computed(() => this.league()?.draftSlot ?? 1);
