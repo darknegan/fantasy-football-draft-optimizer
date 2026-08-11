@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
   email CITEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
+  time_zone TEXT NOT NULL DEFAULT 'America/New_York',
+  initials_color TEXT NOT NULL DEFAULT 'accent',
+  password_changed_at TIMESTAMPTZ,
+  preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -19,6 +23,8 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   token_hash TEXT NOT NULL UNIQUE,
   expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
+  user_agent TEXT,
+  label TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

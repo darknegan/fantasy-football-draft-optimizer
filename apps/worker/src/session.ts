@@ -9,7 +9,7 @@ import {
   revokeRefreshTokenById,
   storeRefreshToken,
 } from './db/refresh-tokens.js';
-import { findUserById } from './db/users.js';
+import { countLeaguesForUser, findUserById } from './db/users.js';
 
 const ACCESS_TTL = '15m';
 const REFRESH_DAYS = 30;
@@ -21,13 +21,48 @@ type CookieContext = {
   req: { header: (name: string) => string | undefined; raw: Request };
 };
 
-export function publicUser(user: DbUser) {
+export function sessionLabelFromUserAgent(userAgent?: string | null): string | null {
+  if (!userAgent) return null;
+  const ua = userAgent.toLowerCase();
+  const browser = ua.includes('edg/')
+    ? 'Edge'
+    : ua.includes('chrome/')
+      ? 'Chrome'
+      : ua.includes('firefox/')
+        ? 'Firefox'
+        : ua.includes('safari/')
+          ? 'Safari'
+          : 'Browser';
+  const os = ua.includes('iphone') || ua.includes('ipad')
+    ? 'iPhone'
+    : ua.includes('android')
+      ? 'Android'
+      : ua.includes('mac os')
+        ? 'macOS'
+        : ua.includes('windows')
+          ? 'Windows'
+          : ua.includes('linux')
+            ? 'Linux'
+            : 'Device';
+  return `${browser} · ${os}`;
+}
+
+export function publicUser(user: DbUser, leagueCount = 0) {
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
     createdAt: user.createdAt,
+    timeZone: user.timeZone,
+    initialsColor: user.initialsColor,
+    passwordChangedAt: user.passwordChangedAt,
+    preferences: user.preferences,
+    leagueCount,
   };
+}
+
+export async function publicUserWithCounts(db: Db, user: DbUser) {
+  return publicUser(user, await countLeaguesForUser(db, user.id));
 }
 
 async function signAccessToken(env: Env, claims: { sub: string; email: string; displayName: string }) {
@@ -61,21 +96,24 @@ export async function issueSession(c: CookieContext, db: Db, user: DbUser) {
     displayName: user.displayName,
   });
   const refreshToken = generateRefreshToken();
+  const userAgent = c.req.header('user-agent') ?? null;
   await storeRefreshToken(db, {
     userId: user.id,
     token: refreshToken,
     expiresAt: refreshExpiresAt(),
+    userAgent,
+    label: sessionLabelFromUserAgent(userAgent),
   });
   setCookie(c as never, REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     secure: cookieSecure(c.env),
     sameSite: 'Lax',
-    path: '/auth',
+    path: '/',
     maxAge: REFRESH_DAYS * 24 * 60 * 60,
   });
   return {
     accessToken,
-    user: publicUser(user),
+    user: await publicUserWithCounts(db, user),
   };
 }
 
@@ -93,5 +131,5 @@ export async function rotateRefreshSession(c: CookieContext, db: Db) {
 export async function clearRefreshSession(c: CookieContext, db: Db) {
   const token = getCookie(c as never, REFRESH_COOKIE);
   if (token) await revokeRefreshToken(db, token);
-  deleteCookie(c as never, REFRESH_COOKIE, { path: '/auth' });
+  deleteCookie(c as never, REFRESH_COOKIE, { path: '/' });
 }

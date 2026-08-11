@@ -1,0 +1,408 @@
+<section class="profile">
+  <div class="identity">
+    <div class="avatar" [style.--avatar-color]="avatarCss()" aria-hidden="true">{{ initials() }}</div>
+    <div class="who">
+      <div class="name-row">
+        <h2>{{ displayName() || 'Account' }}</h2>
+        @if (sleeperMeta().connected) {
+          <span class="chip accent">Sleeper connected</span>
+        }
+      </div>
+      <p class="meta">
+        {{ email() }} · Member since
+        {{ memberSince() ? (memberSince() | date: 'd MMM y') : '—' }} ·
+        {{ leagueCount() }} league{{ leagueCount() === 1 ? '' : 's' }} connected
+      </p>
+    </div>
+    <div class="stat">
+      <span class="label">LAST SIGN-IN</span>
+      <strong>This device</strong>
+    </div>
+    <div class="stat">
+      <span class="label">TIME ZONE</span>
+      <strong>{{ timeZone() }}</strong>
+    </div>
+    <button type="button" class="btn ghost" (click)="auth.logout()">Log out</button>
+  </div>
+
+  <div class="columns">
+    <div class="left">
+      <section class="card">
+        <header class="card-head">
+          <h2>Account details</h2>
+          <button
+            type="button"
+            class="btn primary"
+            [disabled]="saving()"
+            (click)="saveAccount()"
+          >
+            {{ saving() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </header>
+
+        <div class="fields">
+          <label>
+            <span>DISPLAY NAME</span>
+            <input type="text" [ngModel]="displayName()" (ngModelChange)="displayName.set($event)" />
+          </label>
+          <label>
+            <span>EMAIL</span>
+            <div class="input-with-chip">
+              <input type="email" [ngModel]="email()" readonly />
+              <span class="chip ok">Verified</span>
+            </div>
+          </label>
+          <label>
+            <span>TIME ZONE</span>
+            <select [ngModel]="timeZone()" (ngModelChange)="timeZone.set($event)">
+              @for (tz of timeZones; track tz) {
+                <option [value]="tz">{{ tz }}</option>
+              }
+            </select>
+          </label>
+          <div class="field">
+            <span class="label">INITIALS COLOUR</span>
+            <div class="swatches" role="listbox" aria-label="Initials colour">
+              @for (swatch of swatches; track swatch.id) {
+                <button
+                  type="button"
+                  class="swatch"
+                  role="option"
+                  [class.on]="initialsColor() === swatch.id"
+                  [style.background]="swatch.css"
+                  [attr.aria-selected]="initialsColor() === swatch.id"
+                  (click)="initialsColor.set(swatch.id)"
+                ></button>
+              }
+            </div>
+          </div>
+        </div>
+        <p class="note">
+          Your display name appears on shared boards and recap links. Changing your email needs
+          confirmation first.
+        </p>
+        @if (accountMessage()) {
+          <p class="ok-msg">{{ accountMessage() }}</p>
+        }
+        @if (accountError()) {
+          <p class="err">{{ accountError() }}</p>
+        }
+      </section>
+
+      <section class="card">
+        <header class="card-head">
+          <h2>Draft preferences</h2>
+          <span class="eyebrow">APPLIES TO EVERY LEAGUE</span>
+        </header>
+
+        <div class="prefs">
+          <div class="pref">
+            <div>
+              <strong>Board density</strong>
+              <p>Compact 36px or default 44px rows</p>
+            </div>
+            <div class="segmented" role="group" aria-label="Board density">
+              <button
+                type="button"
+                [class.on]="preferences().boardDensity === 'compact'"
+                (click)="setDensity('compact')"
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                [class.on]="preferences().boardDensity === 'default'"
+                (click)="setDensity('default')"
+              >
+                Default
+              </button>
+            </div>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Landing screen</strong>
+              <p>Where DraftLab opens after sign-in</p>
+            </div>
+            <select
+              [ngModel]="preferences().landingScreen"
+              (ngModelChange)="setLanding($event)"
+            >
+              <option value="dashboard">Dashboard</option>
+              <option value="board">Player Board</option>
+              <option value="draft">Live Draft Room</option>
+            </select>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>ADP notation</strong>
+              <p>How pick numbers are written</p>
+            </div>
+            <select [ngModel]="preferences().adpNotation" (ngModelChange)="setAdp($event)">
+              <option value="round.pick">Round.pick</option>
+              <option value="overall">Overall</option>
+            </select>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Confirm before submitting a pick</strong>
+              <p>Posted straight to Sleeper, no undo</p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              [class.on]="preferences().confirmBeforePick"
+              [attr.aria-pressed]="preferences().confirmBeforePick"
+              (click)="togglePref('confirmBeforePick')"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Auto-scroll to your pick</strong>
+              <p>Jumps the board when your turn arrives</p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              [class.on]="preferences().autoScrollToPick"
+              [attr.aria-pressed]="preferences().autoScrollToPick"
+              (click)="togglePref('autoScrollToPick')"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Colour-blind shape marks</strong>
+              <p>Always on — ▲ ▬ ▼ accompany colour</p>
+            </div>
+            <button type="button" class="toggle locked on" aria-pressed="true" disabled>
+              <span class="knob"></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <header class="card-head">
+          <h2>Security</h2>
+          <div class="actions">
+            <button type="button" class="btn ghost" (click)="revokeOthers()">
+              Sign out everywhere
+            </button>
+          </div>
+        </header>
+
+        <div class="password-row">
+          <div>
+            <strong>Password</strong>
+            <p>
+              @if (passwordChangedAt()) {
+                Last changed {{ passwordChangedAt() | date: 'mediumDate' }}
+              } @else {
+                Last changed — not recorded yet
+              }
+            </p>
+          </div>
+          <p class="note tight">Two-factor authentication is not offered yet</p>
+        </div>
+
+        <div class="password-form">
+          <label>
+            <span>CURRENT PASSWORD</span>
+            <input
+              type="password"
+              autocomplete="current-password"
+              [ngModel]="currentPassword()"
+              (ngModelChange)="currentPassword.set($event)"
+            />
+          </label>
+          <label>
+            <span>NEW PASSWORD</span>
+            <input
+              type="password"
+              autocomplete="new-password"
+              [ngModel]="newPassword()"
+              (ngModelChange)="newPassword.set($event)"
+            />
+          </label>
+          <button
+            type="button"
+            class="btn ghost"
+            [disabled]="passwordBusy()"
+            (click)="changePassword()"
+          >
+            {{ passwordBusy() ? 'Updating…' : 'Change password' }}
+          </button>
+        </div>
+
+        <div class="sessions">
+          @for (session of sessions(); track session.id) {
+            <div class="session">
+              <span class="dot" [class.live]="session.current"></span>
+              <span class="device">{{ session.label }}</span>
+              @if (session.current) {
+                <span class="chip accent">This device</span>
+              }
+              <span class="when">
+                {{ session.current ? 'Active now' : (session.createdAt | date: 'mediumDate') }}
+              </span>
+              @if (!session.current) {
+                <button type="button" class="link danger" (click)="revokeSession(session.id)">
+                  Revoke
+                </button>
+              }
+            </div>
+          } @empty {
+            <p class="note">No active sessions listed yet.</p>
+          }
+        </div>
+
+        @if (passwordMessage()) {
+          <p class="ok-msg">{{ passwordMessage() }}</p>
+        }
+        @if (passwordError()) {
+          <p class="err">{{ passwordError() }}</p>
+        }
+      </section>
+    </div>
+
+    <div class="right">
+      <section class="card">
+        <header class="card-head">
+          <h2>Notifications</h2>
+        </header>
+
+        <div class="notify">
+          <div class="pref">
+            <div>
+              <strong>Draft starting soon</strong>
+              <p>A reminder before each draft window opens</p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              [class.on]="preferences().notifications.draftStarting"
+              [attr.aria-pressed]="preferences().notifications.draftStarting"
+              (click)="toggleNotification('draftStarting')"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+          <div class="leads">
+            @for (lead of ['24h', '1h', '15m']; track lead) {
+              <button
+                type="button"
+                class="chip"
+                [class.accent]="leadActive($any(lead))"
+                (click)="toggleLeadTime($any(lead))"
+              >
+                {{ lead }}
+              </button>
+            }
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Your pick is up</strong>
+              <p>The room polls every 5s, so this can trail Sleeper</p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              [class.on]="preferences().notifications.pickUp"
+              [attr.aria-pressed]="preferences().notifications.pickUp"
+              (click)="toggleNotification('pickUp')"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+
+          <div class="pref">
+            <div>
+              <strong>Position run detected</strong>
+              <p>3 of the last 5 picks share a position</p>
+            </div>
+            <button
+              type="button"
+              class="toggle"
+              [class.on]="preferences().notifications.positionRun"
+              [attr.aria-pressed]="preferences().notifications.positionRun"
+              (click)="toggleNotification('positionRun')"
+            >
+              <span class="knob"></span>
+            </button>
+          </div>
+        </div>
+        <p class="note">Sent to {{ email() }}</p>
+      </section>
+
+      <section class="card">
+        <header class="card-head">
+          <h2>Connections</h2>
+          <a class="link accent" routerLink="/leagues/connect">Manage</a>
+        </header>
+        <div class="connection">
+          <span class="chip accent">Sleeper</span>
+          <div>
+            <strong>{{ sleeperMeta().connected ? sleeperMeta().label : 'Not connected' }}</strong>
+            <p>{{ sleeperMeta().connected ? 'Linked via your leagues' : 'Connect from Connections' }}</p>
+          </div>
+        </div>
+        <p class="note">ESPN is not supported — their draft API is private.</p>
+      </section>
+
+      <section class="card danger-zone">
+        <header class="card-head">
+          <h2>Danger zone</h2>
+        </header>
+
+        <div class="danger-block">
+          <div class="row">
+            <strong>Export your data</strong>
+            <button type="button" class="btn ghost" [disabled]="dangerBusy()" (click)="exportData()">
+              Export
+            </button>
+          </div>
+          <p class="note">Leagues, strategies, picks and calibration as JSON.</p>
+        </div>
+
+        <hr />
+
+        <div class="danger-block">
+          <strong>Delete account</strong>
+          <p class="note">
+            Deletes {{ leagueCount() }} league{{ leagueCount() === 1 ? '' : 's' }} along with saved
+            strategies, draft recaps and calibration history. This cannot be undone.
+          </p>
+          <label>
+            <span>CONFIRM PASSWORD</span>
+            <input
+              type="password"
+              autocomplete="current-password"
+              [ngModel]="deletePassword()"
+              (ngModelChange)="deletePassword.set($event)"
+            />
+          </label>
+          <button
+            type="button"
+            class="btn danger"
+            [disabled]="dangerBusy()"
+            (click)="deleteAccount()"
+          >
+            Delete account
+          </button>
+        </div>
+        @if (dangerError()) {
+          <p class="err">{{ dangerError() }}</p>
+        }
+      </section>
+    </div>
+  </div>
+</section>

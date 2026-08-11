@@ -265,6 +265,8 @@ Thirteen screens, ordered by the flow a new user follows. All are built in the F
 The profile screen is reached from the top bar avatar rather than the left navigation, since the
 sidebar is league-scoped and the account is not. The menu is drawn separately as
 [**Account menu**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=72-1367).
+The Angular route is `/profile`, backed by `GET/PATCH /me`, password, sessions, export and delete
+endpoints on the API and Worker.
 
 A post-draft recap screen (`05-architecture.md` §4, `/leagues/:id/recap`) is specified but
 deferred out of the first mock set, since its content depends on decisions made in the live

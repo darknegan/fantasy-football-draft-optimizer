@@ -1,3 +1,5 @@
+import type { InitialsColor, UserPreferences } from './user-preferences.js';
+
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
 export type FactorGrade = 'green' | 'yellow' | 'orange' | 'red' | 'unknown';
@@ -248,7 +250,28 @@ export interface User {
   email: string;
   displayName: string;
   createdAt: string;
+  timeZone: string;
+  initialsColor: InitialsColor;
+  passwordChangedAt?: string | null;
+  preferences: UserPreferences;
+  leagueCount?: number;
 }
+
+export type {
+  AdpNotation,
+  BoardDensity,
+  DraftLeadTime,
+  InitialsColor,
+  LandingScreen,
+  NotificationPreferences,
+  UserPreferences,
+} from './user-preferences.js';
+export {
+  DEFAULT_USER_PREFERENCES,
+  isValidTimeZone,
+  mergeUserPreferences,
+  normalizeInitialsColor,
+} from './user-preferences.js';
 
 export interface League {
   id: string;
