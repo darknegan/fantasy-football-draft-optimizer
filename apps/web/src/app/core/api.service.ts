@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import type { ArtifactMeta } from './artifact-provenance';
 import type {
   AdherenceResult,
   AuctionState,
@@ -27,7 +28,13 @@ export class ApiService {
   private readonly http = inject(HttpClient);
 
   health() {
-    return this.http.get<{ ok: boolean }>('/api/health');
+    return this.http.get<{
+      ok: boolean;
+      artifacts?: {
+        factors: ArtifactMeta;
+        benchmarks: ArtifactMeta;
+      };
+    }>('/api/health');
   }
 
   players() {

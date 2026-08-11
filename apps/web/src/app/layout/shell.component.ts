@@ -14,6 +14,7 @@ import { filter } from 'rxjs/operators';
 import { ActiveLeagueService } from '../core/active-league.service';
 import { ApiService } from '../core/api.service';
 import type { League } from '../core/api.types';
+import { formatArtifactLine } from '../core/artifact-provenance';
 import { AuthService } from '../core/auth.service';
 
 type NavIcon =
@@ -261,6 +262,13 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
             <span class="dot" [class.idle]="!hasLiveSync()" aria-hidden="true"></span>
             <span>{{ syncLabel() }}</span>
           </div>
+          @if (artifactLines().length) {
+            <div class="artifact-chip" role="status" aria-label="Artifact data source">
+              @for (line of artifactLines(); track line) {
+                <div class="artifact-line">{{ line }}</div>
+              }
+            </div>
+          }
         </div>
       </aside>
 
@@ -342,6 +350,7 @@ export class ShellComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly pageTitle = signal('Dashboard');
   readonly currentPath = signal('/');
+  readonly artifactLines = signal<string[]>([]);
 
   readonly initials = computed(() => {
     const name = this.auth.user()?.displayName?.trim() || 'DL';
@@ -457,6 +466,16 @@ export class ShellComponent implements OnInit {
       if (typeof document !== 'undefined') document.body.style.overflow = '';
     });
     this.api.leagues().subscribe((leagues) => this.active.setLeagues(leagues));
+    this.api.health().subscribe({
+      next: (health) => {
+        const lines = [
+          formatArtifactLine('Factors', health.artifacts?.factors),
+          formatArtifactLine('Benchmarks', health.artifacts?.benchmarks),
+        ].filter((line): line is string => line !== null);
+        this.artifactLines.set(lines);
+      },
+      error: () => this.artifactLines.set([]),
+    });
     this.updateTitle(this.router.url);
 
     this.router.events
