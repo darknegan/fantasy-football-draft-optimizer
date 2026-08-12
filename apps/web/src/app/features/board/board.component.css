@@ -94,7 +94,7 @@
 .col-head,
 .row {
   display: grid;
-  grid-template-columns: 30px 34px minmax(168px, 1fr) 52px 76px 48px 132px 96px 60px 74px 248px 28px;
+  grid-template-columns: 30px 34px minmax(168px, 1fr) 52px 44px 76px 48px 132px 96px 60px 74px 248px 28px;
   gap: 0.75rem;
   align-items: center;
   padding: 0 1rem;
@@ -112,6 +112,7 @@
 }
 
 .col-head .c-adp,
+.col-head .c-score,
 .col-head .c-ceiling,
 .col-head .c-conf,
 .col-head .c-value {
@@ -246,6 +247,12 @@
 .c-adp {
   text-align: center;
   color: var(--dl-text-secondary);
+}
+
+.c-score {
+  text-align: center;
+  color: var(--dl-text-primary);
+  font-weight: 600;
 }
 
 .c-ceiling {
@@ -465,7 +472,7 @@
   .col-head,
   .row {
     grid-template-columns:
-      30px 34px minmax(120px, 1fr) 52px 76px 48px minmax(100px, 132px)
+      30px 34px minmax(120px, 1fr) 52px 44px 76px 48px minmax(100px, 132px)
       60px 74px 28px;
   }
 }
@@ -496,6 +503,7 @@
     min-width: 0;
   }
   .c-adp,
+  .c-score,
   .c-ceiling,
   .c-value,
   .c-proj,

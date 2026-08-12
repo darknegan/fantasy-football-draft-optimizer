@@ -11,6 +11,7 @@ import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
 import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-display';
+import { scoreLabel } from './score-label';
 
 type PosFilter = Position | 'ALL';
 type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
@@ -116,6 +117,7 @@ const RISK_MAX = 100;
         <span class="c-pos">POS</span>
         <span class="c-player">PLAYER</span>
         <span class="c-adp">ADP</span>
+        <span class="c-score" title="Draft score">SCORE</span>
         <span class="c-ceiling">CEILING</span>
         <span class="c-conf">CONF</span>
         <span class="c-arch">ARCHETYPE</span>
@@ -180,6 +182,8 @@ const RISK_MAX = 100;
               </a>
 
               <span class="c-adp mono">{{ row.evaluation.value.adpRoundPick }}</span>
+
+              <span class="c-score mono">{{ scoreLabel(row) }}</span>
 
               <span class="c-ceiling mono">
                 @if (row.evaluation.ceiling.provisional) {
@@ -267,6 +271,7 @@ export class BoardComponent implements OnInit {
   readonly posTabs = POS_TABS;
   readonly sortOptions = SORT_OPTIONS;
   readonly configuredFactorCount = configuredFactorCount;
+  readonly scoreLabel = scoreLabel;
 
   leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
