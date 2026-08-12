@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildRecVsActual,
+  DEFAULT_BANDS,
   DEFAULT_WEIGHTS,
   followRate,
   proposeCalibration,
@@ -47,6 +48,16 @@ describe('outcomes', () => {
 });
 
 describe('compare + recalibrate', () => {
+  it('uses the five-field volume grading defaults', () => {
+    expect(DEFAULT_BANDS).toEqual({
+      eliteMin: 1.15,
+      greenMin: 1.05,
+      yellowMin: 0.9,
+      orangeMin: 0.75,
+      redMin: 0.5,
+    });
+  });
+
   it('builds rec vs actual rows', () => {
     const outcomes = [
       recordOutcome({
@@ -76,5 +87,33 @@ describe('compare + recalibrate', () => {
     expect(proposal.sampleSize).toBe(12);
     expect(proposal.proposedWeights.ceiling).toBeGreaterThan(DEFAULT_WEIGHTS.ceiling - 0.001);
     expect(proposal.notes.length).toBeGreaterThan(0);
+  });
+
+  it('leaves elite and red volume thresholds unchanged when tightening bands', () => {
+    const outcomes = Array.from({ length: 12 }, (_, i) =>
+      recordOutcome({
+        leagueId: 'L',
+        pickNumber: i + 1,
+        actualPlayerId: 'a',
+        recommendations: recs(['a', 'b', 'c', 'd']),
+      }),
+    );
+    const currentBands = {
+      eliteMin: 1.2,
+      greenMin: 1.1,
+      yellowMin: 0.95,
+      orangeMin: 0.8,
+      redMin: 0.55,
+    };
+
+    const proposal = proposeCalibration(outcomes, currentBands);
+
+    expect(proposal.proposedBands).toEqual({
+      eliteMin: 1.2,
+      greenMin: 1.09,
+      yellowMin: 0.94,
+      orangeMin: 0.79,
+      redMin: 0.55,
+    });
   });
 });

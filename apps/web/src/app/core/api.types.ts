@@ -415,9 +415,21 @@ export interface CalibrationProposal {
   sampleSize: number;
   followRate: number;
   meanRankDelta: number;
-  proposedBands: { greenMin: number; yellowMin: number; orangeMin: number };
+  proposedBands: {
+    eliteMin: number;
+    greenMin: number;
+    yellowMin: number;
+    orangeMin: number;
+    redMin: number;
+  };
   proposedWeights: { ceiling: number; archetype: number; value: number; risk: number };
-  currentBands: { greenMin: number; yellowMin: number; orangeMin: number };
+  currentBands: {
+    eliteMin: number;
+    greenMin: number;
+    yellowMin: number;
+    orangeMin: number;
+    redMin: number;
+  };
   currentWeights: { ceiling: number; archetype: number; value: number; risk: number };
   notes: string[];
   applied: boolean;

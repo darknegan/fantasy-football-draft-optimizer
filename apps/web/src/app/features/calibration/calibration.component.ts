@@ -21,7 +21,9 @@ import type { CalibrationProposal, CalibrationSummary } from '../../core/api.typ
           <div class="kv"><span>Archetype</span><strong class="dl-mono">{{ s.activeWeights.archetype }}</strong></div>
           <div class="kv"><span>Value</span><strong class="dl-mono">{{ s.activeWeights.value }}</strong></div>
           <div class="kv"><span>Risk</span><strong class="dl-mono">{{ s.activeWeights.risk }}</strong></div>
+          <div class="kv"><span>Elite band ≥</span><strong class="dl-mono">{{ s.activeBands.eliteMin }}</strong></div>
           <div class="kv"><span>Green band ≥</span><strong class="dl-mono">{{ s.activeBands.greenMin }}</strong></div>
+          <div class="kv"><span>Red band ≥</span><strong class="dl-mono">{{ s.activeBands.redMin }}</strong></div>
         </section>
 
         <section class="dl-panel">
@@ -55,9 +57,11 @@ import type { CalibrationProposal, CalibrationSummary } from '../../core/api.typ
               </div>
               <div>
                 <h3>Bands</h3>
+                <div class="kv"><span>Elite</span><span class="dl-mono">{{ p.currentBands.eliteMin }} → {{ p.proposedBands.eliteMin }}</span></div>
                 <div class="kv"><span>Green</span><span class="dl-mono">{{ p.currentBands.greenMin }} → {{ p.proposedBands.greenMin }}</span></div>
                 <div class="kv"><span>Yellow</span><span class="dl-mono">{{ p.currentBands.yellowMin }} → {{ p.proposedBands.yellowMin }}</span></div>
                 <div class="kv"><span>Orange</span><span class="dl-mono">{{ p.currentBands.orangeMin }} → {{ p.proposedBands.orangeMin }}</span></div>
+                <div class="kv"><span>Red</span><span class="dl-mono">{{ p.currentBands.redMin }} → {{ p.proposedBands.redMin }}</span></div>
               </div>
             </div>
           </section>
