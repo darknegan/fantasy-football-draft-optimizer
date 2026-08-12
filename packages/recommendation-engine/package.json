@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@draftlab/domain": "*",
-    "@draftlab/strategy-engine": "*"
+    "@draftlab/strategy-engine": "*",
+    "@draftlab/tiers": "*"
   },
   "devDependencies": {
     "typescript": "~5.9.2",
