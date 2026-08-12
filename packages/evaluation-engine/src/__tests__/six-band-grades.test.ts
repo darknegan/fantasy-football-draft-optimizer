@@ -53,11 +53,11 @@ describe('rank bands', () => {
   });
 });
 
-describe('categoricals stay four-color', () => {
+describe('categorical grades', () => {
   it('injury serious is red not critical', () => {
     expect(gradeInjuryConcern('serious')).toBe('red');
   });
-  it('prime archetype is green not elite', () => {
-    expect(gradeArchetypeFactor('PRIME_WR1')).toBe('green');
+  it('allows the ELITE archetype to use the elite band', () => {
+    expect(gradeArchetypeFactor('ELITE')).toBe('elite');
   });
 });

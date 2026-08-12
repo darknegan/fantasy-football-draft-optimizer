@@ -63,18 +63,16 @@ export function gradeInjuryConcern(
 
 export function gradeArchetypeFactor(archetype: ArchetypeId): FactorGrade {
   switch (archetype) {
-    case 'PRIME_WR1':
-    case 'PRIME_RB1':
-    case 'IN_THEIR_PRIME':
-      return 'green';
-    case 'PRIME_WR2':
-    case 'PRIME_RB2':
-      return 'yellow';
+    case 'ELITE':
+      return 'elite';
     case 'PROVEN_BREAKOUT_CANDIDATE':
+    case 'TRUSTY_VETERAN':
+      return 'green';
+    case 'IN_THEIR_PRIME':
       return 'yellow';
     case 'BREAKOUT_CANDIDATE':
       return 'orange';
-    case 'TRUSTY_VETERAN':
+    case 'VETERAN':
       return 'red';
     default:
       return 'unknown';
