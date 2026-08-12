@@ -182,6 +182,71 @@ export function classifyArchetype(player: Player): ArchetypeId {
   }
 }
 
+function explainSkillPosition(player: Player): string {
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
+
+  if (seasons <= 3 && top5 === 0) {
+    return `yr ${seasons}, no top-5 finishes → rule 1`;
+  }
+  if (seasons <= 3 && top5 === 1) {
+    return `yr ${seasons}, 1 top-5 finish → rule 2`;
+  }
+  if (seasons <= 4 && top5 >= 2) {
+    return `yr ${seasons}, ${top5} top-5 finishes → rule 3`;
+  }
+  if (seasons > 4 && overHalf(top8, seasons)) {
+    return `yr ${seasons}, top-8 in ${top8}/${seasons} seasons (over half) → rule 4`;
+  }
+  if (seasons > 4 && overHalf(top12, seasons)) {
+    return `yr ${seasons}, top-12 in ${top12}/${seasons} seasons (over half) → rule 5`;
+  }
+  if (seasons >= 7 || player.age >= 28) {
+    const gates: string[] = [];
+    if (player.age >= 28) gates.push(`age ${player.age}`);
+    if (seasons >= 7) gates.push(`yr ${seasons}`);
+    return `${gates.join(', ')} — aging without half-rate pedigree → rule 6`;
+  }
+  return `yr ${seasons}, mid-career without half-rate pedigree → rule 7`;
+}
+
+function explainQb(player: Player): string {
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
+
+  if (seasons <= 3 && top5 === 0) {
+    return `yr ${seasons}, no top-5 finishes → rule 1`;
+  }
+  if (seasons <= 3 && top5 === 1) {
+    return `yr ${seasons}, 1 top-5 finish → rule 2`;
+  }
+  if (seasons <= 4 && top5 >= 2) {
+    return `yr ${seasons}, ${top5} top-5 finishes → rule 3`;
+  }
+  if (seasons > 4 && overHalf(top8, seasons)) {
+    return `yr ${seasons}, top-8 in ${top8}/${seasons} seasons (over half) → rule 4`;
+  }
+  if (seasons > 4 && overHalf(top12, seasons)) {
+    return `yr ${seasons}, top-12 in ${top12}/${seasons} seasons (over half) → rule 5`;
+  }
+  if (player.age >= 34) {
+    return `age ${player.age} — aging without half-rate pedigree → rule 6`;
+  }
+  return `yr ${seasons}, mid-career without half-rate pedigree → rule 7`;
+}
+
+/** Short "Why" phrase for board tooltips — mirrors classifyArchetype ladder rules. */
+export function explainArchetype(player: Player): string {
+  if (player.position === 'QB') {
+    return explainQb(player);
+  }
+  return explainSkillPosition(player);
+}
+
 function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
   if (position === 'RB' && archetype in RB_RATES) {
     return RB_RATES[archetype as keyof typeof RB_RATES];
