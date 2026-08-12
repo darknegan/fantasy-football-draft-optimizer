@@ -236,10 +236,10 @@ guardrails the recommender applies regardless of strategy:
 
 - **QB**: prefer rushing quarterbacks on fast-paced offenses; target rounds 3–4; never
   round 1–2
-- **RB**: prime-age RBs (under 27, or with an RB1 finish) hit 46.15% and crush 27.88%,
-  both bucket-bests; assume roughly 3 games missed for any early-round RB
-- **WR**: Prime WR1s are the most reliable asset in the game (53.52% return, 12.68% bust);
-  Trusty Veteran WRs are the worst (8.33% boom, 30.56% injured) and should be actively
-  downgraded
+- **RB**: `ELITE` / `IN_THEIR_PRIME` (interim prime-age rates) hit 46.15% return and 27.88%
+  boom; assume roughly 3 games missed for any early-round RB
+- **WR**: `ELITE` (interim Prime WR1 rates) is the most reliable asset (53.52% return,
+  12.68% bust); Trusty Veteran WRs are the worst (8.33% boom, 30.56% injured) and should be
+  actively downgraded
 - **TE**: must be first or second in team targets; sub-50% in-line rate strongly preferred;
   take in rounds 2–3 or wait for round 10; round 4 is a 0% dead zone

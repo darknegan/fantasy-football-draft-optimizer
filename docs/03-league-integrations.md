@@ -224,7 +224,7 @@ in `01-player-evaluation-model.md` becomes the dominant input rather than a modi
 
 Additional requirements:
 
-- **Multi-year value curves** per player, not a single number: a 23-year-old Prime WR1 and a
+- **Multi-year value curves** per player, not a single number: a 23-year-old `ELITE` WR and a
   29-year-old with the same projection are not remotely the same asset
 - **Rookie draft support**, a separate draft type with its own board and pick trading
 - **Draft pick assets** — future first, second, and third round picks are tradeable and must
@@ -258,7 +258,7 @@ The most complex format and the one requiring the most novel modelling. Requirem
   league uses them
 
 Contracts change player valuation qualitatively rather than quantitatively, and the app's
-recommendations must reflect it. Signing a 23-year-old Prime WR1 to four years is a very
+recommendations must reflect it. Signing a 23-year-old `ELITE` WR to four years is a very
 different transaction from signing a 30-year-old Trusty Veteran WR to the same deal, even at
 an identical annual price — the archetype tables say the second player has a 30.56% chance
 of missing time *this* year and a declining curve after it. The contract dimension is where
