@@ -53,7 +53,7 @@ source images:
 Positions do not all have the same number of configured or currently sourced factors.
 The raw range is therefore position-specific:
 `CEILING_RANGE[position] = knownFactorCount × [−5, +5]`. Current known coverage is QB
-11/12 (−55…55), RB 16/16 (−80…80), WR 17/17 (−85…85), and TE 12/14 (−60…60).
+12/12 (−60…60), RB 16/16 (−80…80), WR 17/17 (−85…85), and TE 13/13 (−65…65).
 Cross-position comparisons normalise against the applicable positional range.
 
 ```ts
@@ -131,7 +131,7 @@ multiplying by 17.
 | Rank in QBR | 6.90 | lower better |
 | Red zone combined attempts | 6.848 | higher better |
 | Rank in neutral pace | 12.697 | lower better |
-| Rank in pass offense DVOA | 7.01 | lower better |
+| Pass EPA rank (proxy) | 5.03 | lower better |
 | Injury concern | categorical | lower better |
 
 The elite-QB archetype this encodes is worth stating plainly, because it should drive copy
@@ -145,7 +145,8 @@ green-heavy QB profile.
 
 The shipped factor list deliberately excludes `ADP`: market price belongs in the separate
 `ValueScore`, not in `CeilingScore`. The twelfth QB factor is injury concern. Pass-offense
-DVOA remains the one unsourced QB gap, so current ceiling coverage is 11/12.
+efficiency is sourced as team **pass EPA/play rank** (`pass_epa_rank`), a free nflverse
+proxy — not opponent-adjusted DVOA. Current ceiling coverage is 12/12.
 
 ### 1.3 Wide receiver factors
 
@@ -195,7 +196,7 @@ Benchmarks from `TE Avg Scoring.PNG`.
 **Volume factors** (3): targets 8.10/g (137.67 paced), receptions 5.71/g (97.02),
 touchdowns 0.56/g (9.49).
 
-**Situational factors** (10):
+**Situational factors** (9):
 
 | Factor | Benchmark | Direction |
 | --- | --- | --- |
@@ -205,14 +206,14 @@ touchdowns 0.56/g (9.49).
 | Rank in team targets | 1.43 | lower better |
 | Rank in receiving touchdowns | 1.38 | lower better |
 | Route participation | 79.8% | higher better |
-| In-line % | 39.0% | lower better |
-| Rank in yards per route run | 5.14 | lower better |
+| Yards per route run (proxy) | 1.956 | higher better |
 | Offensive line rank in pass blocking (proxy) | 14.667 | lower better |
 | Rank in neutral pace | 14.667 | lower better |
 
 **Profile factor** (1): `Injury/Age Concern`, graded in `TE ADPs #1-8.PNG` as `Minimal
-Concerns` / `Some Concern` / `Concerned`. In-line percentage and YPRR rank remain licensed
-data gaps, giving TE 12 known factors out of 14 configured.
+Concerns` / `Some Concern` / `Concerned`. YPRR is the same participation proxy as WR
+(`yprr`, higher-better rate). In-line % is not a live factor (no honest free alignment
+proxy). All 13 configured TE factors are currently sourced.
 
 The TE position has the sharpest, most usable signal of any position, and the annotations in
 `TE Avg Scoring.PNG` state it directly: of the 37 league-winning TE seasons studied, only
@@ -228,10 +229,10 @@ in the same annotation — the 4 TEs who cleared with sub-70% route participatio
 touchdown-dependent, which is the least stable production source in fantasy football, so
 those profiles should carry a volatility flag.
 
-The in-line percentage direction is counterintuitive and worth a tooltip: a *lower* in-line
-rate is better because it means the TE is being deployed as a receiver in the slot or out
-wide rather than as a blocker. `TE League Winners 2025-2024.PNG` shows Trey McBride at 28.0%
-and Brock Bowers at 30.5% in-line, versus George Kittle at 57.0%.
+The historical in-line finding is still worth stating in copy, even though `inline_pct` is
+not a scored factor: a *lower* in-line rate meant the TE was deployed as a receiver in the
+slot or out wide rather than as a blocker. `TE League Winners 2025-2024.PNG` shows Trey
+McBride at 28.0% and Brock Bowers at 30.5% in-line, versus George Kittle at 57.0%.
 
 ### 1.5 Running back factors
 
@@ -265,6 +266,14 @@ factor definitions as data and iterates, so neither the factor count nor names a
 **Confidence is derived from each position's configured factor count.** This lets missing
 inputs surface as unknown without special-casing a position or silently rewarding incomplete
 coverage.
+
+### 1.6 Board display
+
+The player board shows **raw** `CeilingScore` with no `/60` (or any position-max denominator).
+Green styling marks the **top 5 raw ceilings at that position** (ties at the cutoff included;
+provisional rows excluded). A **SCORE** column shows `DraftScore` (or contextual score when
+present). **CONF** is `known / configured` using that position's catalog size (QB 12, RB 16,
+TE 13, WR 17), not a hardcoded 12.
 
 ---
 
