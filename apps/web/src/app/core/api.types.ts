@@ -1,5 +1,5 @@
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
-export type FactorGrade = 'green' | 'yellow' | 'orange' | 'red' | 'unknown';
+export type FactorGrade = 'elite' | 'green' | 'yellow' | 'orange' | 'red' | 'critical' | 'unknown';
 export type StrategyTier = 'S' | 'A' | 'B' | 'C' | 'unrated';
 
 export interface Player {
