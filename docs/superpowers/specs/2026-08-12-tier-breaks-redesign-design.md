@@ -102,9 +102,15 @@ rather than being added to an existing one.
 ```ts
 qualityBand(draftScore: number, ceilingKnownFactors: number): QualityBand | null
 detectCliffs(scores: number[], k?: number): CliffMarker[]
-survivalBands(rows: TierRow[], nextPickOverall: number, teamCount: number): SurvivalBand[]
+survivalBands(rows: TierRow[], nextPickOverall: number, picksUntilNext: number, teamCount: number, cuts?: SurvivalCuts): SurvivalBand[]
 replacementBand(positionRank: number, position: Position, roster: RosterShape, teamCount: number): ReplacementBand
+adpOverall(adpRoundPick: string, teamCount: number): number | null
+estimateSurvivalProbability(input: SurvivalInput): number   // relocated, unchanged
 ```
+
+`survivalBands` takes `picksUntilNext` explicitly rather than deriving it, because
+the caller owns draft state and `estimateSurvivalProbability` needs both that and
+`nextPickOverall`.
 
 `TierRow` is the minimum a row must expose to be banded: player id, position,
 `draftScore`, `ceilingKnownFactors`, and `adpRoundPick`. Each function is
@@ -145,9 +151,20 @@ the resulting cliffs land on the real seed artifact (see *Testing*).
 
 ### survivalBands
 
-Wraps the existing `estimateSurvivalProbability()` in
-`packages/recommendation-engine/src/scarcity.ts` rather than reimplementing it,
-and partitions into three bands plus a trailing unknown band:
+Reuses the existing `estimateSurvivalProbability()` rather than reimplementing it.
+That function currently lives in `packages/recommendation-engine/src/scarcity.ts`,
+which would make `@draftlab/tiers` depend on `recommendation-engine` and stop it
+being a leaf. Resolution: **`estimateSurvivalProbability` and its `SurvivalInput`
+type move into `@draftlab/tiers`**, and `recommendation-engine` imports them from
+there. It has exactly one internal consumer (`recommend.ts:130`) plus its tests, so
+the move is contained. `scarcityUrgencyMultiplier` stays in `recommendation-engine`
+— it is about recommendation urgency, not tiering.
+
+`adpOverall()` also moves into this package from `board.component.ts:445-451`, and
+changes its unparseable-input return from the `999` sentinel to `null`, so callers
+cannot mistake "unknown" for "very late" (see *Edge cases*).
+
+`survivalBands` partitions into three bands plus a trailing unknown band:
 
 | Band | Survival probability | Meaning |
 |---|---|---|
@@ -256,8 +273,9 @@ default is fixed.
 
 | File | Change |
 |---|---|
-| `packages/tiers/` | New package: four functions plus tests. |
+| `packages/tiers/` | New package: four functions, `adpOverall`, the relocated survival estimator, plus tests. |
 | `packages/strategy-engine/src/tiers.ts` | Deleted. |
+| `packages/recommendation-engine/src/scarcity.ts` | `estimateSurvivalProbability` + `SurvivalInput` removed; `recommend.ts:130` and its tests import from `@draftlab/tiers`. |
 | `packages/strategy-engine/src/__tests__/simulate.test.ts:99-136` | `buildCheatSheet` tests move to the new package and are rewritten. |
 | `apps/api/src/services/store.ts:647` | `cheatSheet()` repoints to the new package. |
 | `apps/web/.../board.component.ts` | Remove `buildSections`; replace `estimateNextUserPick` and `survivalNote` internals; render the two chips and cliff markers. |
