@@ -42,38 +42,38 @@ cleanly.
 
 ### 2.1 Surfaces
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `surface-base` | `#0A0E14` | App background |
-| `surface-raised` | `#111722` | Cards, panels |
+| Token             | Hex       | Use                           |
+| ----------------- | --------- | ----------------------------- |
+| `surface-base`    | `#0A0E14` | App background                |
+| `surface-raised`  | `#111722` | Cards, panels                 |
 | `surface-overlay` | `#1A2130` | Dialogs, popovers, hover rows |
-| `surface-sunken` | `#070A0F` | Table headers, wells |
-| `border-subtle` | `#1E2635` | Dividers, table gridlines |
-| `border-strong` | `#2E3A4D` | Card and input borders |
+| `surface-sunken`  | `#070A0F` | Table headers, wells          |
+| `border-subtle`   | `#1E2635` | Dividers, table gridlines     |
+| `border-strong`   | `#2E3A4D` | Card and input borders        |
 
 ### 2.2 Text
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `text-primary` | `#E8EDF5` | Headings, player names, key numbers |
-| `text-secondary` | `#96A3B8` | Labels, supporting copy |
-| `text-tertiary` | `#5D6B80` | Metadata, disabled |
-| `text-inverse` | `#0A0E14` | On accent fills |
+| Token            | Hex       | Use                                 |
+| ---------------- | --------- | ----------------------------------- |
+| `text-primary`   | `#E8EDF5` | Headings, player names, key numbers |
+| `text-secondary` | `#96A3B8` | Labels, supporting copy             |
+| `text-tertiary`  | `#5D6B80` | Metadata, disabled                  |
+| `text-inverse`   | `#0A0E14` | On accent fills                     |
 
 ### 2.3 Grade scale
 
 The spreadsheet semantics, retuned for accessible contrast on a dark surface. Each grade has
 a solid colour for text and icons plus a translucent fill for cell backgrounds.
 
-| Token | Hex | Fill | Weight |
-| --- | --- | --- | --- |
-| `grade-elite` | `#0D9488` | `#0D94881F` | +5 |
-| `grade-green` | `#22C55E` | `#22C55E1F` | +3 |
-| `grade-yellow` | `#EAB308` | `#EAB3081F` | +1 |
-| `grade-orange` | `#F97316` | `#F973161F` | -1 |
-| `grade-red` | `#EF4444` | `#EF44441F` | -3 |
-| `grade-critical` | `#9F1239` | `#9F12391F` | -5 |
-| `grade-unknown` | `#5D6B80` | `#5D6B801F` | 0 |
+| Token            | Hex       | Fill        | Weight |
+| ---------------- | --------- | ----------- | ------ |
+| `grade-elite`    | `#0D9488` | `#0D94881F` | +5     |
+| `grade-green`    | `#22C55E` | `#22C55E1F` | +3     |
+| `grade-yellow`   | `#EAB308` | `#EAB3081F` | +1     |
+| `grade-orange`   | `#F97316` | `#F973161F` | -1     |
+| `grade-red`      | `#EF4444` | `#EF44441F` | -3     |
+| `grade-critical` | `#9F1239` | `#9F12391F` | -5     |
+| `grade-unknown`  | `#5D6B80` | `#5D6B801F` | 0      |
 
 `grade-unknown` exists because unresolved factors are a real and frequent state in the source
 data (the `?` cells) and must be visually distinct from a bad grade. Rendering an unknown as
@@ -87,15 +87,15 @@ product, this is a functional requirement rather than a compliance checkbox.
 
 ### 2.4 Accent and semantic
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `accent-primary` | `#00E5A0` | Primary actions, active state, live indicator |
-| `accent-primary-dim` | `#00E5A029` | Accent fills, selected rows |
-| `accent-secondary` | `#6366F1` | Secondary emphasis, strategy accents |
-| `info` | `#38BDF8` | Informational callouts |
-| `warning` | `#FBBF24` | Drift warnings, risk flags |
-| `danger` | `#F43F5E` | Destructive actions, critical alerts |
-| `live` | `#00E5A0` | Pulsing live-sync indicator |
+| Token                | Hex         | Use                                           |
+| -------------------- | ----------- | --------------------------------------------- |
+| `accent-primary`     | `#00E5A0`   | Primary actions, active state, live indicator |
+| `accent-primary-dim` | `#00E5A029` | Accent fills, selected rows                   |
+| `accent-secondary`   | `#6366F1`   | Secondary emphasis, strategy accents          |
+| `info`               | `#38BDF8`   | Informational callouts                        |
+| `warning`            | `#FBBF24`   | Drift warnings, risk flags                    |
+| `danger`             | `#F43F5E`   | Destructive actions, critical alerts          |
+| `live`               | `#00E5A0`   | Pulsing live-sync indicator                   |
 
 ### 2.5 Tier scale
 
@@ -103,14 +103,14 @@ Reused for both strategy tiers and draft slot tiers so the grading language stay
 with `Best Draft Strategy Archetype.PNG` and `Best Spot To Draft From.PNG`, whose original
 tier colours are preserved:
 
-| Token | Hex |
-| --- | --- |
-| `tier-s` | `#8B8BFF` |
-| `tier-a` | `#5DE895` |
-| `tier-b` | `#F5E663` |
-| `tier-c` | `#F5C563` |
-| `tier-d` | `#F58A63` |
-| `tier-f` | `#F56363` |
+| Token          | Hex       |
+| -------------- | --------- |
+| `tier-s`       | `#8B8BFF` |
+| `tier-a`       | `#5DE895` |
+| `tier-b`       | `#F5E663` |
+| `tier-c`       | `#F5C563` |
+| `tier-d`       | `#F58A63` |
+| `tier-f`       | `#F56363` |
 | `tier-unrated` | `#5D6B80` |
 
 `tier-unrated` covers Zero RB, Elite QB, and draft slot 1.05, which are cropped out of the
@@ -119,13 +119,13 @@ than guessing a grade.
 
 ### 2.6 Position colours
 
-| Token | Hex |
-| --- | --- |
-| `pos-qb` | `#F472B6` |
-| `pos-rb` | `#4ADE80` |
-| `pos-wr` | `#60A5FA` |
-| `pos-te` | `#FB923C` |
-| `pos-flex` | `#A78BFA` |
+| Token               | Hex       |
+| ------------------- | --------- |
+| `pos-qb`            | `#F472B6` |
+| `pos-rb`            | `#4ADE80` |
+| `pos-wr`            | `#60A5FA` |
+| `pos-te`            | `#FB923C` |
+| `pos-flex`          | `#A78BFA` |
 | `pos-k` / `pos-dst` | `#94A3B8` |
 
 Position colours are deliberately distinct in hue from the grade scale so a green RB badge is
@@ -135,20 +135,20 @@ never confused with a green factor grade.
 
 ## 3. Typography
 
-| Token | Family | Size / Line | Weight | Use |
-| --- | --- | --- | --- | --- |
-| `display` | Inter | 32 / 40 | 700 | Page titles |
-| `h1` | Inter | 24 / 32 | 700 | Section headers |
-| `h2` | Inter | 18 / 26 | 600 | Card titles |
-| `h3` | Inter | 15 / 22 | 600 | Subsection labels |
-| `body` | Inter | 14 / 20 | 400 | Default copy |
-| `body-strong` | Inter | 14 / 20 | 600 | Player names |
-| `small` | Inter | 12 / 18 | 400 | Metadata |
-| `label` | Inter | 11 / 16 | 600, 0.06em tracking, uppercase | Column headers, tags |
-| `small-strong` | Inter | 12 / 18 | 600 | Emphasised metadata |
-| `mono-lg` | JetBrains Mono | 22 / 28 | Bold, tabular | Composite scores |
-| `mono` | JetBrains Mono | 13 / 18 | Medium, tabular | All table numerics |
-| `mono-sm` | JetBrains Mono | 11 / 16 | Medium, tabular | Dense cells, factor strips |
+| Token          | Family         | Size / Line | Weight                          | Use                        |
+| -------------- | -------------- | ----------- | ------------------------------- | -------------------------- |
+| `display`      | Inter          | 32 / 40     | 700                             | Page titles                |
+| `h1`           | Inter          | 24 / 32     | 700                             | Section headers            |
+| `h2`           | Inter          | 18 / 26     | 600                             | Card titles                |
+| `h3`           | Inter          | 15 / 22     | 600                             | Subsection labels          |
+| `body`         | Inter          | 14 / 20     | 400                             | Default copy               |
+| `body-strong`  | Inter          | 14 / 20     | 600                             | Player names               |
+| `small`        | Inter          | 12 / 18     | 400                             | Metadata                   |
+| `label`        | Inter          | 11 / 16     | 600, 0.06em tracking, uppercase | Column headers, tags       |
+| `small-strong` | Inter          | 12 / 18     | 600                             | Emphasised metadata        |
+| `mono-lg`      | JetBrains Mono | 22 / 28     | Bold, tabular                   | Composite scores           |
+| `mono`         | JetBrains Mono | 13 / 18     | Medium, tabular                 | All table numerics         |
+| `mono-sm`      | JetBrains Mono | 11 / 16     | Medium, tabular                 | Dense cells, factor strips |
 
 Tabular monospace numerals for every number in a column is not a stylistic flourish — with
 position-configured factor values per player row, proportional digits make columns fail to
@@ -219,8 +219,14 @@ in round.pick notation alongside, since value is meaningless without the price.
 **`PlayerRow`** — the board's primary row: position badge, name, team, ADP, ceiling score,
 archetype, risk, value, projected points, and a target/avoid marker.
 
-**`TierBreak`** — the explicit horizontal rule between board tiers with a remaining-count and
-survival estimate, so cliffs are visible rather than described.
+**`TierBreak`** — the horizontal rule between board survival bands, carrying a
+remaining-count and the odds of reaching the user's next pick. Scoring cliffs are
+marked separately and inline, by `CliffMarker`, since they answer a different
+question and do not align with band boundaries.
+
+**`CliffMarker`** — an inline dashed rule with the point gap, shown between two
+adjacent rows where the score drop is large relative to the typical gap. Rendered
+only under a score-based sort, where row adjacency is meaningful.
 
 **`StrategyCard`** — a strategy with its tier grade, verbatim definition, round shape preview,
 and fit-for-your-slot indicator.
@@ -251,21 +257,21 @@ inflation rate, and the max-bid figure that is the auction room's most valuable 
 
 Thirteen screens, ordered by the flow a new user follows. All are built in the Figma file.
 
-| # | Screen | Purpose |
-| --- | --- | --- |
-| — | [**Login**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1285) | Account sign-in: DraftLab brand, email/password, primary CTA, link to Sign up, inline error state (centered auth panel, no app chrome) |
-| — | [**Sign up**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1286) | Account creation: display name, email, password, confirm password, primary CTA, link to Login |
-| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and a model-coverage card showing per-position factor confidence |
-| 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow, manual league setup as an equal path for other platforms, discovered-league table with detected format and scoring, and a note stating plainly why ESPN is not supported |
-| 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |
-| 4 | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240) | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout |
-| 5 | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces |
-| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the position-specific factor strip per row |
-| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full position-specific factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
-| 8 | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108) | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert |
-| 9 | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108) | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector |
-| 10 | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149) | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets |
-| — | [**User Profile**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=62-1285) | Account customisation: identity strip, account details, account-wide draft preferences, password and active sessions, notification lead times, the Sleeper connection in summary, and a danger zone that names what deletion removes |
+| #   | Screen                                                                                        | Purpose                                                                                                                                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| —   | [**Login**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1285)              | Account sign-in: DraftLab brand, email/password, primary CTA, link to Sign up, inline error state (centered auth panel, no app chrome)                                                                                               |
+| —   | [**Sign up**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1286)            | Account creation: display name, email, password, confirm password, primary CTA, link to Login                                                                                                                                        |
+| 1   | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6)             | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and a model-coverage card showing per-position factor confidence                                      |
+| 2   | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88)      | Sleeper username flow, manual league setup as an equal path for other platforms, discovered-league table with detected format and scoring, and a note stating plainly why ESPN is not supported                                      |
+| 3   | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164)    | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against                                                          |
+| 4   | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240)    | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout                                                               |
+| 5   | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces                                                                                                |
+| 6   | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341)        | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the position-specific factor strip per row                                                                |
+| 7   | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019)      | Full position-specific factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value                                                                   |
+| 8   | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108)    | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert                                        |
+| 9   | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108)       | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector                                                             |
+| 10  | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149)     | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets                                                                                                                 |
+| —   | [**User Profile**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=62-1285)       | Account customisation: identity strip, account details, account-wide draft preferences, password and active sessions, notification lead times, the Sleeper connection in summary, and a danger zone that names what deletion removes |
 
 The profile screen is reached from the top bar avatar rather than the left navigation, since the
 sidebar is league-scoped and the account is not. The menu is drawn separately as
