@@ -41,7 +41,6 @@ import {
 } from '@draftlab/integrations';
 import { recommendPlayers } from '@draftlab/recommendation-engine';
 import {
-  buildCheatSheet,
   compareStrategies,
   getDraftSlotInfo,
   listStrategies,
@@ -50,6 +49,7 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
+import { buildCheatSheet } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
@@ -369,10 +369,12 @@ export class AppStore {
       .map((p) => this.getPlayer(p.playerId!)!)
       .filter(Boolean);
 
-    const available = this.seeds.filter((s) => !draftedIds.has(s.player.id)).map((s) => ({
-      player: s.player,
-      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
-    }));
+    const available = this.seeds
+      .filter((s) => !draftedIds.has(s.player.id))
+      .map((s) => ({
+        player: s.player,
+        evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
+      }));
 
     const round = Math.floor((draft.currentPick - 1) / league.teamCount) + 1;
     const slotInfo = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
@@ -411,19 +413,21 @@ export class AppStore {
 
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
-    return this.seeds.map((s) => ({
-      player: withHeadshot(s.player),
-      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
-      recommendation: recById.get(s.player.id),
-      drafted: draftedIds.has(s.player.id),
-      target: targetSet.has(s.player.id),
-      avoid: avoidSet.has(s.player.id),
-      projectedPoints: s.market.projectedPoints ?? null,
-    })).sort((a, b) => {
-      const ar = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
-      const br = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
-      return br - ar;
-    });
+    return this.seeds
+      .map((s) => ({
+        player: withHeadshot(s.player),
+        evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
+        recommendation: recById.get(s.player.id),
+        drafted: draftedIds.has(s.player.id),
+        target: targetSet.has(s.player.id),
+        avoid: avoidSet.has(s.player.id),
+        projectedPoints: s.market.projectedPoints ?? null,
+      }))
+      .sort((a, b) => {
+        const ar = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
+        const br = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
+        return br - ar;
+      });
   }
 
   applyPick(leagueId: string, pick: Omit<PickEvent, 'pickedAt'> & { pickedAt?: string }) {
@@ -704,7 +708,9 @@ export class AppStore {
       };
     };
 
-    const rosterBoard = rosterPlayers.map((p) => toRow(p.id)).sort((a, b) => b.dynastyScore - a.dynastyScore);
+    const rosterBoard = rosterPlayers
+      .map((p) => toRow(p.id))
+      .sort((a, b) => b.dynastyScore - a.dynastyScore);
 
     const board = this.seeds
       .map((s) => toRow(s.player.id))

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { compareStrategies, createRng, simulateStrategy, type SimPlayer } from '../simulate.js';
-import { buildCheatSheet } from '../tiers.js';
 
 const pool: SimPlayer[] = [
   { id: 'p1', name: 'WR1', position: 'WR', adpOverall: 1, draftScore: 85 },
@@ -93,49 +92,5 @@ describe('createRng', () => {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThan(1);
     }
-  });
-});
-
-describe('buildCheatSheet', () => {
-  it('groups players into positional tiers', () => {
-    const sheet = buildCheatSheet(
-      pool.map((p) => ({
-        id: p.id,
-        name: p.name,
-        position: p.position,
-        draftScore: p.draftScore,
-        ceilingScore: null,
-        provisional: p.position === 'RB',
-        ceilingKnownFactors: 5,
-        adpRoundPick: '1.01',
-      })),
-    );
-    expect(sheet.find((g) => g.position === 'WR')?.tiers.length).toBeGreaterThan(0);
-    expect(
-      sheet.every((g) => g.tiers.every((t) => t.players.every((p) => p.position === g.position))),
-    ).toBe(true);
-  });
-
-  it('excludes zero-known-factor players from tiers and lists them as unranked instead', () => {
-    const sheet = buildCheatSheet(
-      pool.map((p, i) => ({
-        id: p.id,
-        name: p.name,
-        position: p.position,
-        // First WR in the pool has a wildly inflated score from mostly-generic defaults
-        // (no real measured production) — must not stretch the tier range for the rest.
-        draftScore: p.position === 'WR' && i === 0 ? 999 : p.draftScore,
-        ceilingScore: p.position === 'WR' && i === 0 ? null : 10,
-        provisional: false,
-        ceilingKnownFactors: p.position === 'WR' && i === 0 ? 0 : 5,
-        adpRoundPick: '1.01',
-      })),
-    );
-    const wrGroup = sheet.find((g) => g.position === 'WR')!;
-    expect(wrGroup.unranked).toHaveLength(1);
-    expect(wrGroup.unranked[0]!.draftScore).toBe(999);
-    expect(wrGroup.tiers.every((t) => t.players.every((p) => p.ceilingKnownFactors > 0))).toBe(
-      true,
-    );
   });
 });

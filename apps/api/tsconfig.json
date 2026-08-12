@@ -8,5 +8,6 @@
     "declarationMap": false
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts"]
+  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts"],
+  "references": [{ "path": "../../packages/tiers" }]
 }
