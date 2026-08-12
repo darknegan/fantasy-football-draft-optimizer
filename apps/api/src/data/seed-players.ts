@@ -34,6 +34,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 6,
       positionalTop8FinishCount: 7,
+      positionalTop12FinishCount: 7,
     },
     // Engineered to reproduce spreadsheet CeilingScore 41 (7G/3Y/1R/1 unknown)
     factors: [
@@ -66,6 +67,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 5,
       teamPositionRank: 1,
     },
     // Engineered to 9G / 1Y / 2R → CeilingScore 42
@@ -99,6 +101,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 1,
       positionalTop8FinishCount: 1,
+      positionalTop12FinishCount: 1,
     },
     // Engineered to 8G / 1Y / 1O / 2R → CeilingScore 36
     factors: [
@@ -131,6 +134,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
     },
     factors: [
       { factorId: 'targets', value: 8.1 * 1.2 },
@@ -162,6 +166,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.02', fseRank: 3, espnProjectionRank: 4 },
@@ -181,6 +186,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 5,
     },
     factors: [],
     market: { adpRoundPick: '1.04', fseRank: 5, espnProjectionRank: 6 },
@@ -200,6 +206,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 5,
       teamPositionRank: 1,
     },
     factors: [
@@ -232,6 +239,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 5,
       teamPositionRank: 1,
     },
     factors: [
@@ -264,6 +272,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 5,
       positionalTop8FinishCount: 6,
+      positionalTop12FinishCount: 6,
     },
     factors: [
       { factorId: 'pass_attempts', value: 28 },
@@ -295,6 +304,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.06', fseRank: 7, espnProjectionRank: 8 },
@@ -313,6 +323,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 3,
       positionalTop8FinishCount: 4,
+      positionalTop12FinishCount: 4,
       teamPositionRank: 1,
     },
     factors: [
@@ -345,6 +356,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       status: 'active',
       positionalTop5FinishCount: 5,
       positionalTop8FinishCount: 7,
+      positionalTop12FinishCount: 7,
     },
     factors: [
       { factorId: 'targets', value: 6.5 },

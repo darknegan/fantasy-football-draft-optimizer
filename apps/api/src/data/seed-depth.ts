@@ -13,9 +13,10 @@ const DEPTH: Array<{
   fse: number;
   espn: number;
   draftScoreHint?: number;
-  /** Prior top-5/top-8-at-position finish counts. */
+  /** Prior top-5/top-8/top-12-at-position finish counts. */
   top5FinishCount?: number;
   top8FinishCount?: number;
+  top12FinishCount?: number;
 }> = [
   {
     id: 'nico-collins',
@@ -421,6 +422,7 @@ function toPlayer(d: (typeof DEPTH)[number]): Player {
     status: 'active',
     positionalTop5FinishCount: d.top5FinishCount ?? 0,
     positionalTop8FinishCount: d.top8FinishCount ?? 0,
+    positionalTop12FinishCount: d.top12FinishCount ?? d.top8FinishCount ?? 0,
     // Crude ADP-based heuristic (early pick -> presumed team-position lead), same as the
     // old isClearWr1 stood in for before real team_position_rank data existed. Applied to
     // both WR and RB now that classifyRb also uses this field.

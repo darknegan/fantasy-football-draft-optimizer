@@ -17,6 +17,7 @@ function stubPlayer(id: string, position: Player['position'], name = id): Player
     status: 'active',
     positionalTop5FinishCount: 2,
     positionalTop8FinishCount: 3,
+    positionalTop12FinishCount: 3,
   };
 }
 

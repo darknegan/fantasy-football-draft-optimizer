@@ -68,6 +68,7 @@ describe('seedPlayersFromArtifact', () => {
             provenance: 'measured',
             top5_finish_count: 2,
             top8_finish_count: 3,
+            top12_finish_count: 3,
           },
           factors: {
             touches: { value: 18.824, provenance: 'measured', note: null },
@@ -119,6 +120,7 @@ describe('seedPlayersFromArtifact', () => {
       status: 'active',
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
       teamPositionRank: 1,
     });
 

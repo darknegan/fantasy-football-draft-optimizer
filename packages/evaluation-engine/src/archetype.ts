@@ -122,17 +122,23 @@ export function computeArchetypeEv(rates: ArchetypeRates): number {
   );
 }
 
+/** Finish count strictly greater than half of seasons in league (e.g. 8 yrs → ≥5). */
+export function overHalf(finishCount: number, seasonsInLeague: number): boolean {
+  return finishCount > seasonsInLeague / 2;
+}
+
 function classifySkillPosition(player: Player): ArchetypeId {
   const top5 = player.positionalTop5FinishCount ?? 0;
   const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
   const seasons = player.seasonsInLeague;
 
   if (seasons <= 3 && top5 === 0) return 'BREAKOUT_CANDIDATE';
   if (seasons <= 3 && top5 === 1) return 'PROVEN_BREAKOUT_CANDIDATE';
   if (seasons <= 4 && top5 >= 2) return 'ELITE';
-  if (seasons <= 6 && top8 >= 3) return 'ELITE';
-  if ((seasons >= 7 || player.age >= 28) && top8 >= 3) return 'TRUSTY_VETERAN';
-  if ((seasons >= 7 || player.age >= 28) && top8 < 3) return 'VETERAN';
+  if (seasons > 4 && overHalf(top8, seasons)) return 'ELITE';
+  if (seasons > 4 && overHalf(top12, seasons)) return 'TRUSTY_VETERAN';
+  if (seasons >= 7 || player.age >= 28) return 'VETERAN';
   return 'IN_THEIR_PRIME';
 }
 
@@ -151,14 +157,15 @@ export function classifyTe(player: Player): ArchetypeId {
 export function classifyQb(player: Player): ArchetypeId {
   const top5 = player.positionalTop5FinishCount ?? 0;
   const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
   const seasons = player.seasonsInLeague;
 
   if (seasons <= 3 && top5 === 0) return 'BREAKOUT_CANDIDATE';
   if (seasons <= 3 && top5 === 1) return 'PROVEN_BREAKOUT_CANDIDATE';
   if (seasons <= 4 && top5 >= 2) return 'ELITE';
-  if (seasons <= 6 && top8 >= 3) return 'ELITE';
-  if (player.age >= 34 && top8 >= 3) return 'TRUSTY_VETERAN';
-  if (player.age >= 34 && top8 < 3) return 'VETERAN';
+  if (seasons > 4 && overHalf(top8, seasons)) return 'ELITE';
+  if (seasons > 4 && overHalf(top12, seasons)) return 'TRUSTY_VETERAN';
+  if (player.age >= 34) return 'VETERAN';
   return 'IN_THEIR_PRIME';
 }
 

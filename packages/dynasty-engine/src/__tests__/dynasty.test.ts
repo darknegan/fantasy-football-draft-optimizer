@@ -60,6 +60,7 @@ function player(partial: Partial<Player> & Pick<Player, 'id' | 'name' | 'age' | 
     status: 'active',
     positionalTop5FinishCount: 0,
     positionalTop8FinishCount: 0,
+    positionalTop12FinishCount: 0,
     ...partial,
   };
 }

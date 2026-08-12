@@ -86,14 +86,12 @@ export interface Player {
   positionalTop5FinishCount: number;
   /** Career top-8 finishes at the player's position (season fantasy-point rank). */
   positionalTop8FinishCount: number;
+  /** Career top-12 finishes at the player's position (season fantasy-point rank). */
+  positionalTop12FinishCount: number;
   /**
-   * @deprecated Use positionalTop5FinishCount / positionalTop8FinishCount. Removed in Task 4–5.
+   * @deprecated Prefer positionalTop12FinishCount. Kept optional for older fixtures.
    */
   hasPositionalTop12Finish?: boolean;
-  /**
-   * @deprecated Use positionalTop5FinishCount / positionalTop8FinishCount. Removed in Task 4–5.
-   */
-  positionalTop12FinishCount?: number;
   /**
    * WR/RB only: rank among same-team, same-position teammates by the position's primary
    * volume stat (targets for WR, touches for RB). 1 = the team's clear lead option — a

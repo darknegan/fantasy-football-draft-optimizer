@@ -259,6 +259,7 @@ describe('archetype classification', () => {
       status: 'active',
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 5,
       teamPositionRank: 1,
     };
     expect(classifyWr(chase)).toBe('ELITE');
@@ -281,6 +282,7 @@ describe('archetype classification', () => {
       status: 'active',
       positionalTop5FinishCount: 0,
       positionalTop8FinishCount: 1,
+      positionalTop12FinishCount: 1,
       teamPositionRank: 2,
     };
     expect(classifyWr(wr2)).toBe('IN_THEIR_PRIME');
@@ -300,6 +302,7 @@ describe('archetype classification', () => {
       status: 'active',
       positionalTop5FinishCount: 0,
       positionalTop8FinishCount: 0,
+      positionalTop12FinishCount: 0,
       ...overrides,
     };
   }
@@ -318,7 +321,7 @@ describe('archetype classification', () => {
     );
   });
 
-  it('classifies an accomplished veteran as trusty', () => {
+  it('classifies an accomplished veteran as trusty via top-12 half-rate', () => {
     expect(
       classifyRb(
         rb({
@@ -326,6 +329,7 @@ describe('archetype classification', () => {
           age: 29,
           positionalTop5FinishCount: 2,
           positionalTop8FinishCount: 3,
+          positionalTop12FinishCount: 5,
         }),
       ),
     ).toBe('TRUSTY_VETERAN');
@@ -338,6 +342,7 @@ describe('archetype classification', () => {
       seasonsInLeague: 3,
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
       teamPositionRank: 1,
     });
     expect(classifyRb(bijan)).toBe('ELITE');
@@ -348,6 +353,7 @@ describe('archetype classification', () => {
       seasonsInLeague: 3,
       positionalTop5FinishCount: 2,
       positionalTop8FinishCount: 3,
+      positionalTop12FinishCount: 3,
     });
     expect(classifyRb(gibbs)).toBe('ELITE');
 
@@ -357,8 +363,9 @@ describe('archetype classification', () => {
       seasonsInLeague: 8,
       positionalTop5FinishCount: 4,
       positionalTop8FinishCount: 5,
+      positionalTop12FinishCount: 6,
     });
-    expect(classifyRb(saquon)).toBe('TRUSTY_VETERAN');
+    expect(classifyRb(saquon)).toBe('ELITE');
 
     const chaseBrown = rb({
       name: 'Chase Brown',
@@ -366,6 +373,7 @@ describe('archetype classification', () => {
       seasonsInLeague: 3,
       positionalTop5FinishCount: 1,
       positionalTop8FinishCount: 2,
+      positionalTop12FinishCount: 2,
       teamPositionRank: 1,
     });
     expect(classifyRb(chaseBrown)).toBe('PROVEN_BREAKOUT_CANDIDATE');

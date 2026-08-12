@@ -272,8 +272,9 @@ coverage.
 
 Both the RB and WR studies bucket players by age and experience and then measure how each
 bucket actually performed. DraftLab replaces the old positional top-12 breakout gate and the
-WR1/RB1 vs WR2 label split with a shared **top-5 / top-8 at-position finish ladder**. Finish
-counts come from season-total fantasy points (full PPR) at the player's fantasy position.
+WR1/RB1 vs WR2 label split with a shared **top-5 / top-8 / top-12 at-position finish ladder**.
+Finish counts come from season-total fantasy points (full PPR) at the player's fantasy
+position. Nested ranks: top-5 ⊆ top-8 ⊆ top-12 for the same season window.
 
 ```ts
 type ArchetypeId =
@@ -286,12 +287,14 @@ type ArchetypeId =
 ```
 
 **Removed:** `PRIME_WR1`, `PRIME_WR2`, `PRIME_RB1`, `PRIME_RB2` and any volume blend on
-those labels. A top-5 finish counts toward top-8 history (same seasonal ranks).
+those labels.
+
+Helper: `overHalf(count, seasons) => count > seasons / 2` (e.g. 8 seasons → need ≥5 finishes).
 
 ### 2.1 Classification rules
 
 Evaluate **in order 1→7**; first match wins. RB / WR / TE share the same ladder; QB uses
-rules 1–4 and 7 unchanged, with a narrower veteran gate (age ≥ 34 only — not
+rules 1–5 and 7 unchanged, with a narrower veteran gate (age ≥ 34 only — not
 `seasonsInLeague ≥ 7`).
 
 | # | Rule (RB / WR / TE) | Archetype |
@@ -299,18 +302,19 @@ rules 1–4 and 7 unchanged, with a narrower veteran gate (age ≥ 34 only — n
 | 1 | `seasonsInLeague ≤ 3` **and** top-5 finishes `= 0` | `BREAKOUT_CANDIDATE` |
 | 2 | `seasonsInLeague ≤ 3` **and** top-5 finishes `= 1` | `PROVEN_BREAKOUT_CANDIDATE` |
 | 3 | `seasonsInLeague ≤ 4` **and** top-5 finishes `≥ 2` | `ELITE` |
-| 4 | `seasonsInLeague ≤ 6` **and** top-8 finishes `≥ 3` | `ELITE` |
-| 5 | (`seasonsInLeague ≥ 7` **or** `age ≥ 28`) **and** top-8 finishes `≥ 3` | `TRUSTY_VETERAN` |
-| 6 | (`seasonsInLeague ≥ 7` **or** `age ≥ 28`) **and** top-8 finishes `< 3` | `VETERAN` |
+| 4 | `seasonsInLeague > 4` **and** `overHalf(top8, seasons)` | `ELITE` |
+| 5 | `seasonsInLeague > 4` **and** `overHalf(top12, seasons)` | `TRUSTY_VETERAN` |
+| 6 | (`seasonsInLeague ≥ 7` **or** `age ≥ 28`) — missed 4 and 5 | `VETERAN` |
 | 7 | Else | `IN_THEIR_PRIME` |
 
-**QB veteran split (rules 5–6):** `age ≥ 34` with top-8 `≥ 3` → `TRUSTY_VETERAN`; `age ≥ 34`
-with top-8 `< 3` → `VETERAN`.
+**QB rule 6:** `age ≥ 34` if rules 4–5 did not match → `VETERAN`. Rules 4–5 can keep mid-career
+QBs `ELITE` / `TRUSTY_VETERAN` without waiting for age 34 (e.g. Allen with 7 top-8s in 8
+seasons → `ELITE`).
 
 Load-bearing gaps (do not relax without evidence):
 
-- Year 5–6 with 2× top-5 but `< 3` top-8 → `IN_THEIR_PRIME` (not `ELITE`).
-- Year 7+ / age gate never stays `ELITE`; pedigreed agers become `TRUSTY_VETERAN`.
+- Year 5–6 with 2× top-5 but failing half-rates → usually `IN_THEIR_PRIME` (not `ELITE`).
+- `ELITE` **can** persist past year 6/7 while the top-8 half-rate holds.
 - Young players hit rules 1–2 before age-based veteran rules.
 
 The source spreadsheets in `public/stats/` still show the older Prime WR1 / Prime WR2 labels

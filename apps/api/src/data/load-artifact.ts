@@ -32,6 +32,7 @@ interface ArtifactBio {
   provenance: string;
   top5_finish_count?: number;
   top8_finish_count?: number;
+  top12_finish_count?: number;
 }
 
 interface ArtifactPlayer {
@@ -132,6 +133,7 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
       status: mapStatus(p.bio.status),
       positionalTop5FinishCount: p.bio.top5_finish_count ?? 0,
       positionalTop8FinishCount: p.bio.top8_finish_count ?? 0,
+      positionalTop12FinishCount: p.bio.top12_finish_count ?? 0,
       teamPositionRank: p.team_position_rank ?? null,
     };
 
