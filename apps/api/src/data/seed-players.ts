@@ -32,7 +32,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2018,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 6,
+      positionalTop8FinishCount: 7,
     },
     // Engineered to reproduce spreadsheet CeilingScore 41 (7G/3Y/1R/1 unknown)
     factors: [
@@ -63,7 +64,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2021,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 4,
+      positionalTop8FinishCount: 5,
       teamPositionRank: 1,
     },
     // Engineered to 9G / 1Y / 2R → CeilingScore 42
@@ -78,7 +80,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       { factorId: 'ol_pass_block_rank', value: 10.75 / 1.1 },
       { factorId: 'yprr', value: 4.81 * 1.15 },
       { factorId: 'reception_perception', value: 90 * 0.95 },
-      { factorId: 'archetype', value: 1, categorical: 'PRIME_WR1' },
+      { factorId: 'archetype', value: 1, categorical: 'ELITE' },
       { factorId: 'injury_concern', value: 1, categorical: 'serious' },
     ],
     market: { adpRoundPick: '1.01', fseRank: 1, espnProjectionRank: 2 },
@@ -95,7 +97,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2024,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 1,
+      positionalTop8FinishCount: 1,
     },
     // Engineered to 8G / 1Y / 1O / 2R → CeilingScore 36
     factors: [
@@ -126,7 +129,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2022,
       draftRound: 2,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 2,
+      positionalTop8FinishCount: 3,
     },
     factors: [
       { factorId: 'targets', value: 8.1 * 1.2 },
@@ -156,11 +160,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2023,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
-      // Computed from sleeperMCP's build_factors.py (real 2015-2025 PPR season-total
-      // ranking) — corrects an earlier hand-estimate of 2 that assumed his rookie year
-      // missed the top-12 cut. It didn't.
-      positionalTop12FinishCount: 3,
+      positionalTop5FinishCount: 2,
+      positionalTop8FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.02', fseRank: 3, espnProjectionRank: 4 },
@@ -178,7 +179,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2018,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 4,
+      positionalTop8FinishCount: 5,
     },
     factors: [],
     market: { adpRoundPick: '1.04', fseRank: 5, espnProjectionRank: 6 },
@@ -196,7 +198,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2020,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 4,
+      positionalTop8FinishCount: 5,
       teamPositionRank: 1,
     },
     factors: [
@@ -210,7 +213,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       { factorId: 'ol_pass_block_rank', value: 10 },
       { factorId: 'yprr', value: 5.1 },
       { factorId: 'reception_perception', value: 92 },
-      { factorId: 'archetype', value: 1, categorical: 'PRIME_WR1' },
+      { factorId: 'archetype', value: 1, categorical: 'ELITE' },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
     ],
     market: { adpRoundPick: '1.03', fseRank: 2, espnProjectionRank: 3 },
@@ -227,7 +230,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2020,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 4,
+      positionalTop8FinishCount: 5,
       teamPositionRank: 1,
     },
     factors: [
@@ -241,7 +245,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       { factorId: 'ol_pass_block_rank', value: 12 },
       { factorId: 'yprr', value: 4.6 },
       { factorId: 'reception_perception', value: 88 },
-      { factorId: 'archetype', value: 1, categorical: 'PRIME_WR1' },
+      { factorId: 'archetype', value: 1, categorical: 'ELITE' },
       { factorId: 'injury_concern', value: 1, categorical: 'some' },
     ],
     market: { adpRoundPick: '1.05', fseRank: 6, espnProjectionRank: 7 },
@@ -258,7 +262,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2018,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 5,
+      positionalTop8FinishCount: 6,
     },
     factors: [
       { factorId: 'pass_attempts', value: 28 },
@@ -288,11 +293,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2023,
       draftRound: 1,
       status: 'active',
-      hasPositionalTop12Finish: true,
-      // Computed from sleeperMCP's build_factors.py (real 2015-2025 PPR season-total
-      // ranking) — corrects an earlier hand-estimate of 2 that assumed his rookie year
-      // missed the top-12 cut. It didn't.
-      positionalTop12FinishCount: 3,
+      positionalTop5FinishCount: 2,
+      positionalTop8FinishCount: 3,
     },
     factors: [],
     market: { adpRoundPick: '1.06', fseRank: 7, espnProjectionRank: 8 },
@@ -309,7 +311,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2021,
       draftRound: 4,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 3,
+      positionalTop8FinishCount: 4,
       teamPositionRank: 1,
     },
     factors: [
@@ -323,7 +326,7 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       { factorId: 'ol_pass_block_rank', value: 8 },
       { factorId: 'yprr', value: 4.9 },
       { factorId: 'reception_perception', value: 91 },
-      { factorId: 'archetype', value: 1, categorical: 'PRIME_WR1' },
+      { factorId: 'archetype', value: 1, categorical: 'ELITE' },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
     ],
     market: { adpRoundPick: '1.08', fseRank: 9, espnProjectionRank: 10 },
@@ -340,7 +343,8 @@ export const SEED_PLAYERS: SeedPlayer[] = [
       draftYear: 2017,
       draftRound: 5,
       status: 'active',
-      hasPositionalTop12Finish: true,
+      positionalTop5FinishCount: 5,
+      positionalTop8FinishCount: 7,
     },
     factors: [
       { factorId: 'targets', value: 6.5 },

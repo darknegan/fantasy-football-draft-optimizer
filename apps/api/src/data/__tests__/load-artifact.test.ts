@@ -34,8 +34,8 @@ describe('seedPlayersFromArtifact', () => {
             draft_year: null,
             status: null,
             provenance: 'missing:no_sleeper_id',
-            top12_finish_count: 0,
-            top12_finish_seasons: [],
+            top5_finish_count: 0,
+            top8_finish_count: 0,
           },
           factors: {},
         },
@@ -66,8 +66,8 @@ describe('seedPlayersFromArtifact', () => {
             draft_year: 2023,
             status: 'Active',
             provenance: 'measured',
-            top12_finish_count: 3,
-            top12_finish_seasons: [2023, 2024, 2025],
+            top5_finish_count: 2,
+            top8_finish_count: 3,
           },
           factors: {
             touches: { value: 18.824, provenance: 'measured', note: null },
@@ -117,8 +117,8 @@ describe('seedPlayersFromArtifact', () => {
       draftYear: 2023,
       draftRound: null,
       status: 'active',
-      hasPositionalTop12Finish: true,
-      positionalTop12FinishCount: 3,
+      positionalTop5FinishCount: 2,
+      positionalTop8FinishCount: 3,
       teamPositionRank: 1,
     });
 
@@ -134,15 +134,14 @@ describe('seedPlayersFromArtifact', () => {
       value: null,
       provenance: 'unsourced',
     });
-    // Archetype is computed here (classifyArchetype), never trusted from the artifact,
-    // which never supplies one. 3 top-12 finishes -> not a breakout, young enough and
-    // not a veteran -> prime, and team_position_rank 1 -> PRIME_RB1 (team's lead back).
+    // Archetype is computed here (classifyArchetype), never trusted from the artifact.
+    // Two top-5 finishes in four or fewer seasons maps to ELITE.
     // Exactly one entry — the artifact's own null 'archetype' placeholder must not
     // survive alongside the computed one.
     const archetypeEntries = sp.factors.filter((f) => f.factorId === 'archetype');
     expect(archetypeEntries).toHaveLength(1);
     expect(archetypeEntries[0]).toMatchObject({
-      categorical: 'PRIME_RB1',
+      categorical: 'ELITE',
       provenance: 'computed:classifyArchetype',
     });
     // Injury concern is artifact-sourced when its categorical value is present.
@@ -185,8 +184,8 @@ describe('seedPlayersFromArtifact', () => {
             draft_year: 2023,
             status: 'Active',
             provenance: 'measured',
-            top12_finish_count: 3,
-            top12_finish_seasons: [2023, 2024, 2025],
+            top5_finish_count: 2,
+            top8_finish_count: 3,
           },
           factors: {},
         },
@@ -196,7 +195,7 @@ describe('seedPlayersFromArtifact', () => {
     expect(players[0].market.projectedRank).toBe(3);
   });
 
-  it('passes team_position_rank through into player.teamPositionRank and drives PRIME_RB1/RB2', () => {
+  it('passes team_position_rank through without changing the finish-count archetype', () => {
     const base = {
       sleeper_id: '9221',
       name: 'Jahmyr Gibbs',
@@ -211,8 +210,8 @@ describe('seedPlayersFromArtifact', () => {
         draft_year: 2023,
         status: 'Active',
         provenance: 'measured',
-        top12_finish_count: 3,
-        top12_finish_seasons: [2023, 2024, 2025],
+        top5_finish_count: 2,
+        top8_finish_count: 3,
       },
       factors: {},
     };
@@ -222,7 +221,7 @@ describe('seedPlayersFromArtifact', () => {
     );
     expect(lead.players[0].player.teamPositionRank).toBe(1);
     expect(lead.players[0].factors.find((f) => f.factorId === 'archetype')?.categorical).toBe(
-      'PRIME_RB1',
+      'ELITE',
     );
 
     const committee = seedPlayersFromArtifact(
@@ -230,7 +229,7 @@ describe('seedPlayersFromArtifact', () => {
     );
     expect(committee.players[0].player.teamPositionRank).toBe(2);
     expect(committee.players[0].factors.find((f) => f.factorId === 'archetype')?.categorical).toBe(
-      'PRIME_RB2',
+      'ELITE',
     );
 
     // Absent entirely (older schema, or genuinely unsourced) -> null, not a crash.
@@ -262,8 +261,8 @@ describe('seedPlayersFromArtifact', () => {
             draft_year: 2024,
             status: raw,
             provenance: 'measured',
-            top12_finish_count: 0,
-            top12_finish_seasons: [],
+            top5_finish_count: 0,
+            top8_finish_count: 0,
           },
           factors: {},
         },
