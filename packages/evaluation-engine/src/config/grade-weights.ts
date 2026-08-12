@@ -1,10 +1,12 @@
-import type { FactorGrade, Position } from '@draftlab/domain';
+import type { FactorGrade, GradingBands, Position } from '@draftlab/domain';
 
 export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
-  green: 5,
-  yellow: 3,
+  elite: 5,
+  green: 3,
+  yellow: 1,
   orange: -1,
   red: -3,
+  critical: -5,
   unknown: 0,
 };
 
@@ -34,12 +36,25 @@ const CEILING_KNOWN_FACTORS: Record<Position, number> = {
 export const CEILING_RANGE: Record<Position, { min: number; max: number }> = Object.fromEntries(
   (Object.entries(CEILING_KNOWN_FACTORS) as Array<[Position, number]>).map(([pos, n]) => [
     pos,
-    { min: n * GRADE_WEIGHTS.red, max: n * GRADE_WEIGHTS.green },
+    { min: n * GRADE_WEIGHTS.critical, max: n * GRADE_WEIGHTS.elite },
   ]),
 ) as Record<Position, { min: number; max: number }>;
 
-export const DEFAULT_GRADING_BANDS = {
+export const DEFAULT_VOLUME_BANDS = {
+  eliteMin: 1.15,
   greenMin: 1.05,
   yellowMin: 0.9,
   orangeMin: 0.75,
-} as const;
+  redMin: 0.5,
+} as const satisfies GradingBands;
+
+export const DEFAULT_RANK_BANDS = {
+  eliteMin: 1.5,
+  greenMin: 1.05,
+  yellowMin: 0.9,
+  orangeMin: 0.75,
+  redMin: 0.5,
+} as const satisfies GradingBands;
+
+/** @deprecated use DEFAULT_VOLUME_BANDS — delete once all callers updated */
+export const DEFAULT_GRADING_BANDS = DEFAULT_VOLUME_BANDS;

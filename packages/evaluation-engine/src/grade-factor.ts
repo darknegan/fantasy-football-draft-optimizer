@@ -22,10 +22,12 @@ export function gradeByRatio(
 ): FactorGrade {
   if (benchmark === 0) return 'unknown';
   const ratio = direction === 'higherBetter' ? value / benchmark : benchmark / value;
+  if (ratio >= bands.eliteMin) return 'elite';
   if (ratio >= bands.greenMin) return 'green';
   if (ratio >= bands.yellowMin) return 'yellow';
   if (ratio >= bands.orangeMin) return 'orange';
-  return 'red';
+  if (ratio >= bands.redMin) return 'red';
+  return 'critical';
 }
 
 export function gradeSecondaryCompetition(label: SecondaryTargetCompetition): FactorGrade {
@@ -82,9 +84,12 @@ export function gradeArchetypeFactor(archetype: ArchetypeId): FactorGrade {
 export function gradeFactor(
   def: FactorDefinition,
   input: FactorInput | undefined,
-  bands: GradingBands,
+  volumeBands: GradingBands,
+  rankBands: GradingBands,
   options: GradeFactorOptions = {},
 ): GradedFactor {
+  const bands = def.direction === 'lowerBetter' ? rankBands : volumeBands;
+
   if (
     !input ||
     (input.value === null && (input.categorical === null || input.categorical === undefined))

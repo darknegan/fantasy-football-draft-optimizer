@@ -31,7 +31,9 @@ export function computeCeilingScore(
 
   const byId = new Map(inputs.map((i) => [i.factorId, i]));
   const factors = config.factors.map((def) =>
-    gradeFactor(def, byId.get(def.id), config.bands, { softCapSerious: true }),
+    gradeFactor(def, byId.get(def.id), config.volumeBands, config.rankBands, {
+      softCapSerious: true,
+    }),
   );
 
   const knownFactors = factors.filter((f) => f.grade !== 'unknown').length;
