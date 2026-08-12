@@ -56,4 +56,15 @@ describe('replacementBand', () => {
     expect(replacementBand(5, 'WR', roster, 12).id).toBe('WR1');
     expect(replacementBand(5, 'WR', roster, 12).label).toBe('WR1');
   });
+
+  it('degrades a non-positive rank to BENCH rather than emitting a malformed band', () => {
+    // 1-indexed by contract. A 0-indexed off-by-one must not silently produce "RB0".
+    expect(replacementBand(0, 'RB', roster, 12).id).toBe('BENCH');
+    expect(replacementBand(-5, 'RB', roster, 12).id).toBe('BENCH');
+  });
+
+  it('degrades a non-finite rank to BENCH', () => {
+    expect(replacementBand(Number.NaN, 'RB', roster, 12).id).toBe('BENCH');
+    expect(replacementBand(Number.POSITIVE_INFINITY, 'RB', roster, 12).id).toBe('BENCH');
+  });
 });

@@ -36,6 +36,12 @@ export function replacementBand(
   roster: RosterShape,
   teamCount: number,
 ): ReplacementBand {
+  // A rank is 1-indexed by contract. Anything else is a caller bug; degrade to
+  // BENCH rather than emitting a malformed band id like "RB0" or "RBNaN".
+  if (!Number.isFinite(positionRank) || positionRank < 1) {
+    return { id: 'BENCH', label: 'BENCH' };
+  }
+
   const starterSlots = starterSlotsPerTeam(position, roster);
   const starterCapacity = starterSlots * teamCount;
 
