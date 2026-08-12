@@ -84,7 +84,7 @@ describe('computeCeilingScore with engineered factor values', () => {
       { factorId: 'red_zone_attempts', value: 6.848 * 1.1 },
       { factorId: 'injury_concern', value: 1, categorical: 'some' },
       { factorId: 'neutral_pace_rank', value: 12.697 / 0.95 },
-      { factorId: 'pass_dvoa_rank', value: 7.01 / 0.95 },
+      { factorId: 'pass_epa_rank', value: 5.03 / 0.95 },
     ];
 
     const result = computeCeilingScore('QB', inputs);

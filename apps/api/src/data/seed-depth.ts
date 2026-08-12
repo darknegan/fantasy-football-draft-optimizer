@@ -470,8 +470,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
       { factorId: 'team_target_rank', value: quality > 0.5 ? 1 : 3 },
       { factorId: 'rec_td_rank', value: quality > 0.5 ? 1 : 3 },
       { factorId: 'route_participation', value: 79.8 * mid },
-      { factorId: 'inline_pct', value: quality > 0.5 ? 32 : 50 },
-      { factorId: 'yprr_rank', value: 5.14 / mid },
+      { factorId: 'yprr', value: 1.956 * mid },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
     ];
   }
@@ -488,7 +487,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
       { factorId: 'red_zone_attempts', value: 6.3 * mid },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
       { factorId: 'neutral_pace_rank', value: 12.86 / mid },
-      { factorId: 'pass_dvoa_rank', value: 7.01 / mid },
+      { factorId: 'pass_epa_rank', value: 5.03 / mid },
     ];
   }
   return emptyFactors(position);

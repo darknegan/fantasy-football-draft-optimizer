@@ -1,6 +1,6 @@
 {
  "schema_version": 5,
- "generated_at": "2026-08-12T14:41:15+00:00",
+ "generated_at": "2026-08-12T16:11:51+00:00",
  "basis": {
   "player_factors": "measured:2025",
   "universe": "FantasyFootballCalculator ADP 2026",
@@ -33,11 +33,11 @@
   "team_changed": 39,
   "recovered": 7,
   "provenance": {
-   "measured": 2534,
-   "unsourced": 247,
-   "missing:not_recorded": 70,
+   "measured": 2592,
+   "unsourced": 159,
+   "missing:not_recorded": 71,
    "stale:team_changed": 218,
-   "missing:no_prior_season": 295,
+   "missing:no_prior_season": 298,
    "measured:2024": 20,
    "missing:no_team_context": 39,
    "measured:2025": 8
@@ -193,10 +193,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 4,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -670,10 +670,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 1,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -777,10 +777,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 22,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -1008,10 +1008,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 24,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -1253,10 +1253,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 5,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -1486,10 +1486,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 16,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -1854,10 +1854,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 15,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -1957,10 +1957,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 10,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2055,10 +2055,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 6,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2162,10 +2162,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 3,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2411,10 +2411,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 14,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2636,10 +2636,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 23,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2736,10 +2736,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 9,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -2841,10 +2841,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 7,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -3184,10 +3184,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 12,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -3658,10 +3658,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 11,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -4508,10 +4508,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 18,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -5680,10 +5680,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 27,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -6016,10 +6016,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 8,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -6230,10 +6230,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 2,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -6715,10 +6715,10 @@
      "provenance": "stale:team_changed",
      "note": "describes ARI, player now on MIN"
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 20,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -7544,15 +7544,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.717,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -7997,10 +7992,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 17,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -8107,15 +8102,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.858,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -8442,10 +8432,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 13,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -9009,10 +8999,10 @@
      "provenance": "stale:team_changed",
      "note": "describes GB, player now on MIA"
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 2,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -9969,15 +9959,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.886,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -10306,10 +10291,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 25,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -10411,15 +10396,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.577,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -10990,10 +10970,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 31,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -12031,15 +12011,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 2.183,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -12496,10 +12471,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 20,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -12596,10 +12571,10 @@
      "provenance": "stale:team_changed",
      "note": "describes LV, player now on NYJ"
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 29,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -12947,15 +12922,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.661,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -13059,15 +13029,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.804,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -13405,15 +13370,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.697,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -13755,10 +13715,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 19,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -14354,15 +14314,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.431,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -15187,15 +15142,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 2.093,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -15307,15 +15257,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.26,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -15646,10 +15591,10 @@
      "provenance": "missing:no_prior_season",
      "note": "no measured season for this player"
     },
-    "pass_dvoa_rank": {
+    "pass_epa_rank": {
      "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+     "provenance": "missing:no_prior_season",
+     "note": "no measured season for this player"
     },
     "injury_concern": {
      "value": 1,
@@ -15745,15 +15690,10 @@
      "provenance": "missing:no_prior_season",
      "note": "no measured season for this player"
     },
-    "inline_pct": {
+    "yprr": {
      "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+     "provenance": "missing:no_prior_season",
+     "note": "no measured season for this player"
     },
     "injury_concern": {
      "value": 1,
@@ -16320,10 +16260,10 @@
      "provenance": "stale:team_changed",
      "note": "describes MIA, player now on ATL"
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 26,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -16426,10 +16366,10 @@
      "provenance": "missing:no_team_context",
      "note": "player recovered from 2024; team context for that season describes a different situation"
     },
-    "pass_dvoa_rank": {
+    "pass_epa_rank": {
      "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+     "provenance": "missing:not_recorded",
+     "note": "player matched but factor absent from source"
     },
     "injury_concern": {
      "value": 1,
@@ -16559,15 +16499,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.544,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -16907,10 +16842,10 @@
      "provenance": "stale:team_changed",
      "note": "describes ATL, player now on LV"
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 21,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -17595,10 +17530,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 32,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -17928,15 +17863,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.693,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -18027,10 +17957,10 @@
      "provenance": "measured",
      "note": null
     },
-    "pass_dvoa_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+    "pass_epa_rank": {
+     "value": 21,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -18121,10 +18051,10 @@
      "provenance": "missing:no_prior_season",
      "note": "no measured season for this player"
     },
-    "pass_dvoa_rank": {
+    "pass_epa_rank": {
      "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (FTN); manual import"
+     "provenance": "missing:no_prior_season",
+     "note": "no measured season for this player"
     },
     "injury_concern": {
      "value": 1,
@@ -18220,15 +18150,10 @@
      "provenance": "stale:team_changed",
      "note": "describes BAL, player now on NYG"
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.29,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -18440,15 +18365,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 2.928,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -18669,15 +18589,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.648,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -19014,15 +18929,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.183,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -19118,15 +19028,10 @@
      "provenance": "stale:team_changed",
      "note": "describes TEN, player now on WAS"
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.296,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -21624,15 +21529,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.503,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -22196,15 +22096,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.067,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -22312,15 +22207,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.028,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -22644,15 +22534,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.743,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -23448,15 +23333,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.7,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -24122,15 +24002,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 1.251,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
@@ -24226,15 +24101,10 @@
      "provenance": "measured",
      "note": null
     },
-    "inline_pct": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
-    },
-    "yprr_rank": {
-     "value": null,
-     "provenance": "unsourced",
-     "note": "not freely redistributable (PFF); manual import"
+    "yprr": {
+     "value": 2.326,
+     "provenance": "measured",
+     "note": null
     },
     "injury_concern": {
      "value": 1,
