@@ -75,26 +75,32 @@ const RANK_FACTORS = new Set([
 ]);
 
 const INJURY_LABELS: Record<FactorGrade, string> = {
+  elite: 'Minimal',
   green: 'Minimal',
   yellow: 'Some concern',
   orange: 'Concerned',
   red: 'Serious',
+  critical: 'Serious',
   unknown: '—',
 };
 
 const GRADE_GLYPH: Record<FactorGrade, string> = {
+  elite: '★',
   green: '▲',
   yellow: '▬',
   orange: '▼',
   red: '▼',
+  critical: '✘',
   unknown: '?',
 };
 
 const GRADE_WEIGHT_LABEL: Record<FactorGrade, string> = {
-  green: '+5',
-  yellow: '+3',
+  elite: '+5',
+  green: '+3',
+  yellow: '+1',
   orange: '−1',
   red: '−3',
+  critical: '−5',
   unknown: '0',
 };
 
@@ -239,9 +245,7 @@ export class PlayerDetailComponent implements OnInit {
           return of(null);
         }),
       ),
-      board: this.leagueId
-        ? this.api.board(this.leagueId).pipe(catchError(() => of([])))
-        : of([]),
+      board: this.leagueId ? this.api.board(this.leagueId).pipe(catchError(() => of([]))) : of([]),
       league: this.leagueId
         ? this.api.league(this.leagueId).pipe(catchError(() => of(null)))
         : of(null),
@@ -424,7 +428,13 @@ export class PlayerDetailComponent implements OnInit {
     const diff = this.marketDiffFromEval(e);
 
     const riskSub =
-      risk < 25 ? 'durable profile' : risk < 45 ? 'moderate risk' : risk < 65 ? 'elevated risk' : 'high risk';
+      risk < 25
+        ? 'durable profile'
+        : risk < 45
+          ? 'moderate risk'
+          : risk < 65
+            ? 'elevated risk'
+            : 'high risk';
 
     let valueTone: MetricCard['tone'] = 'muted';
     let valueSub = 'fairly priced';
@@ -455,7 +465,7 @@ export class PlayerDetailComponent implements OnInit {
         unit: '/60',
         sub: e.ceiling.provisional
           ? 'provisional'
-          : `${counts.green}G ${counts.yellow}Y ${counts.orange}O ${counts.red}R`,
+          : `${counts.elite}E ${counts.green}G ${counts.yellow}Y ${counts.orange}O ${counts.red}R ${counts.critical}C`,
         tone: !e.ceiling.provisional && (ceil ?? 0) >= 30 ? 'good' : 'muted',
       },
       {
@@ -491,8 +501,10 @@ export class PlayerDetailComponent implements OnInit {
 
     const targetVal = target?.value;
     const tdVal = td?.value;
-    const inlineVal = inline?.value != null ? (inline.value <= 1 ? inline.value * 100 : inline.value) : null;
-    const routeVal = routes?.value != null ? (routes.value <= 1 ? routes.value * 100 : routes.value) : null;
+    const inlineVal =
+      inline?.value != null ? (inline.value <= 1 ? inline.value * 100 : inline.value) : null;
+    const routeVal =
+      routes?.value != null ? (routes.value <= 1 ? routes.value * 100 : routes.value) : null;
 
     return [
       {
@@ -531,7 +543,8 @@ export class PlayerDetailComponent implements OnInit {
 
     return Array.from({ length: n }, (_, i) => {
       const year = currentYear - (n - 1 - i);
-      const missed = i === n - 1 ? Math.max(perSeason, expected > 3 ? expected : perSeason) : perSeason;
+      const missed =
+        i === n - 1 ? Math.max(perSeason, expected > 3 ? expected : perSeason) : perSeason;
       // When durable, force zeros even if expected is a soft prior
       const value = rate < 0.05 && expected < 1.5 ? 0 : missed;
       return {
@@ -569,19 +582,23 @@ export class PlayerDetailComponent implements OnInit {
   private formatWeightedBreakdown(factors: GradedFactor[]): string {
     const c = this.gradeCounts(factors);
     let out = '';
-    if (c.green) out += `${c.green}×5`;
-    if (c.yellow) out += `${out ? ' + ' : ''}${c.yellow}×3`;
+    if (c.elite) out += `${c.elite}×5`;
+    if (c.green) out += `${out ? ' + ' : ''}${c.green}×3`;
+    if (c.yellow) out += `${out ? ' + ' : ''}${c.yellow}×1`;
     if (c.orange) out += `${out ? ' − ' : '−'}${c.orange}×1`;
     if (c.red) out += `${out ? ' − ' : '−'}${c.red}×3`;
+    if (c.critical) out += `${out ? ' − ' : '−'}${c.critical}×5`;
     return out;
   }
 
   private gradeCounts(factors: GradedFactor[]) {
     return {
+      elite: factors.filter((f) => f.grade === 'elite').length,
       green: factors.filter((f) => f.grade === 'green').length,
       yellow: factors.filter((f) => f.grade === 'yellow').length,
       orange: factors.filter((f) => f.grade === 'orange').length,
       red: factors.filter((f) => f.grade === 'red').length,
+      critical: factors.filter((f) => f.grade === 'critical').length,
     };
   }
 

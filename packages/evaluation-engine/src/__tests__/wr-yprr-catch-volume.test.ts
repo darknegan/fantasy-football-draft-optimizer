@@ -22,6 +22,6 @@ describe('WR yprr / catch% / volume (ITEM-005)', () => {
 
   it('bumps WR known ceiling factors to 17', () => {
     expect(CEILING_RANGE.WR.max).toBe(17 * 5);
-    expect(CEILING_RANGE.WR.min).toBe(17 * -3);
+    expect(CEILING_RANGE.WR.min).toBe(17 * -5);
   });
 });

@@ -70,6 +70,10 @@ app-board {
   font-size: 0.75rem;
   font-weight: 600;
 
+  &.elite {
+    color: var(--dl-grade-elite);
+    background: var(--dl-grade-elite-fill);
+  }
   &.green {
     color: var(--dl-grade-green);
     background: var(--dl-grade-green-fill);
@@ -85,6 +89,10 @@ app-board {
   &.red {
     color: var(--dl-grade-red);
     background: var(--dl-grade-red-fill);
+  }
+  &.critical {
+    color: var(--dl-grade-critical);
+    background: var(--dl-grade-critical-fill);
   }
   &.unknown {
     color: var(--dl-grade-unknown);

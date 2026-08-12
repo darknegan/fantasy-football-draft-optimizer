@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { PositionBenchmarkConfig } from '@draftlab/domain';
 import { computeCeilingScore } from '../ceiling.js';
 import { getBenchmarkConfig } from '../config/benchmarks.js';
-import { CEILING_RANGE } from '../config/grade-weights.js';
+import {
+  CEILING_RANGE,
+  DEFAULT_RANK_BANDS,
+  DEFAULT_VOLUME_BANDS,
+} from '../config/grade-weights.js';
 import { gradeFactor, gradeInjuryConcern } from '../grade-factor.js';
 
 describe('injury ceiling soft-cap', () => {
@@ -19,7 +23,6 @@ describe('injury ceiling soft-cap', () => {
     benchmark: 1,
     categorical: 'injuryConcern',
   } as const;
-  const bands = { greenMin: 1.05, yellowMin: 0.9, orangeMin: 0.75 };
   const seriousInjury = {
     factorId: 'injury_concern',
     value: 1,
@@ -27,13 +30,21 @@ describe('injury ceiling soft-cap', () => {
   } as const;
 
   it('defaults gradeFactor serious injuries to red', () => {
-    expect(gradeFactor(injuryFactor, seriousInjury, bands).grade).toBe('red');
+    expect(
+      gradeFactor(injuryFactor, seriousInjury, DEFAULT_VOLUME_BANDS, DEFAULT_RANK_BANDS).grade,
+    ).toBe('red');
   });
 
   it('soft-caps serious injuries only when explicitly requested', () => {
-    const graded = gradeFactor(injuryFactor, seriousInjury, bands, {
-      softCapSerious: true,
-    });
+    const graded = gradeFactor(
+      injuryFactor,
+      seriousInjury,
+      DEFAULT_VOLUME_BANDS,
+      DEFAULT_RANK_BANDS,
+      {
+        softCapSerious: true,
+      },
+    );
 
     expect(graded.grade).toBe('orange');
     expect(graded.weight).toBe(-1);
@@ -44,7 +55,8 @@ describe('injury ceiling soft-cap', () => {
       position: 'WR',
       season: 2025,
       provisional: false,
-      bands,
+      volumeBands: { ...DEFAULT_VOLUME_BANDS },
+      rankBands: { ...DEFAULT_RANK_BANDS },
       factors: [injuryFactor],
     };
 
@@ -59,6 +71,6 @@ describe('WR ceiling config', () => {
     const cfg = getBenchmarkConfig('WR', 2025);
     expect(cfg.factors.some((factor) => factor.id === 'route_participation')).toBe(true);
     expect(CEILING_RANGE.WR.max).toBe(85);
-    expect(CEILING_RANGE.WR.min).toBe(-51);
+    expect(CEILING_RANGE.WR.min).toBe(17 * -5);
   });
 });

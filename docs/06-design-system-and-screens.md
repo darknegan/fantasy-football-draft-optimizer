@@ -25,12 +25,13 @@ sustained use, and it makes coloured data signals read far more strongly than th
 white.
 
 **The grade colours are load-bearing, not decorative.** The entire evaluation model in
-`01-player-evaluation-model.md` is expressed as green/yellow/orange/red factor grades. Those
-four colours must be the most legible thing on screen, which means the rest of the palette
-has to stay quiet. A colourful brand palette would compete with the data and make the product
-harder to read.
+`01-player-evaluation-model.md` is expressed as elite/green/yellow/orange/red/critical factor
+grades. Those six colours must be the most legible thing on screen, which means the rest of
+the palette has to stay quiet. A colourful brand palette would compete with the data and make
+the product harder to read.
 
-**Information density is a feature.** A draft board showing 400 players, twelve factors each,
+**Information density is a feature.** A draft board showing 400 players, position-configured
+factors each,
 under a 60-second clock cannot afford generous whitespace. The design uses tight vertical
 rhythm, small-but-legible type, and tabular numerals so columns of numbers align and scan
 cleanly.
@@ -66,10 +67,12 @@ a solid colour for text and icons plus a translucent fill for cell backgrounds.
 
 | Token | Hex | Fill | Weight |
 | --- | --- | --- | --- |
-| `grade-green` | `#22C55E` | `#22C55E1F` | +5 |
-| `grade-yellow` | `#EAB308` | `#EAB3081F` | +3 |
+| `grade-elite` | `#0D9488` | `#0D94881F` | +5 |
+| `grade-green` | `#22C55E` | `#22C55E1F` | +3 |
+| `grade-yellow` | `#EAB308` | `#EAB3081F` | +1 |
 | `grade-orange` | `#F97316` | `#F973161F` | -1 |
 | `grade-red` | `#EF4444` | `#EF44441F` | -3 |
+| `grade-critical` | `#9F1239` | `#9F12391F` | -5 |
 | `grade-unknown` | `#5D6B80` | `#5D6B801F` | 0 |
 
 `grade-unknown` exists because unresolved factors are a real and frequent state in the source
@@ -79,7 +82,7 @@ and conflating them would misrepresent the model.
 
 Colour is never the sole carrier of meaning: every grade cell also shows its numeric value,
 and factor rows carry a shape indicator (▲ ▬ ▼) so the interface remains usable for
-colour-blind users. Given that four-colour coding is the core visual language of this
+colour-blind users. Given that six-band grade coding is the core visual language of this
 product, this is a functional requirement rather than a compliance checkbox.
 
 ### 2.4 Accent and semantic
@@ -148,8 +151,8 @@ never confused with a green factor grade.
 | `mono-sm` | JetBrains Mono | 11 / 16 | Medium, tabular | Dense cells, factor strips |
 
 Tabular monospace numerals for every number in a column is not a stylistic flourish — with
-twelve factor values per player row, proportional digits make columns fail to align and the
-board becomes materially harder to scan.
+position-configured factor values per player row, proportional digits make columns fail to
+align and the board becomes materially harder to scan.
 
 Two naming details that matter when writing code against the Figma file: Inter's 600 weight is
 the style `Semi Bold` (with a space), while JetBrains Mono has no semibold at all, so the mono
@@ -178,7 +181,8 @@ and a 12px cell gutter.
 ## 5. Core Components
 
 Eight of these exist as variant component sets in the Figma file's **Components** page and are
-instanced throughout the mocks: `Cell/FactorGrade` (green / yellow / orange / red / unknown),
+instanced throughout the mocks: `Cell/FactorGrade` (elite / green / yellow / orange / red /
+critical / unknown),
 `Badge/Position` (QB / RB / WR / TE), `Chip/Tier` (S / A / B / C / D / F / Unrated),
 `Badge/Archetype` (Prime WR1 / Prime WR2 / Prime RB / Prime / Breakout / Trusty Vet),
 `Chip/ValueDelta` (Discount / Neutral / Premium), `Control/Toggle` (On / Off / Locked),
@@ -195,11 +199,12 @@ Components that carry the model's semantics and must be built once and reused ev
 naming the factor, its benchmark, and the player's actual figure. The atom of the whole
 system.
 
-**`FactorGrid`** — the 12-factor breakdown for a player, grouped into Volume / Situational /
-Profile, with the weighted subtotal and an unknown count.
+**`FactorGrid`** — the position-configured factor breakdown for a player, grouped into
+Volume / Situational / Profile, with the weighted subtotal and an unknown count.
 
-**`CeilingScoreDial`** — the -36…60 composite as a radial gauge with the grade-count
-breakdown (`7G 3Y 0O 1R`) beneath, plus a confidence ring showing known-factor coverage.
+**`CeilingScoreDial`** — the position-normalised composite as a radial gauge with the
+six-band grade-count breakdown (`E G Y O R C`) beneath, plus a confidence ring showing
+known-factor coverage. Raw bounds are ±5 × the position's known-factor count.
 
 **`ArchetypeBadge`** — the career-stage bucket with its historical outcome rates on hover
 (return / boom / bust / injury), which is what makes the badge informative rather than
@@ -250,13 +255,13 @@ Thirteen screens, ordered by the flow a new user follows. All are built in the F
 | --- | --- | --- |
 | — | [**Login**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1285) | Account sign-in: DraftLab brand, email/password, primary CTA, link to Sign up, inline error state (centered auth panel, no app chrome) |
 | — | [**Sign up**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=38-1286) | Account creation: display name, email, password, confirm password, primary CTA, link to Login |
-| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and an explicit model-coverage card marking RB provisional |
+| 1 | [**Dashboard**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=10-6) | Multi-league hub covering all three league formats, draft-time conflict warning, research findings panel, readiness checklist, and a model-coverage card showing per-position factor confidence |
 | 2 | [**Connect Leagues**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=14-88) | Sleeper username flow, manual league setup as an equal path for other platforms, discovered-league table with detected format and scoring, and a note stating plainly why ESPN is not supported |
 | 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |
 | 4 | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240) | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout |
 | 5 | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces |
-| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the 12-factor strip per row |
-| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full 12-factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
+| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the position-specific factor strip per row |
+| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full position-specific factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
 | 8 | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108) | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert |
 | 9 | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108) | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector |
 | 10 | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149) | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets |

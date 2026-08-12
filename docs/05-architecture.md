@@ -132,9 +132,9 @@ interface MarketData {
 
 interface PlayerEvaluation {            // computed, cached per league
   playerId: string; leagueId: string;
-  factors: FactorGrade[];               // 12 per position
-  ceilingScore: number;                 // -36..60
-  confidenceScore: number;              // knownFactors / 12
+  factors: FactorGrade[];               // position-configured factor list
+  ceilingScore: number;                 // ±5 × known-factor count
+  confidenceScore: number;              // known / configured factors
   archetype: Archetype;
   archetypeEv: number;
   riskProfile: number;                  // 0..100
@@ -325,12 +325,6 @@ feature, during a few concentrated weeks per year. The mitigations in
 platform to fall back on, manual pick entry is not a nice-to-have — it is the only thing
 standing between a Sleeper outage and a user with no working draft tool.
 
-**RB scores ship provisional.** Per `01-player-evaluation-model.md` §1.5, the RB benchmarks do
-not exist yet and will be supplied later. RB is arguably the most important position in a draft
-tool, so until the data arrives the RB board runs on archetype, VORP and risk, and RB rows show
-no ceiling score rather than a computed-looking placeholder. The residual risk is that the gap
-becomes permanent and normalised — worth a checkpoint before the phase 2 board ships.
-
 **Licensed efficiency metrics.** PFF grades, DVOA, and Reception Perception percentiles are
 load-bearing in the WR and TE factor sets and are not freely redistributable. The realistic
 starting point is a manually maintained seasonal CSV import, which caps how current those
@@ -346,6 +340,9 @@ slot 1.05 unrated. Small, but the app shows these as unrated rather than guessin
 
 ### Resolved
 
+- **RB ceiling scores** — RB is no longer provisional. Per `01-player-evaluation-model.md`
+  §1.5, DraftLab configures 16 factors from FSE's 40-league-winner cohort and public
+  nflverse-derived proxies; all 16 are currently sourced (raw range −80…80).
 - **ESPN integration** — dropped on terms-of-service grounds rather than resolved. Reaching
   private leagues required sending full account session cookies to undocumented endpoints. See
   `03-league-integrations.md` §2; users on other platforms are served by manual league setup.

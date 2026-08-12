@@ -6,7 +6,7 @@ import type {
   Player,
   RiskResult,
 } from '@draftlab/domain';
-import { GRADE_WEIGHTS, DEFAULT_GRADING_BANDS } from '../config/grade-weights.js';
+import { GRADE_WEIGHTS, DEFAULT_VOLUME_BANDS } from '../config/grade-weights.js';
 import { computeCeilingScore } from '../ceiling.js';
 import { computeDraftScore } from '../draft-score.js';
 import { gradeByRatio } from '../grade-factor.js';
@@ -19,18 +19,20 @@ function ceilingFromGrades(grades: FactorGrade[]): number {
 }
 
 describe('factor grade weights (spreadsheet legend)', () => {
-  it('uses green +5, yellow +3, orange −1, red −3', () => {
-    expect(GRADE_WEIGHTS.green).toBe(5);
-    expect(GRADE_WEIGHTS.yellow).toBe(3);
+  it('uses six-band weights: elite +5 through critical −5', () => {
+    expect(GRADE_WEIGHTS.elite).toBe(5);
+    expect(GRADE_WEIGHTS.green).toBe(3);
+    expect(GRADE_WEIGHTS.yellow).toBe(1);
     expect(GRADE_WEIGHTS.orange).toBe(-1);
     expect(GRADE_WEIGHTS.red).toBe(-3);
+    expect(GRADE_WEIGHTS.critical).toBe(-5);
     expect(GRADE_WEIGHTS.unknown).toBe(0);
   });
 });
 
 describe('spot-check CeilingScores from source spreadsheets', () => {
-  it('Josh Allen (QB1) → 41 — 7 green, 3 yellow, 0 orange, 1 red (+ unknown)', () => {
-    // 7+3+1 = 11 known; twelfth factor unknown (0) keeps total at 41.
+  it('Josh Allen (QB1) → 21 — 7 green, 3 yellow, 0 orange, 1 red (+ unknown)', () => {
+    // 7+3+1 = 11 known; twelfth factor unknown (0) keeps total at 21 under six-band weights.
     const allen: FactorGrade[] = [
       ...Array(7).fill('green'),
       ...Array(3).fill('yellow'),
@@ -38,11 +40,11 @@ describe('spot-check CeilingScores from source spreadsheets', () => {
       'unknown',
     ] as FactorGrade[];
     expect(allen).toHaveLength(12);
-    expect(7 * 5 + 3 * 3 + 0 + -3 + 0).toBe(41);
-    expect(ceilingFromGrades(allen)).toBe(41);
+    expect(7 * 3 + 3 * 1 + 0 + -3 + 0).toBe(21);
+    expect(ceilingFromGrades(allen)).toBe(21);
   });
 
-  it("Ja'Marr Chase (WR1) → 42 — 9 green, 1 yellow, 0 orange, 2 red", () => {
+  it("Ja'Marr Chase (WR1) → 22 — 9 green, 1 yellow, 0 orange, 2 red", () => {
     const chase: FactorGrade[] = [
       ...Array(9).fill('green'),
       'yellow',
@@ -50,11 +52,11 @@ describe('spot-check CeilingScores from source spreadsheets', () => {
       'red',
     ] as FactorGrade[];
     expect(chase).toHaveLength(12);
-    expect(9 * 5 + 1 * 3 + 2 * -3).toBe(42);
-    expect(ceilingFromGrades(chase)).toBe(42);
+    expect(9 * 3 + 1 * 1 + 2 * -3).toBe(22);
+    expect(ceilingFromGrades(chase)).toBe(22);
   });
 
-  it('Brock Bowers (TE1) → 36 — 8 green, 1 yellow, 1 orange, 2 red', () => {
+  it('Brock Bowers (TE1) → 18 — 8 green, 1 yellow, 1 orange, 2 red', () => {
     const bowers: FactorGrade[] = [
       ...Array(8).fill('green'),
       'yellow',
@@ -63,13 +65,13 @@ describe('spot-check CeilingScores from source spreadsheets', () => {
       'red',
     ] as FactorGrade[];
     expect(bowers).toHaveLength(12);
-    expect(8 * 5 + 1 * 3 + 1 * -1 + 2 * -3).toBe(36);
-    expect(ceilingFromGrades(bowers)).toBe(36);
+    expect(8 * 3 + 1 * 1 + 1 * -1 + 2 * -3).toBe(18);
+    expect(ceilingFromGrades(bowers)).toBe(18);
   });
 });
 
 describe('computeCeilingScore with engineered factor values', () => {
-  it('sums graded weights for a full QB profile totaling 41', () => {
+  it('sums graded weights for a full QB profile totaling 21', () => {
     const inputs: FactorInput[] = [
       { factorId: 'pass_attempts', value: null },
       { factorId: 'passing_tds', value: 2.63 * 0.7 },
@@ -87,7 +89,7 @@ describe('computeCeilingScore with engineered factor values', () => {
 
     const result = computeCeilingScore('QB', inputs);
     expect(result.provisional).toBe(false);
-    expect(result.ceilingScore).toBe(41);
+    expect(result.ceilingScore).toBe(21);
     expect(result.knownFactors).toBe(11);
   });
 
@@ -116,9 +118,9 @@ describe('computeCeilingScore with engineered factor values', () => {
     // omitted — same honest gap QB/WR/TE already tolerate for unlicensed factors.
     const inputs: FactorInput[] = [
       { factorId: 'touches', value: 21.529 }, // benchmark 21.5 -> ratio ~1.001 -> yellow
-      { factorId: 'off_ppg_rank', value: 24 }, // benchmark 9.5, lowerBetter -> ratio ~0.396 -> red
+      { factorId: 'off_ppg_rank', value: 24 }, // benchmark 9.5, lowerBetter -> ratio ~0.396 -> critical
       { factorId: 'snap_share', value: 0.782 }, // benchmark 0.717 -> ratio ~1.091 -> green
-      { factorId: 'rz_touch_share', value: 0.485 }, // benchmark 0.4 -> ratio ~1.213 -> green
+      { factorId: 'rz_touch_share', value: 0.485 }, // benchmark 0.4 -> ratio ~1.213 -> elite
       { factorId: 'gl_carry_share', value: 0.5 }, // benchmark 0.664 -> ratio ~0.753 -> orange
       { factorId: 'neutral_run_rate', value: 0.449 }, // benchmark 0.435 -> ratio ~1.032 -> yellow
     ];
@@ -126,18 +128,18 @@ describe('computeCeilingScore with engineered factor values', () => {
     expect(result.provisional).toBe(false);
     const byId = new Map(result.factors.map((f) => [f.factorId, f.grade]));
     expect(byId.get('touches')).toBe('yellow');
-    expect(byId.get('off_ppg_rank')).toBe('red');
+    expect(byId.get('off_ppg_rank')).toBe('critical');
     expect(byId.get('snap_share')).toBe('green');
-    expect(byId.get('rz_touch_share')).toBe('green');
+    expect(byId.get('rz_touch_share')).toBe('elite');
     expect(byId.get('gl_carry_share')).toBe('orange');
     expect(byId.get('neutral_run_rate')).toBe('yellow');
     expect(byId.get('injury_concern')).toBe('unknown');
     expect(result.knownFactors).toBe(6);
     expect(result.ceilingScore).toBe(
       GRADE_WEIGHTS.yellow +
-        GRADE_WEIGHTS.red +
+        GRADE_WEIGHTS.critical +
         GRADE_WEIGHTS.green +
-        GRADE_WEIGHTS.green +
+        GRADE_WEIGHTS.elite +
         GRADE_WEIGHTS.orange +
         GRADE_WEIGHTS.yellow,
     );
@@ -234,11 +236,11 @@ describe('evaluateValue', () => {
 
 describe('ratio grading bands', () => {
   it('grades Josh Allen rush attempts green vs benchmark', () => {
-    expect(gradeByRatio(6.59, 5.74, 'higherBetter', DEFAULT_GRADING_BANDS)).toBe('green');
+    expect(gradeByRatio(6.59, 5.74, 'higherBetter', DEFAULT_VOLUME_BANDS)).toBe('green');
   });
 
   it('grades Allen pass attempts orange (below bar)', () => {
-    expect(gradeByRatio(27.1, 33.91, 'higherBetter', DEFAULT_GRADING_BANDS)).toBe('orange');
+    expect(gradeByRatio(27.1, 33.91, 'higherBetter', DEFAULT_VOLUME_BANDS)).toBe('orange');
   });
 });
 

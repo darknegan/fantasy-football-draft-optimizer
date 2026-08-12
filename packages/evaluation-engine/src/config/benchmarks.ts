@@ -1,5 +1,5 @@
 import type { PositionBenchmarkConfig } from '@draftlab/domain';
-import { DEFAULT_GRADING_BANDS } from './grade-weights.js';
+import { DEFAULT_RANK_BANDS, DEFAULT_VOLUME_BANDS } from './grade-weights.js';
 
 /**
  * Versioned per-position factor benchmarks.
@@ -9,7 +9,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   QB: {
     position: 'QB',
     season: 2025,
-    bands: { ...DEFAULT_GRADING_BANDS },
+    volumeBands: { ...DEFAULT_VOLUME_BANDS },
+    rankBands: { ...DEFAULT_RANK_BANDS },
     factors: [
       {
         id: 'pass_attempts',
@@ -109,7 +110,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   WR: {
     position: 'WR',
     season: 2025,
-    bands: { ...DEFAULT_GRADING_BANDS },
+    volumeBands: { ...DEFAULT_VOLUME_BANDS },
+    rankBands: { ...DEFAULT_RANK_BANDS },
     factors: [
       {
         id: 'targets',
@@ -238,7 +240,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
   TE: {
     position: 'TE',
     season: 2025,
-    bands: { ...DEFAULT_GRADING_BANDS },
+    volumeBands: { ...DEFAULT_VOLUME_BANDS },
+    rankBands: { ...DEFAULT_RANK_BANDS },
     factors: [
       {
         id: 'targets',
@@ -348,7 +351,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
     // sourced from sleeperMCP nflverse play-by-play (top-3 cohort, 11-season half-PPR
     // means; relative SE 2.0–3.5%). receptions, YPC, YPT, and team_wins are
     // sourced from sleeperMCP nflverse (ITEM-004).
-    bands: { ...DEFAULT_GRADING_BANDS },
+    volumeBands: { ...DEFAULT_VOLUME_BANDS },
+    rankBands: { ...DEFAULT_RANK_BANDS },
     // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
     // (20+ PPR ppg, 12+ games, averaged across those seasons).
     factors: [
@@ -477,8 +481,7 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
  * `benchmarks.json` via `activateBenchmarkArtifact` / `setActiveBenchmarks`.
  * These embedded values remain the offline bootstrap / test fallback only.
  */
-let activeBenchmarks: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmarkConfig> =
-  BENCHMARKS_2025;
+let activeBenchmarks: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmarkConfig> = BENCHMARKS_2025;
 
 export function setActiveBenchmarks(
   next: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmarkConfig>,

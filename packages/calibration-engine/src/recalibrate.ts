@@ -7,9 +7,11 @@ import type {
 import { followRate, meanRankDelta } from './outcomes.js';
 
 export const DEFAULT_BANDS: GradingBands = {
+  eliteMin: 1.15,
   greenMin: 1.05,
   yellowMin: 0.9,
   orangeMin: 0.75,
+  redMin: 0.5,
 };
 
 export const DEFAULT_WEIGHTS: DraftScoreWeights = {
@@ -51,17 +53,21 @@ export function proposeCalibration(
     } else if (delta < 0.75 && rate > 0.55) {
       notes.push('Model and picks are well aligned — minor band tightening only.');
       bands = {
+        eliteMin: currentBands.eliteMin,
         greenMin: round3(currentBands.greenMin - 0.01),
         yellowMin: round3(currentBands.yellowMin - 0.01),
         orangeMin: round3(currentBands.orangeMin - 0.01),
+        redMin: currentBands.redMin,
       };
     }
 
     if (rate < 0.35) {
       bands = {
+        eliteMin: currentBands.eliteMin,
         greenMin: round3(currentBands.greenMin + 0.02),
         yellowMin: round3(currentBands.yellowMin + 0.01),
         orangeMin: currentBands.orangeMin,
+        redMin: currentBands.redMin,
       };
       notes.push('Low follow rate — proposing stricter green band so elite grades are rarer.');
     }

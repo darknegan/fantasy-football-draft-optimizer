@@ -2,7 +2,7 @@ import type { InitialsColor, UserPreferences } from './user-preferences.js';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
-export type FactorGrade = 'green' | 'yellow' | 'orange' | 'red' | 'unknown';
+export type FactorGrade = 'elite' | 'green' | 'yellow' | 'orange' | 'red' | 'critical' | 'unknown';
 
 export type FactorDirection = 'higherBetter' | 'lowerBetter';
 
@@ -56,16 +56,19 @@ export interface FactorDefinition {
 }
 
 export interface GradingBands {
+  eliteMin: number;
   greenMin: number;
   yellowMin: number;
   orangeMin: number;
+  redMin: number;
 }
 
 export interface PositionBenchmarkConfig {
   position: Position;
   season: number;
   factors: FactorDefinition[];
-  bands: GradingBands;
+  volumeBands: GradingBands;
+  rankBands: GradingBands;
   provisional?: boolean;
 }
 
