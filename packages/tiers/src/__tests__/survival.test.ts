@@ -34,8 +34,20 @@ describe('survivalBands', () => {
     const idsIn = (bandId: string) =>
       bands.find((b) => b.id === bandId)?.rows.map((r) => r.id) ?? [];
 
-    expect(idsIn('gone')).toContain('early');
-    expect(idsIn('available')).toContain('late');
+    // Assert every band exhaustively, not just membership. A wrong middle
+    // boundary must not be able to pass by leaving coin-flip unexamined.
+    expect(idsIn('gone')).toEqual(['early']);
+    expect(idsIn('coin-flip')).toEqual(['near']);
+    expect(idsIn('available')).toEqual(['late']);
+  });
+
+  it('assigns a probability exactly on a cut-point to the upper band', () => {
+    // SURVIVAL_CUTS: gone below 0.25, coin-flip below 0.65, available at/above.
+    // Pin the boundary semantics directly rather than inferring them from ADP.
+    const bands = survivalBands([row('a', '1.01')], 21, 8, 12, { gone: 0.08, coinFlip: 0.65 });
+    // p for '1.01' at this pick is 0.08 — exactly the `gone` cut, so NOT gone.
+    expect(bands.find((b) => b.id === 'gone')).toBeUndefined();
+    expect(bands.find((b) => b.id === 'coin-flip')?.rows.map((r) => r.id)).toEqual(['a']);
   });
 
   it('routes unparseable ADP to its own band, never to available', () => {
