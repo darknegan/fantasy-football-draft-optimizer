@@ -35,14 +35,12 @@ const ARCHETYPE_ASSET_BIAS: Record<ArchetypeId, number> = {
   // Interim estimate (de-risked vs. an unproven breakout, but not yet an established
   // IN_THEIR_PRIME asset) — no dedicated dynasty study for this split yet.
   PROVEN_BREAKOUT_CANDIDATE: 1.18,
+  // Former PRIME_WR1 / PRIME_RB1 premium — no dedicated dynasty study for ELITE yet.
+  ELITE: 1.12,
   IN_THEIR_PRIME: 1.05,
-  PRIME_WR1: 1.12,
-  PRIME_WR2: 1.05,
-  // Same premium as the WR1/WR2 split, by analogy — no dedicated dynasty study for a
-  // bell-cow-vs-committee RB split yet, same caveat as their EV rates in archetype.ts.
-  PRIME_RB1: 1.12,
-  PRIME_RB2: 1.05,
   TRUSTY_VETERAN: 0.78,
+  // Aging without résumé — interim discount below trusty veteran.
+  VETERAN: 0.65,
 };
 
 const DISCOUNT = 0.92;
