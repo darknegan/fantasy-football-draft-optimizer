@@ -10,6 +10,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
+import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-display';
 
 type PosFilter = Position | 'ALL';
 type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
@@ -32,7 +33,6 @@ const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'proj', label: 'Proj' },
 ];
 
-const FACTOR_SLOTS = 12;
 const RISK_MAX = 100;
 
 @Component({
@@ -122,7 +122,7 @@ const RISK_MAX = 100;
         <span class="c-risk">RISK</span>
         <span class="c-value">VALUE</span>
         <span class="c-proj">PROJ</span>
-        <span class="c-factors">12 FACTORS</span>
+        <span class="c-factors">FACTORS</span>
         <span class="c-flag"></span>
       </div>
 
@@ -184,14 +184,10 @@ const RISK_MAX = 100;
               <span class="c-ceiling mono">
                 @if (row.evaluation.ceiling.provisional) {
                   <span class="ceil-score muted">—</span>
-                  <span class="ceil-den muted">/60</span>
                 } @else {
-                  <span
-                    class="ceil-score"
-                    [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30"
-                    >{{ row.evaluation.ceiling.ceilingScore ?? '—' }}</span
-                  >
-                  <span class="ceil-den muted">/60</span>
+                  <span class="ceil-score" [class.good]="top5Ids().has(row.player.id)">{{
+                    row.evaluation.ceiling.ceilingScore ?? '—'
+                  }}</span>
                 }
               </span>
 
@@ -199,7 +195,7 @@ const RISK_MAX = 100;
                 @if (row.evaluation.ceiling.provisional) {
                   prov.
                 } @else {
-                  {{ row.evaluation.ceiling.knownFactors }}/{{ factorSlots }}
+                  {{ row.evaluation.ceiling.knownFactors }}/{{ configuredFactorCount(row) }}
                 }
               </span>
 
@@ -270,7 +266,7 @@ export class BoardComponent implements OnInit {
   readonly Math = Math;
   readonly posTabs = POS_TABS;
   readonly sortOptions = SORT_OPTIONS;
-  readonly factorSlots = FACTOR_SLOTS;
+  readonly configuredFactorCount = configuredFactorCount;
 
   leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
@@ -288,6 +284,8 @@ export class BoardComponent implements OnInit {
     const set = new Set(this.rows().map((r) => r.evaluation.archetype.archetype));
     return [...set].sort();
   });
+
+  readonly top5Ids = computed(() => top5CeilingIdsByPosition(this.rows()));
 
   readonly filteredSorted = computed(() => {
     let list = this.rows();
@@ -438,9 +436,10 @@ export class BoardComponent implements OnInit {
   }
 
   factorGrades(row: BoardPlayer): FactorGrade[] {
+    const slots = configuredFactorCount(row);
     const factors = row.evaluation.ceiling.factors ?? [];
-    const grades = factors.slice(0, FACTOR_SLOTS).map((f) => f.grade);
-    while (grades.length < FACTOR_SLOTS) grades.push('unknown');
+    const grades = factors.slice(0, slots).map((f) => f.grade);
+    while (grades.length < slots) grades.push('unknown');
     return grades;
   }
 

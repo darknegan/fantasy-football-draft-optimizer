@@ -94,7 +94,7 @@
 .col-head,
 .row {
   display: grid;
-  grid-template-columns: 30px 34px minmax(168px, 1fr) 52px 76px 48px 132px 96px 60px 74px 180px 28px;
+  grid-template-columns: 30px 34px minmax(168px, 1fr) 52px 76px 48px 132px 96px 60px 74px 248px 28px;
   gap: 0.75rem;
   align-items: center;
   padding: 0 1rem;
@@ -397,7 +397,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  width: 180px;
+  width: 248px;
 }
 
 .fcell {
