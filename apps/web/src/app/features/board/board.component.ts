@@ -8,7 +8,15 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { adpOverall, survivalBands, type SurvivalBandId } from '@draftlab/tiers';
+import {
+  adpOverall,
+  survivalBands,
+  qualityBand,
+  detectCliffs,
+  replacementBand,
+  type SurvivalBandId,
+  type QualityBand,
+} from '@draftlab/tiers';
 import { snakePickNumbers } from '@draftlab/strategy-engine';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
@@ -117,6 +125,7 @@ const RISK_MAX = 100;
       <div class="col-head" aria-hidden="true">
         <span class="c-rank">#</span>
         <span class="c-pos">POS</span>
+        <span class="c-band">GRADE</span>
         <span class="c-player">PLAYER</span>
         <span class="c-adp">ADP</span>
         <span class="c-ceiling">CEILING</span>
@@ -151,6 +160,15 @@ const RISK_MAX = 100;
 
               <span class="c-pos">
                 <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
+              </span>
+
+              <span class="c-band">
+                @if (bandOf(row); as band) {
+                  <span class="chip band" [class]="'band-' + band">{{ band }}</span>
+                } @else {
+                  <span class="chip band band-none" title="No measured data">—</span>
+                }
+                <span class="chip slot">{{ replacementOf(row) }}</span>
               </span>
 
               <a
@@ -256,6 +274,11 @@ const RISK_MAX = 100;
                 ★
               </button>
             </div>
+            @if (cliffAfterIds().get(row.player.id); as gap) {
+              <div class="cliff-marker" role="separator">
+                <span class="cliff-label">⌄ cliff — {{ gap }} pt gap</span>
+              </div>
+            }
           }
         } @empty {
           <p class="empty">No players match these filters.</p>
@@ -328,6 +351,53 @@ export class BoardComponent implements OnInit {
     return buildSections(rows, next, league?.teamCount ?? 12);
   });
 
+  /**
+   * Positional rank by draftScore, over the FULL board rather than the filtered
+   * view. Replacement chips must not change when the user filters to one
+   * position — that's the exact defect this redesign removes.
+   */
+  private readonly positionRanks = computed(() => {
+    const ranks = new Map<string, number>();
+    const byPosition = new Map<Position, BoardPlayer[]>();
+    for (const row of this.rows()) {
+      const list = byPosition.get(row.player.position) ?? [];
+      list.push(row);
+      byPosition.set(row.player.position, list);
+    }
+    for (const list of byPosition.values()) {
+      list
+        .slice()
+        .sort((a, b) => b.evaluation.draftScore - a.evaluation.draftScore)
+        .forEach((row, index) => ranks.set(row.player.id, index + 1));
+    }
+    return ranks;
+  });
+
+  /** True when the current sort orders rows by a score, making adjacency meaningful. */
+  private readonly cliffsApply = computed(() => this.sortKey() === 'draft');
+
+  /**
+   * Row ids after which a cliff falls, per section. Computed on the same axis the
+   * list is sorted by (contextualScore ?? draftScore), so the marker always sits
+   * between the two rows it describes. Hidden entirely under any other sort,
+   * since adjacency is not score-ordered there.
+   */
+  readonly cliffAfterIds = computed((): ReadonlyMap<string, number> => {
+    const out = new Map<string, number>();
+    if (!this.cliffsApply()) return out;
+    for (const section of this.sections()) {
+      const measured = section.rows.filter((r) => r.evaluation.ceiling.knownFactors > 0);
+      const scores = measured.map(
+        (r) => r.recommendation?.contextualScore ?? r.evaluation.draftScore,
+      );
+      for (const cliff of detectCliffs(scores)) {
+        const row = measured[cliff.afterIndex];
+        if (row) out.set(row.player.id, cliff.gap);
+      }
+    }
+    return out;
+  });
+
   ngOnInit() {
     this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
     forkJoin({
@@ -358,6 +428,27 @@ export class BoardComponent implements OnInit {
   rankOf(row: BoardPlayer): number {
     const idx = this.filteredSorted().findIndex((r) => r.player.id === row.player.id);
     return idx >= 0 ? idx + 1 : 0;
+  }
+
+  /** Absolute quality grade. Independent of filter and of who has been drafted. */
+  bandOf(row: BoardPlayer): QualityBand | null {
+    return qualityBand(row.evaluation.draftScore, row.evaluation.ceiling.knownFactors);
+  }
+
+  /** Which roster slot this player realistically fills in THIS league. */
+  replacementOf(row: BoardPlayer): string {
+    const league = this.league();
+    if (!league?.roster) return '';
+    return replacementBand(
+      this.positionRank(row),
+      row.player.position,
+      league.roster,
+      league.teamCount,
+    ).label;
+  }
+
+  private positionRank(row: BoardPlayer): number {
+    return this.positionRanks().get(row.player.id) ?? Number.MAX_SAFE_INTEGER;
   }
 
   headshotOf(row: BoardPlayer): string | null {
