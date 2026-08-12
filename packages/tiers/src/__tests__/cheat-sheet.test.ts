@@ -59,6 +59,26 @@ describe('buildCheatSheet', () => {
     expect(wr).not.toHaveProperty('unranked');
   });
 
+  it('does not launder a no-data player into the D (Speculative) tier', () => {
+    // A no-data player has draftScore made of defaults, not a judgment, so it
+    // must never be graded a real letter — including 'D'. It should surface
+    // in its own distinct tier instead. Regression test for the bug where
+    // `qualityBand(...) ?? 'D'` merged null (no-data) into the real D bucket,
+    // handing it the same letter grade the API's own qualityBand refuses to
+    // give it.
+    const sheet = buildCheatSheet([
+      player({ id: 'real-d', position: 'WR', draftScore: 20, ceilingKnownFactors: 5 }),
+      player({ id: 'nodata', position: 'WR', draftScore: 999, ceilingKnownFactors: 0 }),
+    ]);
+    const wr = sheet.find((g) => g.position === 'WR')!;
+    const dTier = wr.tiers.find((t) => t.tier === 'D');
+    const noDataTier = wr.tiers.find((t) => t.tier === null);
+
+    expect(dTier?.players.map((p) => p.id)).toEqual(['real-d']);
+    expect(dTier?.players.some((p) => p.id === 'nodata')).toBe(false);
+    expect(noDataTier?.players.map((p) => p.id)).toEqual(['nodata']);
+  });
+
   it('does not let a no-data player change a measured player band', () => {
     // The old min-max implementation had an inflated no-data score stretch the
     // range and shift everyone else. Absolute bands make that structurally

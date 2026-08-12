@@ -26,8 +26,16 @@ type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
 type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
+/**
+ * 'unbanded' is not produced by `survivalBands()` — it's a board-local fallback
+ * id used only when there is no next-pick projection to band against at all
+ * (the planning window is exhausted), so the board can still show every row in
+ * one ungrouped section instead of rendering nothing. See `sections` below.
+ */
+type BoardSectionId = SurvivalBandId | 'unbanded';
+
 interface BoardSection {
-  id: SurvivalBandId;
+  id: BoardSectionId;
   label: string;
   note: string;
   rows: BoardPlayer[];
@@ -341,13 +349,31 @@ export class BoardComponent implements OnInit {
 
   readonly sections = computed((): BoardSection[] => {
     const rows = this.filteredSorted();
+    // Only reachable via the template's @empty branch ("No players match
+    // these filters"). That message must never appear while rows exist —
+    // see the fallback below for the other way `sections` can end up short.
     if (!rows.length) return [];
     const league = this.league();
     // Recomputed on every pick: picksMade is derived from the rows themselves, so
     // the bands re-partition live as the draft progresses.
     const picksMade = this.rows().filter((r) => r.drafted).length;
     const next = nextUserPick(league, picksMade);
-    if (!next) return [];
+    if (!next) {
+      // No next-pick projection to band against — either the league hasn't
+      // loaded yet, or (far more commonly) the draft has run past
+      // PLANNING_ROUNDS. rows.length > 0 here, so returning [] would render
+      // the "No players match these filters" empty state, which is simply
+      // false: the board has players, there's just no survival estimate to
+      // group them by. Show everything, ungrouped, instead of nothing.
+      return [
+        {
+          id: 'unbanded',
+          label: 'All remaining players',
+          note: 'Past the planning window — showing every player, unsorted by survival odds.',
+          rows,
+        },
+      ];
+    }
     return buildSections(rows, next, league?.teamCount ?? 12);
   });
 
@@ -386,7 +412,17 @@ export class BoardComponent implements OnInit {
     const out = new Map<string, number>();
     if (!this.cliffsApply()) return out;
     for (const section of this.sections()) {
-      const measured = section.rows.filter((r) => r.evaluation.ceiling.knownFactors > 0);
+      // Drafted rows are excluded, not just filtered by knownFactors: the API's
+      // getBoard only computes recommendation/contextualScore for undrafted
+      // players (store.ts filters to `available` before scoring) — drafted
+      // rows fall back to raw draftScore. Mixing the two scales into one
+      // detectCliffs() call can flag a "cliff" that is really just the scale
+      // seam between contextualScore and draftScore, not a real score gap.
+      // This only matters when "Show drafted" is on; hideDrafted() already
+      // strips drafted rows out of filteredSorted() by default.
+      const measured = section.rows.filter(
+        (r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted,
+      );
       const scores = measured.map(
         (r) => r.recommendation?.contextualScore ?? r.evaluation.draftScore,
       );
@@ -567,21 +603,44 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: nu
   }
 }
 
-/** Rounds to plan for when projecting the user's remaining snake picks. */
-const PLANNING_ROUNDS = 15;
+/**
+ * Rounds to plan for when projecting the user's remaining snake picks.
+ *
+ * Every RosterShape in this repo (DEFAULT_ROSTER_12: totalStarters 7 + bench
+ * 6, DEFAULT_ROSTER_SUPERFLEX: 8 + 6, the seeded league in api's store.ts:
+ * 9 + 8) fills out to roughly 13-17 rounds, and dynasty leagues routinely
+ * carry a deeper bench (taxi squad / IR) on top of that. The previous value
+ * of 15 undershot even the shallow end: in a 12-team league, slot 1's own
+ * last pick inside a 15-round window is overall 169, while an entirely
+ * ordinary 15-round, 12-team snake draft runs 180 picks — the board went
+ * blank for the last ~11 picks of a normal draft, and any deeper league hit
+ * the wall well before the draft ended. 30 rounds gives comfortable margin
+ * over realistic league depth, redraft or dynasty, without projecting an
+ * unreasonable number of picks ahead.
+ */
+const PLANNING_ROUNDS = 30;
 
 /**
  * The user's next pick as an overall number, plus how many picks fall before it.
  * Replaces the previous placeholder, which returned the raw draft slot (or 9) and
  * so never advanced as the draft progressed.
+ *
+ * `draftSlot` is genuinely optional (`League.draftSlot?: number`) and defaults
+ * to 1 here, matching every other consumer in the codebase (store.ts,
+ * draft-poller.ts, draft.component.ts all use `?? 1`) — it must not read as
+ * "no data" and blank the board. Returns null only when there's no league to
+ * plan against at all, or when the planning window itself is exhausted
+ * (nothing in `picks` exceeds `picksMade`); callers must treat that as "no
+ * survival projection available," not "no players," and fall back to showing
+ * the full board ungrouped rather than rendering nothing.
  */
 function nextUserPick(
   league: League | null,
   picksMade: number,
 ): { nextOverall: number; picksUntilNext: number } | null {
-  const slot = league?.draftSlot;
-  if (!slot) return null;
-  const teamCount = league?.teamCount ?? 12;
+  if (!league) return null;
+  const slot = league.draftSlot ?? 1;
+  const teamCount = league.teamCount ?? 12;
   const picks = snakePickNumbers(slot, teamCount, PLANNING_ROUNDS);
   const nextOverall = picks.find((p) => p > picksMade);
   if (nextOverall === undefined) return null;

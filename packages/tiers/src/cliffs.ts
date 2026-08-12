@@ -28,6 +28,19 @@ import type { CliffMarker } from './types.js';
  * but 1.5 within RB alone). The unfiltered board is consequently the noisiest
  * case rather than the cleanest. A floor on the baseline would fix that
  * properly; k alone cannot.
+ *
+ * Also known, found in the final whole-branch review after this tuning: the
+ * board (apps/web board.component.ts, `cliffAfterIds`) does not feed this
+ * function the full board, per-position slices, or fixed-size windows — the
+ * three shapes actually sampled above. It runs `detectCliffs` once PER
+ * SURVIVAL BAND (gone / coin-flip / available / adp-unknown), and those bands
+ * re-partition on every pick as ADP-based survival odds shift. That list
+ * shape was never directly sampled during tuning. Consequence, accepted as
+ * documented behavior rather than something this pass fixes: a marker can
+ * shift or disappear across picks purely because band membership changed the
+ * local median baseline, even though no underlying player score changed. A
+ * stability floor or cross-band cliff persistence would address it, but that
+ * is an intentionally separate, larger change — not in scope here.
  */
 export const DEFAULT_CLIFF_K = 5;
 
