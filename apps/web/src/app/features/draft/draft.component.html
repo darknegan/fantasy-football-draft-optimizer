@@ -41,7 +41,12 @@
     </div>
 
     @if (!isUserTurn() && canDraft()) {
-      <button type="button" class="manual-btn accent-btn" (click)="fillToMyPick()" [disabled]="picking()">
+      <button
+        type="button"
+        class="manual-btn accent-btn"
+        (click)="fillToMyPick()"
+        [disabled]="picking()"
+      >
         Sim to my pick
       </button>
     }
@@ -177,7 +182,9 @@
                     }
                   </div>
                 </div>
-                <span class="c-arch">{{ formatArchetype(row.evaluation.archetype.archetype) }}</span>
+                <span class="c-arch" [class]="archTone(row.evaluation.archetype.archetype)">{{
+                  formatArchetype(row.evaluation.archetype.archetype)
+                }}</span>
                 <span class="c-adp dl-mono">{{ row.evaluation.value.adpRoundPick || '—' }}</span>
                 <span class="c-surv dl-mono" [class]="survivalTone(row)">{{
                   formatPct(survivalOf(row))
@@ -190,7 +197,9 @@
                     [class.primary]="isSelected(row)"
                     [disabled]="picking() || !canUserDraft()"
                     [title]="
-                      canUserDraft() ? 'Draft this player' : 'Not your pick yet — use Sim to my pick'
+                      canUserDraft()
+                        ? 'Draft this player'
+                        : 'Not your pick yet — use Sim to my pick'
                     "
                     (click)="selectPlayer(row); pick(row); $event.stopPropagation()"
                   >
@@ -200,7 +209,9 @@
               </article>
             } @empty {
               <div class="empty-recs dl-panel">
-                <p>No available players match these filters. Clear a filter or refresh the board.</p>
+                <p>
+                  No available players match these filters. Clear a filter or refresh the board.
+                </p>
                 <button type="button" class="manual-btn" (click)="reload()">Refresh board</button>
               </div>
             }
@@ -241,7 +252,9 @@
                         @if (cell.filled) {
                           <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
                           <div class="cell-player">
-                            <span class="pos tiny" [class]="cell.position">{{ cell.position }}</span>
+                            <span class="pos tiny" [class]="cell.position">{{
+                              cell.position
+                            }}</span>
                             <span>{{ cell.playerName }}</span>
                           </div>
                         } @else if (cell.isOnClock) {
@@ -251,7 +264,9 @@
                           <div class="cell-pick dl-mono">{{ formatPick(cell.pickNumber) }}</div>
                           <div class="cell-state accent">Your pick</div>
                         } @else {
-                          <div class="cell-pick dl-mono muted">{{ formatPick(cell.pickNumber) }}</div>
+                          <div class="cell-pick dl-mono muted">
+                            {{ formatPick(cell.pickNumber) }}
+                          </div>
                         }
                       </td>
                     }

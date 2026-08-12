@@ -342,6 +342,24 @@ describe('archetype classification', () => {
     });
     expect(classifyRb(bijan)).toBe('ELITE');
 
+    const gibbs = rb({
+      name: 'Jahmyr Gibbs',
+      age: 23,
+      seasonsInLeague: 3,
+      positionalTop5FinishCount: 2,
+      positionalTop8FinishCount: 3,
+    });
+    expect(classifyRb(gibbs)).toBe('ELITE');
+
+    const saquon = rb({
+      name: 'Saquon Barkley',
+      age: 28,
+      seasonsInLeague: 8,
+      positionalTop5FinishCount: 4,
+      positionalTop8FinishCount: 5,
+    });
+    expect(classifyRb(saquon)).toBe('TRUSTY_VETERAN');
+
     const chaseBrown = rb({
       name: 'Chase Brown',
       age: 25,

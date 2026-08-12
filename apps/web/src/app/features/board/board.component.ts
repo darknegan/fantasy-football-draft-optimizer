@@ -9,12 +9,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import type {
-  BoardPlayer,
-  FactorGrade,
-  League,
-  Position,
-} from '../../core/api.types';
+import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
 
 type PosFilter = Position | 'ALL';
 type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
@@ -191,9 +186,11 @@ const RISK_MAX = 100;
                   <span class="ceil-score muted">—</span>
                   <span class="ceil-den muted">/60</span>
                 } @else {
-                  <span class="ceil-score" [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30">{{
-                    row.evaluation.ceiling.ceilingScore ?? '—'
-                  }}</span>
+                  <span
+                    class="ceil-score"
+                    [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30"
+                    >{{ row.evaluation.ceiling.ceilingScore ?? '—' }}</span
+                  >
                   <span class="ceil-den muted">/60</span>
                 }
               </span>
@@ -370,23 +367,42 @@ export class BoardComponent implements OnInit {
   }
 
   formatArchetype(a: string): string {
-    return a
-      .replaceAll('_', ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\bWr\b/g, 'WR')
-      .replace(/\bRb\b/g, 'RB')
-      .replace(/\bTe\b/g, 'TE')
-      .replace(/\bQb\b/g, 'QB');
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+        return 'Elite';
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+        return 'Proven';
+      case 'TRUSTY_VETERAN':
+        return 'Trusty Veteran';
+      case 'VETERAN':
+        return 'Veteran';
+      case 'IN_THEIR_PRIME':
+        return 'In Their Prime';
+      case 'BREAKOUT_CANDIDATE':
+        return 'Breakout';
+      default:
+        return a
+          .replaceAll('_', ' ')
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
   }
 
   archTone(a: string): string {
-    const u = a.toUpperCase();
-    if (u.includes('PRIME') || u.includes('ELITE')) return 'good';
-    if (u.includes('BREAKOUT') || u.includes('UPSIDE')) return 'mid';
-    if (u.includes('VETERAN') || u.includes('TRUSTY') || u.includes('DECLIN')) return 'warn';
-    if (u.includes('RISK') || u.includes('FRAGILE')) return 'bad';
-    return 'good';
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+      case 'TRUSTY_VETERAN':
+        return 'good';
+      case 'IN_THEIR_PRIME':
+        return 'mid';
+      case 'BREAKOUT_CANDIDATE':
+        return 'warn';
+      case 'VETERAN':
+        return 'bad';
+      default:
+        return 'mid';
+    }
   }
 
   archTitle(row: BoardPlayer): string {

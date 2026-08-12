@@ -54,7 +54,9 @@
       <div class="stat">
         <div class="cap">CONTENDING WINDOW</div>
         <div class="stat-val dl-mono">
-          {{ summary().contendWindow.startSeason }}–{{ shortYear(summary().contendWindow.endSeason) }}
+          {{ summary().contendWindow.startSeason }}–{{
+            shortYear(summary().contendWindow.endSeason)
+          }}
         </div>
         <div class="stat-sub good">{{ summary().contendWindow.seasons }} seasons</div>
       </div>
@@ -94,9 +96,7 @@
                 <th>Age</th>
                 <th>Yr</th>
                 <th>Archetype</th>
-                <th>
-                  {{ summary().horizon.startSeason }}–{{ summary().horizon.endSeason }} value
-                </th>
+                <th>{{ summary().horizon.startSeason }}–{{ summary().horizon.endSeason }} value</th>
                 <th>Trend</th>
               </tr>
             </thead>
@@ -104,7 +104,10 @@
               @for (row of filteredRoster(); track row.playerId) {
                 <tr>
                   <td>
-                    <a class="player-cell" [routerLink]="['/leagues', leagueId, 'board', row.playerId]">
+                    <a
+                      class="player-cell"
+                      [routerLink]="['/leagues', leagueId, 'board', row.playerId]"
+                    >
                       <span class="pos" [class]="row.position">{{ row.position }}</span>
                       <span class="pname">{{ row.name }}</span>
                     </a>
@@ -112,7 +115,7 @@
                   <td class="dl-mono">{{ row.age }}</td>
                   <td class="dl-mono">{{ row.seasonsInLeague ?? '—' }}</td>
                   <td>
-                    <span class="arch" [class]="archetypeTone(row.archetype)">{{
+                    <span class="arch" [class]="archTone(row.archetype)">{{
                       formatArchetype(row.archetype)
                     }}</span>
                   </td>
@@ -131,7 +134,9 @@
                     </div>
                   </td>
                   <td>
-                    <span class="trend" [class]="row.trend ?? 'hold'">{{ row.trend ?? 'hold' }}</span>
+                    <span class="trend" [class]="row.trend ?? 'hold'">{{
+                      row.trend ?? 'hold'
+                    }}</span>
                   </td>
                 </tr>
               } @empty {
