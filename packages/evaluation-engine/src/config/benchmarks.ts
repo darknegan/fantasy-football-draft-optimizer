@@ -48,10 +48,10 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
       },
       {
         id: 'ol_pass_block_rank',
-        label: 'OL pass block rank',
+        label: 'OL pass block rank (proxy)',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 11.54,
+        benchmark: 11.485,
       },
       {
         // sleeperMCP now sources this from nflverse play-by-play (top-3 QB
@@ -81,13 +81,6 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 6.848,
       },
       {
-        id: 'adp',
-        label: 'ADP rank',
-        category: 'situational',
-        direction: 'lowerBetter',
-        benchmark: 8.22,
-      },
-      {
         // sleeperMCP-computed, same pbp cohort method as deep_ball_attempts
         // above (relative SE 6.7%).
         id: 'neutral_pace_rank',
@@ -102,6 +95,14 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         category: 'situational',
         direction: 'lowerBetter',
         benchmark: 7.01,
+      },
+      {
+        id: 'injury_concern',
+        label: 'Injury Concern',
+        category: 'profile',
+        direction: 'lowerBetter',
+        benchmark: 1,
+        categorical: 'injuryConcern',
       },
     ],
   },
@@ -190,10 +191,17 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
       },
       {
         id: 'ol_pass_block_rank',
-        label: 'OL pass block rank',
+        label: 'OL pass block rank (proxy)',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 10.75,
+        benchmark: 13.697,
+      },
+      {
+        id: 'neutral_pace_rank',
+        label: 'Neutral pace rank',
+        category: 'situational',
+        direction: 'lowerBetter',
+        benchmark: 15.727,
       },
       {
         id: 'yprr',
@@ -310,6 +318,20 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 5.14,
       },
       {
+        id: 'ol_pass_block_rank',
+        label: 'OL pass block rank (proxy)',
+        category: 'situational',
+        direction: 'lowerBetter',
+        benchmark: 14.667,
+      },
+      {
+        id: 'neutral_pace_rank',
+        label: 'Neutral pace rank',
+        category: 'situational',
+        direction: 'lowerBetter',
+        benchmark: 14.667,
+      },
+      {
         id: 'injury_concern',
         label: 'Injury/Age Concern',
         category: 'profile',
@@ -324,9 +346,8 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
     season: 2025,
     // No longer provisional. rz_touch_share, gl_carry_share, and neutral_run_rate are
     // sourced from sleeperMCP nflverse play-by-play (top-3 cohort, 11-season half-PPR
-    // means; relative SE 2.0–3.5%). Remaining honest unknowns: ol_run_block_rank (PFF),
-    // Remaining honest unknown: ol_run_block_rank (PFF). receptions, YPC, YPT,
-    // and team_wins sourced from sleeperMCP nflverse (ITEM-004).
+    // means; relative SE 2.0–3.5%). receptions, YPC, YPT, and team_wins are
+    // sourced from sleeperMCP nflverse (ITEM-004).
     bands: { ...DEFAULT_GRADING_BANDS },
     // Benchmarks sourced from FSE's "40 league winners since 2013" video analysis
     // (20+ PPR ppg, 12+ games, averaged across those seasons).
@@ -373,14 +394,12 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         direction: 'lowerBetter',
         benchmark: 9.5,
       },
-      // Video labels this "PFF Run Blocking Grade" but the values behave like a 1-32
-      // rank, not a 0-100 grade — confirm against the raw PFF field before trusting this.
       {
         id: 'ol_run_block_rank',
-        label: 'OL run block rank',
+        label: 'OL run block rank (proxy)',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 9.9,
+        benchmark: 12.97,
       },
       {
         id: 'yards_per_carry',

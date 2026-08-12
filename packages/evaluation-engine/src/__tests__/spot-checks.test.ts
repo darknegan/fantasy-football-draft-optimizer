@@ -76,11 +76,11 @@ describe('computeCeilingScore with engineered factor values', () => {
       { factorId: 'rush_attempts', value: 5.74 * 1.1 },
       { factorId: 'rushing_tds', value: 0.32 * 1.1 },
       { factorId: 'off_ppg_rank', value: 6.35 / 1.1 },
-      { factorId: 'ol_pass_block_rank', value: 11.54 / 1.1 },
+      { factorId: 'ol_pass_block_rank', value: 11.485 / 1.1 },
       { factorId: 'deep_ball_attempts', value: 4.397 * 1.1 },
       { factorId: 'qbr_rank', value: 6.9 / 1.1 },
       { factorId: 'red_zone_attempts', value: 6.848 * 1.1 },
-      { factorId: 'adp', value: 8.22 / 0.95 },
+      { factorId: 'injury_concern', value: 1, categorical: 'some' },
       { factorId: 'neutral_pace_rank', value: 12.697 / 0.95 },
       { factorId: 'pass_dvoa_rank', value: 7.01 / 0.95 },
     ];

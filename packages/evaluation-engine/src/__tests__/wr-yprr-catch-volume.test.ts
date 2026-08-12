@@ -20,8 +20,8 @@ describe('WR yprr / catch% / volume (ITEM-005)', () => {
     expect(byId.reception_perception.benchmark).toBe(68.864);
   });
 
-  it('bumps WR known ceiling factors to 15', () => {
-    expect(CEILING_RANGE.WR.max).toBe(15 * 5);
-    expect(CEILING_RANGE.WR.min).toBe(15 * -3);
+  it('bumps WR known ceiling factors to 17', () => {
+    expect(CEILING_RANGE.WR.max).toBe(17 * 5);
+    expect(CEILING_RANGE.WR.min).toBe(17 * -3);
   });
 });

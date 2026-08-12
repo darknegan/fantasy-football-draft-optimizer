@@ -435,7 +435,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
       { factorId: 'deep_ball_attempts', value: 4.31 * mid },
       { factorId: 'qbr_rank', value: 6.9 / mid },
       { factorId: 'red_zone_attempts', value: 6.3 * mid },
-      { factorId: 'adp', value: 8.22 / mid },
+      { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
       { factorId: 'neutral_pace_rank', value: 12.86 / mid },
       { factorId: 'pass_dvoa_rank', value: 7.01 / mid },
     ];

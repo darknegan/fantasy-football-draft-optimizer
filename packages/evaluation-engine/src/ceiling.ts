@@ -8,8 +8,6 @@ import { getBenchmarkConfig } from './config/benchmarks.js';
 import { gradeFactor } from './grade-factor.js';
 
 export interface CeilingOptions {
-  /** Exclude ADP from the sum (11-factor talent/situation variant). */
-  excludeAdp?: boolean;
   season?: number;
   config?: PositionBenchmarkConfig;
 }
@@ -32,9 +30,9 @@ export function computeCeilingScore(
   }
 
   const byId = new Map(inputs.map((i) => [i.factorId, i]));
-  const factors = config.factors
-    .filter((f) => !(options.excludeAdp && f.id === 'adp'))
-    .map((def) => gradeFactor(def, byId.get(def.id), config.bands, { softCapSerious: true }));
+  const factors = config.factors.map((def) =>
+    gradeFactor(def, byId.get(def.id), config.bands, { softCapSerious: true }),
+  );
 
   const knownFactors = factors.filter((f) => f.grade !== 'unknown').length;
   // Derived from the position's own factor list, not a hardcoded constant — RB has 16
