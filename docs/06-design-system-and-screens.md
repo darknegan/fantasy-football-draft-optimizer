@@ -195,11 +195,12 @@ Components that carry the model's semantics and must be built once and reused ev
 naming the factor, its benchmark, and the player's actual figure. The atom of the whole
 system.
 
-**`FactorGrid`** — the 12-factor breakdown for a player, grouped into Volume / Situational /
-Profile, with the weighted subtotal and an unknown count.
+**`FactorGrid`** — the position-configured factor breakdown for a player, grouped into
+Volume / Situational / Profile, with the weighted subtotal and an unknown count.
 
-**`CeilingScoreDial`** — the -36…60 composite as a radial gauge with the grade-count
-breakdown (`7G 3Y 0O 1R`) beneath, plus a confidence ring showing known-factor coverage.
+**`CeilingScoreDial`** — the position-normalised composite as a radial gauge with the
+six-band grade-count breakdown (`E G Y O R C`) beneath, plus a confidence ring showing
+known-factor coverage. Raw bounds are ±5 × the position's known-factor count.
 
 **`ArchetypeBadge`** — the career-stage bucket with its historical outcome rates on hover
 (return / boom / bust / injury), which is what makes the badge informative rather than
@@ -255,8 +256,8 @@ Thirteen screens, ordered by the flow a new user follows. All are built in the F
 | 3 | [**Scoring Settings**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=16-164) | Imported profile in plain language, validation against last season's standings, what these settings change, and the per-position replacement level VORP is measured against |
 | 4 | [**Strategy Planner**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=17-240) | All nine strategies with tier grades and verbatim definitions, draft slot tier map, round-by-round plan with league-winner rates, and the round 4 TE dead-zone callout |
 | 5 | [**Strategy Simulator**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=28-1200) | Outcome distribution with its variance assumptions stated, cross-strategy comparison, and the roster the strategy most often produces |
-| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the 12-factor strip per row |
-| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full 12-factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
+| 6 | [**Player Board**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341) | The ranked board with tier breaks carrying survival estimates, ceiling score, confidence, archetype, risk, value delta and the position-specific factor strip per row |
+| 7 | [**Player Detail**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=22-1019) | Full position-specific factor breakdown with benchmark versus projected and the weighted total, the tight-end qualification gate, injury history, and market value |
 | 8 | [**Live Draft Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=24-1108) | The flagship: status bar with honest sync age, three reasoned recommendations with survival probabilities, snake board grid, roster, needs by quality gap, adherence, live position-run alert |
 | 9 | [**Auction Room**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=26-1108) | Active nomination, max-bid calculation shown with its reasoning, per-team budget grid, inflation, VORP-derived values, nomination strategy, multi-year contract selector |
 | 10 | [**Dynasty Roster**](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=27-1149) | Contend/rebuild toggle, four-year value curve per player, roster age curve, contending window, tradeable pick assets |

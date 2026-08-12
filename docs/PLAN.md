@@ -27,11 +27,12 @@ internally consistent evaluation methodology. The most important discovery durin
 that this methodology is fully implementable as a deterministic algorithm, with no guesswork
 required for QB, WR, or TE.
 
-**The factor scoring rubric is explicit and verifiable.** Green +5, yellow +3, orange -1,
-red -3, summed across exactly twelve factors per position for a -36…60 scale. The formula was
-confirmed against three independent players from three different source images: Josh Allen 41,
-Ja'Marr Chase 42, Brock Bowers 36. Because every position grades twelve factors, scores are
-directly comparable across positions with no normalisation.
+**The factor scoring rubric is explicit and verifiable.** DraftLab extends the source
+four-band rubric to elite +5, green +3, yellow +1, orange −1, red −3, and critical −5
+(unknown 0). The original formula was confirmed against three independent players from three
+different source images: Josh Allen 41, Ja'Marr Chase 42, Brock Bowers 36. Shipped scores use
+position-specific known-factor ranges (`knownFactors × [−5, +5]`) and are normalised for
+cross-position comparison.
 
 **The benchmarks are outcome-derived, not opinion.** The "Average" columns are the average
 profile of players who actually won leagues at each position, which is why grading against

@@ -9,7 +9,7 @@ single `DraftScore`:
 
 | Output | Range | What it answers |
 | --- | --- | --- |
-| `CeilingScore` | -36 … 60 | How good is this player's situation and volume profile? |
+| `CeilingScore` | position-specific | How good is this player's situation and volume profile? |
 | `Archetype` | enum | What kind of career-stage bet am I making? |
 | `RiskProfile` | 0 … 100 | How likely is this pick to be derailed by injury? |
 | `ValueScore` | -100 … 100 | Is the market price a discount or a premium? |
@@ -22,40 +22,51 @@ round early. The UI must always be able to show *why* a player ranks where they 
 
 ## 1. The Factor Scoring Rubric
 
-The spreadsheets grade every player against a fixed set of factors, colour-coding each
-factor and summing weighted points. From `QBs Scoring Factors.PNG`,
-`WR #1-9 Scoring Factors.PNG`, and `TE Scoring Factors.PNG`, the legend is explicit:
+The source spreadsheets grade every player against a fixed set of factors, colour-coding
+each factor and summing weighted points. DraftLab expands that source rubric to six
+scored bands so genuine standouts and severe misses do not collapse into the same grade:
 
 | Grade | Weight |
 | --- | --- |
-| Green | +5 |
-| Yellow | +3 |
-| Orange | -1 |
-| Red | -3 |
+| Elite | +5 |
+| Green | +3 |
+| Yellow | +1 |
+| Orange | −1 |
+| Red | −3 |
+| Critical | −5 |
+| Unknown | 0 |
 
 The sheets label the resulting total "Legendary" for QB/TE and "Ceiling" for WR/TE. It is
 the same number; this project standardises on **`CeilingScore`**.
 
-The formula is confirmed by three independent spot-checks against the source images:
+The original four-band formula was confirmed by three independent spot-checks against the
+source images:
 
 - **Josh Allen (QB1)** — 7 green, 3 yellow, 0 orange, 1 red → `35 + 9 + 0 - 3 = 41`,
   matching the 41 printed in `QBs Scoring Factors.PNG`.
 - **Ja'Marr Chase (WR1)** — 9 green, 1 yellow, 0 orange, 2 red → `45 + 3 + 0 - 6 = 42`,
   matching `WR #1-9 Scoring Factors.PNG`.
 - **Brock Bowers (TE1)** — 8 green, 1 yellow, 1 orange, 2 red → `40 + 3 - 1 - 6 = 36`,
-  matching `TE Scoring Factors.PNG`.
+  matching `TE Scoring Factors.PNG`. These are provenance checks for the source material,
+  not expected scores under the shipped six-band rubric.
 
-Every position grades exactly **12 factors**, so the scale is directly comparable across
-positions without normalisation: a perfect score is **60**, a floor is **-36**.
+Positions do not all have the same number of configured or currently sourced factors.
+The raw range is therefore position-specific:
+`CEILING_RANGE[position] = knownFactorCount × [−5, +5]`. Current known coverage is QB
+11/12 (−55…55), RB 16/16 (−80…80), WR 17/17 (−85…85), and TE 12/14 (−60…60).
+Cross-position comparisons normalise against the applicable positional range.
 
 ```ts
-type FactorGrade = 'green' | 'yellow' | 'orange' | 'red' | 'unknown';
+type FactorGrade =
+  | 'elite' | 'green' | 'yellow' | 'orange' | 'red' | 'critical' | 'unknown';
 
 const GRADE_WEIGHTS: Record<FactorGrade, number> = {
-  green: 5,
-  yellow: 3,
+  elite: 5,
+  green: 3,
+  yellow: 1,
   orange: -1,
   red: -3,
+  critical: -5,
   unknown: 0,
 };
 ```
@@ -64,9 +75,9 @@ const GRADE_WEIGHTS: Record<FactorGrade, number> = {
 Lamar Jackson's passing TDs in `QBs ADP #1-8.PNG` — for players whose situation has not
 resolved yet (new offensive coordinator, unsettled depth chart, rookie with no NFL usage).
 Scoring these as zero rather than guessing is the honest choice, but the UI must surface
-the count of unknowns, because a `CeilingScore` of 30 built on 12 known factors is a much
-firmer projection than a 30 built on 7 known factors and 5 unknowns. Each player therefore
-carries a **`ConfidenceScore`** = `knownFactors / 12`.
+the count of unknowns, because equal `CeilingScore` values can rest on very different
+coverage. Each player therefore carries a **`ConfidenceScore`** =
+`knownFactors / configuredFactorsForPosition`.
 
 ### 1.1 Grading a factor
 
@@ -75,15 +86,21 @@ benchmarks are not arbitrary — they are the **average profile of players who a
 leagues at that position**, which is exactly what the "Average" and "Paced Average" columns
 in `QB Stats Avg.PNG`, `WR Scoring Avgs.PNG`, and `TE Avg Scoring.PNG` contain.
 
-Grading bands, expressed as a ratio of the player's value to the benchmark (inverted for
-rank-type factors, where lower is better):
+Grading bands are expressed as a ratio of the player's value to the benchmark. Volume
+and other `higherBetter` factors use `value / benchmark`; rank-based `lowerBetter`
+factors use `benchmark / value`. They share all thresholds except the elite threshold:
 
-| Band | Ratio to benchmark | Grade |
-| --- | --- | --- |
-| Clears the elite bar comfortably | ≥ 1.05 | green |
-| Meets the bar | 0.90 – 1.05 | yellow |
-| Slightly short | 0.75 – 0.90 | orange |
-| Well short | < 0.75 | red |
+| Grade | Volume ratio | Rank ratio |
+| --- | ---: | ---: |
+| Elite | ≥ 1.15 | ≥ 1.50 |
+| Green | ≥ 1.05 | ≥ 1.05 |
+| Yellow | ≥ 0.90 | ≥ 0.90 |
+| Orange | ≥ 0.75 | ≥ 0.75 |
+| Red | ≥ 0.50 | ≥ 0.50 |
+| Critical | < 0.50 | < 0.50 |
+
+Categorical factors retain their existing mappings and emit only green, yellow, orange,
+red, or unknown; they do not emit elite or critical.
 
 These cut-points are the one genuinely tunable part of the model, and they must live in
 configuration rather than code so they can be recalibrated each season against the prior
@@ -104,18 +121,18 @@ multiplying by 17.
 | Rush attempts | 5.74 | 97.62 |
 | Rushing TDs | 0.32 | 5.36 |
 
-**Situational factors** (8), all rank-based except deep-ball and red-zone volume:
+**Situational/profile factors** (8), all rank-based except deep-ball and red-zone volume:
 
 | Factor | Benchmark | Direction |
 | --- | --- | --- |
 | Offensive rank in PPG | 6.35 | lower better |
-| Offensive line rank in pass blocking | 11.54 | lower better |
-| Deep ball attempts per game | 4.31 | higher better |
+| Offensive line rank in pass blocking (proxy) | 11.485 | lower better |
+| Deep ball attempts per game | 4.397 | higher better |
 | Rank in QBR | 6.90 | lower better |
-| Red zone combined attempts | 6.30 | higher better |
-| ADP | 8.22 | lower better |
-| Rank in neutral pace | 12.86 | lower better |
+| Red zone combined attempts | 6.848 | higher better |
+| Rank in neutral pace | 12.697 | lower better |
 | Rank in pass offense DVOA | 7.01 | lower better |
+| Injury concern | categorical | lower better |
 
 The elite-QB archetype this encodes is worth stating plainly, because it should drive copy
 in the UI: the profile that wins leagues at QB is a **rushing quarterback on a
@@ -126,40 +143,43 @@ strength of green rushing volume (6.59 attempts, 0.82 TDs per game). Rushing pro
 the load-bearing factor, and the model should not let strong passing volume alone produce a
 green-heavy QB profile.
 
-Note also that `ADP` is itself one of the twelve factors. This is deliberate in the source
-sheets but creates a subtle coupling: `CeilingScore` is not fully independent of market
-price. Section 4 keeps a separate, cleaner `ValueScore`, and the UI should offer a toggle to
-compute `CeilingScore` with ADP excluded (an 11-factor, max-55 variant) for users who want
-pure talent-and-situation ranking.
+The shipped factor list deliberately excludes `ADP`: market price belongs in the separate
+`ValueScore`, not in `CeilingScore`. The twelfth QB factor is injury concern. Pass-offense
+DVOA remains the one unsourced QB gap, so current ceiling coverage is 11/12.
 
 ### 1.3 Wide receiver factors
 
 Benchmarks from `WR Scoring Avgs.PNG`.
 
-**Volume factors** (3):
+**Volume factors** (6):
 
 | Factor | Per-game benchmark | Paced (17 g) |
 | --- | --- | --- |
 | Targets | 10.70 | 181.97 |
 | Receptions | 7.21 | 122.49 |
+| Yards per catch | 13.772 | — |
+| YAC per reception | 4.773 | — |
+| Target share | 29.9% | — |
 | Touchdowns | 0.76 | 12.89 |
 
-**Situational factors** (7):
+**Situational factors** (9):
 
 | Factor | Benchmark | Direction |
 | --- | --- | --- |
 | Offensive rank in PPG | 8.94 | lower better |
-| Quarterback's rank in PFF passing grade | 10.36 | lower better |
+| Quarterback QBR rank (proxy) | 21.545 | lower better |
 | Team pass attempts | 594.94 | higher better |
+| Route participation | 90.781% | higher better |
 | Highest targeted secondary option | 103.31 | see below |
-| Offensive line rank in pass blocking | 10.75 | lower better |
-| Yards per route run | 4.81 | higher better |
-| Highest percentile achieved in Reception Perception | 90th | higher better |
+| Offensive line rank in pass blocking (proxy) | 13.697 | lower better |
+| Rank in neutral pace | 15.727 | lower better |
+| Yards per route run (proxy) | 2.739 | higher better |
+| Catch percentage (NGS proxy) | 68.864% | higher better |
 
 **Profile factors** (2): `Archetype` and `Injury/Suspension Concern`. These appear as graded
 rows in `WR ADP #1-9.PNG` — archetype cells are green for Prime WR1 and red for Trusty
 Veteran, and the concern row is graded `Minimal Concern` (green) / `Some Concern` (yellow) /
-worse. This is what brings WR to 12 factors.
+worse. Together these bring WR to 17 configured and known factors.
 
 "Highest targeted secondary option" is the target volume of the *next* most-targeted
 receiver on the team, and it is graded as `More` / `Same` / `Less` rather than by ratio —
@@ -175,7 +195,7 @@ Benchmarks from `TE Avg Scoring.PNG`.
 **Volume factors** (3): targets 8.10/g (137.67 paced), receptions 5.71/g (97.02),
 touchdowns 0.56/g (9.49).
 
-**Situational factors** (8):
+**Situational factors** (10):
 
 | Factor | Benchmark | Direction |
 | --- | --- | --- |
@@ -187,9 +207,12 @@ touchdowns 0.56/g (9.49).
 | Route participation | 79.8% | higher better |
 | In-line % | 39.0% | lower better |
 | Rank in yards per route run | 5.14 | lower better |
+| Offensive line rank in pass blocking (proxy) | 14.667 | lower better |
+| Rank in neutral pace | 14.667 | lower better |
 
 **Profile factor** (1): `Injury/Age Concern`, graded in `TE ADPs #1-8.PNG` as `Minimal
-Concerns` / `Some Concern` / `Concerned`.
+Concerns` / `Some Concern` / `Concerned`. In-line percentage and YPRR rank remain licensed
+data gaps, giving TE 12 known factors out of 14 configured.
 
 The TE position has the sharpest, most usable signal of any position, and the annotations in
 `TE Avg Scoring.PNG` state it directly: of the 37 league-winning TE seasons studied, only
@@ -210,56 +233,38 @@ rate is better because it means the TE is being deployed as a receiver in the sl
 wide rather than as a blocker. `TE League Winners 2025-2024.PNG` shows Trey McBride at 28.0%
 and Brock Bowers at 30.5% in-line, versus George Kittle at 57.0%.
 
-### 1.5 Running back factors — a gap to close
+### 1.5 Running back factors
 
-The RB artifacts take a different analytical route than the other three positions. There is
-no `RB Scoring Factors.PNG`; instead the RB folder supplies archetype bucket hit-rates
-(`RB Player Type Stats since 2015.PNG`), a VORP leaderboard (`RB VORP Rankings.PNG`),
-injury base rates (`RB Avg Games Missed.PNG`), and a season-outcome audit
-(`2025 RB Results.PNG`).
+RB is no longer provisional. DraftLab configures 16 factors from FSE's 40-league-winner
+cohort and public nflverse-derived proxies.
 
-This is a real inconsistency in the source material rather than an oversight on my part to
-paper over.
+**Volume factors** (5): touches per game (21.5), rush attempts per game (17.3), targets per
+game (5.4), receptions per game (3.874), and touchdowns per game (0.98).
 
-**Decision: running backs ship provisional.** The RB benchmarks do not exist yet and will be
-supplied later. Until they arrive, the RB board runs on `ArchetypeEV` + VORP + `RiskProfile`,
-and RB rows display **no `CeilingScore` at all** rather than a computed-looking number — a
-dash and a `provisional` marker, as in the
-[player board mock](https://www.figma.com/design/nNpEDXUHuMGap5CL9kXT4Z?node-id=20-341).
+**Situational factors** (9): offensive PPG rank (9.5), OL run-block rank proxy (12.97),
+yards per carry (4.859), yards per touch (5.606), team wins (9.848), red-zone touch share
+(40.0%), snap share (71.7%), goal-line carry share (66.4%), and neutral run rate (43.5%).
 
-Showing a number that looks as authoritative as Ja'Marr Chase's verified 42 while resting on
-invented benchmarks would be the fastest possible way to make this tool untrustworthy, and it
-would be undetectable to the user. A visible gap is the honest representation, and it has a
-useful side effect: it makes the missing data obvious to whoever is looking at the board,
-rather than letting a placeholder quietly harden into an assumption.
+**Profile factors** (2): `Archetype` and `Injury Concern`.
 
-### 1.5.1 Designing for the benchmarks arriving later
+All 16 RB factors are currently sourced, so the raw range is −80…80.
 
-Because the benchmarks are expected rather than hypothetical, the engine should be built so
-that adding them is a configuration change and not a code change. Three requirements follow:
+### 1.5.1 Versioning future benchmark changes
+
+Benchmarks remain configuration rather than scoring code so future seasons can be updated
+without changing the grading pipeline. Three requirements follow:
 
 **Benchmarks live in versioned configuration, not code.** A per-position, per-season table of
 factor definitions with their benchmark values, comparison direction, and grading bands (the
-cut-points in §1.1). Adding RB means adding one entry, and recalibrating QB/WR/TE next season
-means editing values rather than shipping a release.
+cut-points in §1.1). Recalibrating any position next season means editing values rather than
+shipping a scoring-code change.
 
-**The factor set is position-parameterised from the start.** The grading pipeline should take
-the twelve factors as data and iterate, so nothing about the number twelve or the specific
-factor names is hardcoded. The QB, WR and TE tables prove the shape; RB slots into it.
+**The factor set is position-parameterised.** The grading pipeline takes each position's
+factor definitions as data and iterates, so neither the factor count nor names are hardcoded.
 
-**RB carries `ConfidenceScore` 0 until it lands.** The confidence mechanism in §1 already
-expresses exactly this state — factors whose values are not known — so RB needs no special
-case in the model, only in the UI copy that explains why.
-
-Proposed RB factor set, for when the data is available, mirroring the volume + situational +
-profile structure of the other three positions: touches per game, rush attempts per game,
-targets per game and total touchdowns per game for volume; offensive rank in PPG, offensive
-line rank in run blocking, red zone touch share, snap share, goal-line carry share and team
-neutral-situation run rate for situational; archetype and injury concern for profile. That is
-twelve, keeping the -36…60 scale directly comparable across all four positions. It is a
-proposal to check against the research rather than a specification — the benchmark values are
-what matter, and they should come from the same outcome-derived method as the others: the
-average profile of running backs who actually won leagues.
+**Confidence is derived from each position's configured factor count.** This lets missing
+inputs surface as unknown without special-casing a position or silently rewarding incomplete
+coverage.
 
 ---
 

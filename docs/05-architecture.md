@@ -132,9 +132,9 @@ interface MarketData {
 
 interface PlayerEvaluation {            // computed, cached per league
   playerId: string; leagueId: string;
-  factors: FactorGrade[];               // 12 per position
-  ceilingScore: number;                 // -36..60
-  confidenceScore: number;              // knownFactors / 12
+  factors: FactorGrade[];               // position-configured factor list
+  ceilingScore: number;                 // ±5 × known-factor count
+  confidenceScore: number;              // known / configured factors
   archetype: Archetype;
   archetypeEv: number;
   riskProfile: number;                  // 0..100
