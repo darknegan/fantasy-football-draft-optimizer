@@ -170,8 +170,8 @@ interface Recommendation {
 ```
 
 The UI shows the top three to five with a one-line rationale each, plus a full sortable board
-behind them. Reason strings should be concrete and cite the data — "Prime WR1: 53.52% historical
-return rate, lowest bust rate of any archetype", "first or second in team targets, 28% in-line
+behind them. Reason strings should be concrete and cite the data — "ELITE: 53.52% historical
+return rate (interim Prime WR1 table), lowest bust rate of any archetype", "first or second in team targets, 28% in-line
 rate", "FSE ranks him 30 spots ahead of ESPN at a round 7 price", "round 4 TEs have never won
 a league in this sample" — rather than generic praise. Copy like "great value here" is
 indistinguishable from every other fantasy tool and gives the user nothing to reason with.

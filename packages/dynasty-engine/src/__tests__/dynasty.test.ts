@@ -58,7 +58,9 @@ function player(partial: Partial<Player> & Pick<Player, 'id' | 'name' | 'age' | 
     draftYear: 2023,
     draftRound: 2,
     status: 'active',
-    hasPositionalTop12Finish: false,
+    positionalTop5FinishCount: 0,
+    positionalTop8FinishCount: 0,
+    positionalTop12FinishCount: 0,
     ...partial,
   };
 }

@@ -9,12 +9,16 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import type {
-  BoardPlayer,
-  FactorGrade,
-  League,
-  Position,
-} from '../../core/api.types';
+import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
+import {
+  BOARD_HEADER_PURPOSE,
+  buildArchetypeTooltip,
+  buildCeilingTooltip,
+  buildScoreTooltip,
+  explainBoardArchetype,
+} from './board-tooltips';
+import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-display';
+import { scoreLabel } from './score-label';
 
 type PosFilter = Position | 'ALL';
 type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
@@ -37,7 +41,6 @@ const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'proj', label: 'Proj' },
 ];
 
-const FACTOR_SLOTS = 12;
 const RISK_MAX = 100;
 
 @Component({
@@ -116,19 +119,20 @@ const RISK_MAX = 100;
         </a>
       </div>
 
-      <div class="col-head" aria-hidden="true">
-        <span class="c-rank">#</span>
-        <span class="c-pos">POS</span>
-        <span class="c-player">PLAYER</span>
-        <span class="c-adp">ADP</span>
-        <span class="c-ceiling">CEILING</span>
-        <span class="c-conf">CONF</span>
-        <span class="c-arch">ARCHETYPE</span>
-        <span class="c-risk">RISK</span>
-        <span class="c-value">VALUE</span>
-        <span class="c-proj">PROJ</span>
-        <span class="c-factors">12 FACTORS</span>
-        <span class="c-flag"></span>
+      <div class="col-head">
+        <span class="c-rank" [title]="headerPurpose['#']">#</span>
+        <span class="c-pos" [title]="headerPurpose['POS']">POS</span>
+        <span class="c-player" [title]="headerPurpose['PLAYER']">PLAYER</span>
+        <span class="c-adp" [title]="headerPurpose['ADP']">ADP</span>
+        <span class="c-score" [title]="headerPurpose['SCORE']">SCORE</span>
+        <span class="c-ceiling" [title]="headerPurpose['CEILING']">CEILING</span>
+        <span class="c-conf" [title]="headerPurpose['CONF']">CONF</span>
+        <span class="c-arch" [title]="headerPurpose['ARCHETYPE']">ARCHETYPE</span>
+        <span class="c-risk" [title]="headerPurpose['RISK']">RISK</span>
+        <span class="c-value" [title]="headerPurpose['VALUE']">VALUE</span>
+        <span class="c-proj" [title]="headerPurpose['PROJ']">PROJ</span>
+        <span class="c-factors" [title]="headerPurpose['FACTORS']">FACTORS</span>
+        <span class="c-flag" [title]="headerPurpose['FLAG']"></span>
       </div>
 
       <div class="list" role="list">
@@ -186,35 +190,38 @@ const RISK_MAX = 100;
 
               <span class="c-adp mono">{{ row.evaluation.value.adpRoundPick }}</span>
 
-              <span class="c-ceiling mono">
+              <span class="c-score mono has-tip" tabindex="0">
+                {{ scoreLabel(row) }}
+                <span class="tip" role="tooltip">{{ scoreTooltip(row) }}</span>
+              </span>
+
+              <span class="c-ceiling mono has-tip" tabindex="0">
                 @if (row.evaluation.ceiling.provisional) {
                   <span class="ceil-score muted">—</span>
-                  <span class="ceil-den muted">/60</span>
                 } @else {
-                  <span class="ceil-score" [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30">{{
+                  <span class="ceil-score" [class.good]="top5Ids().has(row.player.id)">{{
                     row.evaluation.ceiling.ceilingScore ?? '—'
                   }}</span>
-                  <span class="ceil-den muted">/60</span>
                 }
+                <span class="tip" role="tooltip">{{
+                  ceilingTooltip(row, top5Ids().has(row.player.id))
+                }}</span>
               </span>
 
               <span class="c-conf mono" [class.prov]="row.evaluation.ceiling.provisional">
                 @if (row.evaluation.ceiling.provisional) {
                   prov.
                 } @else {
-                  {{ row.evaluation.ceiling.knownFactors }}/{{ factorSlots }}
+                  {{ row.evaluation.ceiling.knownFactors }}/{{ configuredFactorCount(row) }}
                 }
               </span>
 
-              <span class="c-arch">
-                <span
-                  class="arch"
-                  [class]="archTone(row.evaluation.archetype.archetype)"
-                  [title]="archTitle(row)"
-                >
+              <span class="c-arch has-tip" tabindex="0">
+                <span class="arch" [class]="archTone(row.evaluation.archetype.archetype)">
                   <span class="arch-dot" aria-hidden="true"></span>
                   {{ formatArchetype(row.evaluation.archetype.archetype) }}
                 </span>
+                <span class="tip" role="tooltip">{{ archetypeTooltip(row) }}</span>
               </span>
 
               <span class="c-risk">
@@ -273,7 +280,11 @@ export class BoardComponent implements OnInit {
   readonly Math = Math;
   readonly posTabs = POS_TABS;
   readonly sortOptions = SORT_OPTIONS;
-  readonly factorSlots = FACTOR_SLOTS;
+  readonly configuredFactorCount = configuredFactorCount;
+  readonly scoreLabel = scoreLabel;
+  readonly headerPurpose = BOARD_HEADER_PURPOSE;
+  readonly scoreTooltip = buildScoreTooltip;
+  readonly ceilingTooltip = buildCeilingTooltip;
 
   leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
@@ -291,6 +302,8 @@ export class BoardComponent implements OnInit {
     const set = new Set(this.rows().map((r) => r.evaluation.archetype.archetype));
     return [...set].sort();
   });
+
+  readonly top5Ids = computed(() => top5CeilingIdsByPosition(this.rows()));
 
   readonly filteredSorted = computed(() => {
     let list = this.rows();
@@ -370,27 +383,46 @@ export class BoardComponent implements OnInit {
   }
 
   formatArchetype(a: string): string {
-    return a
-      .replaceAll('_', ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\bWr\b/g, 'WR')
-      .replace(/\bRb\b/g, 'RB')
-      .replace(/\bTe\b/g, 'TE')
-      .replace(/\bQb\b/g, 'QB');
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+        return 'Elite';
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+        return 'Proven';
+      case 'TRUSTY_VETERAN':
+        return 'Trusty Veteran';
+      case 'VETERAN':
+        return 'Veteran';
+      case 'IN_THEIR_PRIME':
+        return 'In Their Prime';
+      case 'BREAKOUT_CANDIDATE':
+        return 'Breakout';
+      default:
+        return a
+          .replaceAll('_', ' ')
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
   }
 
   archTone(a: string): string {
-    const u = a.toUpperCase();
-    if (u.includes('PRIME') || u.includes('ELITE')) return 'good';
-    if (u.includes('BREAKOUT') || u.includes('UPSIDE')) return 'mid';
-    if (u.includes('VETERAN') || u.includes('TRUSTY') || u.includes('DECLIN')) return 'warn';
-    if (u.includes('RISK') || u.includes('FRAGILE')) return 'bad';
-    return 'good';
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+      case 'TRUSTY_VETERAN':
+        return 'good';
+      case 'IN_THEIR_PRIME':
+        return 'mid';
+      case 'BREAKOUT_CANDIDATE':
+        return 'warn';
+      case 'VETERAN':
+        return 'bad';
+      default:
+        return 'mid';
+    }
   }
 
-  archTitle(row: BoardPlayer): string {
-    return `${this.formatArchetype(row.evaluation.archetype.archetype)} · EV ${row.evaluation.archetype.archetypeEv.toFixed(2)}`;
+  archetypeTooltip(row: BoardPlayer): string {
+    return buildArchetypeTooltip(row, explainBoardArchetype(row));
   }
 
   riskTone(risk: number): string {
@@ -422,9 +454,10 @@ export class BoardComponent implements OnInit {
   }
 
   factorGrades(row: BoardPlayer): FactorGrade[] {
+    const slots = configuredFactorCount(row);
     const factors = row.evaluation.ceiling.factors ?? [];
-    const grades = factors.slice(0, FACTOR_SLOTS).map((f) => f.grade);
-    while (grades.length < FACTOR_SLOTS) grades.push('unknown');
+    const grades = factors.slice(0, slots).map((f) => f.grade);
+    while (grades.length < slots) grades.push('unknown');
     return grades;
   }
 

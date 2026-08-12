@@ -9,12 +9,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import type {
-  DynastyBoardRow,
-  DynastyMode,
-  DynastyOverview,
-  League,
-} from '../../core/api.types';
+import type { DynastyBoardRow, DynastyMode, DynastyOverview, League } from '../../core/api.types';
 
 interface AgeBar {
   label: string;
@@ -142,22 +137,42 @@ export class DynastyComponent implements OnInit {
   }
 
   formatArchetype(raw: string): string {
-    return raw
-      .replaceAll('_', ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\bWr\b/g, 'WR')
-      .replace(/\bRb\b/g, 'RB')
-      .replace(/\bQb\b/g, 'QB')
-      .replace(/\bTe\b/g, 'TE');
+    switch (raw.toUpperCase()) {
+      case 'ELITE':
+        return 'Elite';
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+        return 'Proven';
+      case 'TRUSTY_VETERAN':
+        return 'Trusty Veteran';
+      case 'VETERAN':
+        return 'Veteran';
+      case 'IN_THEIR_PRIME':
+        return 'In Their Prime';
+      case 'BREAKOUT_CANDIDATE':
+        return 'Breakout';
+      default:
+        return raw
+          .replaceAll('_', ' ')
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
   }
 
-  archetypeTone(raw: string): string {
-    const u = raw.toUpperCase();
-    if (u.includes('VET') || u.includes('TRUSTY')) return 'vet';
-    if (u.includes('BREAKOUT') || u.includes('UPSIDE')) return 'breakout';
-    if (u.includes('PRIME') || u.includes('HERO')) return 'prime';
-    return '';
+  archTone(raw: string): string {
+    switch (raw.toUpperCase()) {
+      case 'ELITE':
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+      case 'TRUSTY_VETERAN':
+        return 'good';
+      case 'IN_THEIR_PRIME':
+        return 'mid';
+      case 'BREAKOUT_CANDIDATE':
+        return 'warn';
+      case 'VETERAN':
+        return 'bad';
+      default:
+        return 'mid';
+    }
   }
 
   barWidth(value: number, curve: DynastyBoardRow['curve']): number {
@@ -177,7 +192,9 @@ export class DynastyComponent implements OnInit {
     const s = this.summary();
     const o = this.overview();
     if (!o) return '';
-    const young = o.ageCurve.buckets.filter((b) => b.label.startsWith('21') || b.label.startsWith('24')).reduce((n, b) => n + b.count, 0);
+    const young = o.ageCurve.buckets
+      .filter((b) => b.label.startsWith('21') || b.label.startsWith('24'))
+      .reduce((n, b) => n + b.count, 0);
     const old = s.agingRisk;
     return `Mean age ${s.meanAge.toFixed(1)} with ${young} players under 27 and ${old} at 30+. Contending window lands ${s.contendWindow.startSeason}–${s.contendWindow.endSeason} under the current ${o.mode} tilt.`;
   }
@@ -190,8 +207,10 @@ export class DynastyComponent implements OnInit {
   }
 
   pickSubtitle(p: DynastyOverview['pickAssets'][number]): string {
-    if (p.round === 1) return `Projected ~1.${String(Math.min(12, Math.max(1, Math.round(13 - p.estimatedValue / 10)))).padStart(2, '0')}`;
-    if (p.round === 2) return `Projected ~2.${String(Math.min(12, Math.max(1, Math.round(10 - p.estimatedValue / 8)))).padStart(2, '0')}`;
+    if (p.round === 1)
+      return `Projected ~1.${String(Math.min(12, Math.max(1, Math.round(13 - p.estimatedValue / 10)))).padStart(2, '0')}`;
+    if (p.round === 2)
+      return `Projected ~2.${String(Math.min(12, Math.max(1, Math.round(10 - p.estimatedValue / 8)))).padStart(2, '0')}`;
     return 'Unprojected';
   }
 

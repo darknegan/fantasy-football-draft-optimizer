@@ -24,12 +24,10 @@ export type DraftSlotTier = 'S' | 'A' | 'B' | 'C' | 'unrated';
 export type ArchetypeId =
   | 'BREAKOUT_CANDIDATE'
   | 'PROVEN_BREAKOUT_CANDIDATE'
-  | 'TRUSTY_VETERAN'
+  | 'ELITE'
   | 'IN_THEIR_PRIME'
-  | 'PRIME_WR1'
-  | 'PRIME_WR2'
-  | 'PRIME_RB1'
-  | 'PRIME_RB2';
+  | 'TRUSTY_VETERAN'
+  | 'VETERAN';
 
 export type LeagueType = 'redraft' | 'dynasty' | 'auction';
 
@@ -84,19 +82,20 @@ export interface Player {
   draftYear: number;
   draftRound: number | null;
   status: PlayerStatus;
-  hasPositionalTop12Finish: boolean;
+  /** Career top-5 finishes at the player's position (season fantasy-point rank). */
+  positionalTop5FinishCount: number;
+  /** Career top-8 finishes at the player's position (season fantasy-point rank). */
+  positionalTop8FinishCount: number;
+  /** Career top-12 finishes at the player's position (season fantasy-point rank). */
+  positionalTop12FinishCount: number;
   /**
-   * RB-specific: number of prior top-12-at-position finishes, when known. Lets classifyRb
-   * distinguish a one-hit-wonder breakout (1) from an already-entrenched young RB1 (2+),
-   * which hasPositionalTop12Finish's plain boolean can't. Falls back to the boolean when
-   * undefined, so existing (unmigrated) data keeps its prior classification.
+   * @deprecated Prefer positionalTop12FinishCount. Kept optional for older fixtures.
    */
-  positionalTop12FinishCount?: number;
+  hasPositionalTop12Finish?: boolean;
   /**
    * WR/RB only: rank among same-team, same-position teammates by the position's primary
    * volume stat (targets for WR, touches for RB). 1 = the team's clear lead option — a
-   * true alpha receiver or a bell-cow back, not a committee/complementary piece. Powers
-   * classifyWr's PRIME_WR1/PRIME_WR2 split and classifyRb's PRIME_RB1/PRIME_RB2 split.
+   * true alpha receiver or a bell-cow back, not a committee/complementary piece.
    * QB has no analogous "QB2" within one offense; TE's version of this distinction is
    * captured by computeCeilingScore's failsTargetShareGate instead, a different mechanism
    * for the same idea.

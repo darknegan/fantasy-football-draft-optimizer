@@ -30,8 +30,9 @@ interface ArtifactBio {
   draft_year: number | null;
   status: string | null;
   provenance: string;
-  top12_finish_count: number;
-  top12_finish_seasons: number[];
+  top5_finish_count?: number;
+  top8_finish_count?: number;
+  top12_finish_count?: number;
 }
 
 interface ArtifactPlayer {
@@ -130,8 +131,9 @@ export function seedPlayersFromArtifact(doc: PlayerFactorsArtifact): LoadArtifac
       draftYear: p.bio.draft_year,
       draftRound: null,
       status: mapStatus(p.bio.status),
-      hasPositionalTop12Finish: p.bio.top12_finish_count > 0,
-      positionalTop12FinishCount: p.bio.top12_finish_count,
+      positionalTop5FinishCount: p.bio.top5_finish_count ?? 0,
+      positionalTop8FinishCount: p.bio.top8_finish_count ?? 0,
+      positionalTop12FinishCount: p.bio.top12_finish_count ?? 0,
       teamPositionRank: p.team_position_rank ?? null,
     };
 

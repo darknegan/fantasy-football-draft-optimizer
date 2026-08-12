@@ -91,11 +91,11 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 12.697,
       },
       {
-        id: 'pass_dvoa_rank',
-        label: 'Pass offense DVOA rank',
+        id: 'pass_epa_rank',
+        label: 'Pass EPA rank (proxy)',
         category: 'situational',
         direction: 'lowerBetter',
-        benchmark: 7.01,
+        benchmark: 5.03,
       },
       {
         id: 'injury_concern',
@@ -307,18 +307,11 @@ export const BENCHMARKS_2025: Record<'QB' | 'WR' | 'TE' | 'RB', PositionBenchmar
         benchmark: 79.8,
       },
       {
-        id: 'inline_pct',
-        label: 'In-line %',
+        id: 'yprr',
+        label: 'Yards per route run (proxy)',
         category: 'situational',
-        direction: 'lowerBetter',
-        benchmark: 39.0,
-      },
-      {
-        id: 'yprr_rank',
-        label: 'YPRR rank',
-        category: 'situational',
-        direction: 'lowerBetter',
-        benchmark: 5.14,
+        direction: 'higherBetter',
+        benchmark: 1.956,
       },
       {
         id: 'ol_pass_block_rank',
