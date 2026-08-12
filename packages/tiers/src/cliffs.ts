@@ -2,10 +2,34 @@ import type { CliffMarker } from './types.js';
 
 /**
  * How many times the baseline gap an adjacent gap must be to count as a cliff.
- * Starting value from the design doc; confirm by inspecting where cliffs land on
- * real data before treating it as settled.
+ *
+ * Confirmed against 221 real players (sleeperMCP player_factors.json v5), not
+ * assumed. The design doc's provisional 2.5 was far too low: draftScore is
+ * rounded to one decimal, and across 221 players 147 of the 220 adjacent gaps
+ * are <= 0.1, so the MEDIAN gap collapses onto the 0.1 rounding quantum. At
+ * k=2.5 the threshold is therefore 0.25 and every 0.3 gap in the dense elite
+ * cluster fires — 42 cliffs on a 221-row board, which is noise, and markers
+ * appeared between adjacent near-ties (Amon-Ra St. Brown 70.4 -> George Pickens
+ * 70.0).
+ *
+ * 5.0 is the smallest value that stops firing inside those near-tie clusters
+ * while keeping every per-position break a human would draw: RB after Gibbs
+ * (#2), Kyren Williams (#4), Achane (#8) and Kenneth Walker (#11); TE after
+ * McBride (#1), Kittle (#3) and Ferguson (#5); the full board after Pickens
+ * (70.0 -> Bijan Robinson 67.0) and after Travis Kelce (63.0 -> Chase Brown
+ * 61.9). Measured counts at k=5: 15 on the unfiltered 221-row board, QB 2/36,
+ * RB 6/68, WR 10/91, TE 5/26, and ~6 across eight consecutive 25-row slices.
+ * Pushing k to 8-10 does hit the 3-8 target on the unfiltered board but strips
+ * RB down to a single cliff at rank 67, losing the RB1/RB2 boundary — the most
+ * load-bearing break on a fantasy board — so it was rejected.
+ *
+ * Known limitation, orthogonal to k: because the baseline is the median gap, a
+ * longer list has a SMALLER threshold in absolute points (0.5 across all 221,
+ * but 1.5 within RB alone). The unfiltered board is consequently the noisiest
+ * case rather than the cleanest. A floor on the baseline would fix that
+ * properly; k alone cannot.
  */
-export const DEFAULT_CLIFF_K = 2.5;
+export const DEFAULT_CLIFF_K = 5;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 

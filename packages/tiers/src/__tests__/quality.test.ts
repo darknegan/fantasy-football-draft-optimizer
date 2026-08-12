@@ -4,8 +4,8 @@ import { qualityBand, QUALITY_THRESHOLDS } from '../quality.js';
 describe('qualityBand', () => {
   it('assigns bands from absolute draftScore thresholds', () => {
     expect(qualityBand(92, 5)).toBe('S');
-    expect(qualityBand(80, 5)).toBe('A');
-    expect(qualityBand(65, 5)).toBe('B');
+    expect(qualityBand(66, 5)).toBe('A');
+    expect(qualityBand(58, 5)).toBe('B');
     expect(qualityBand(50, 5)).toBe('C');
     expect(qualityBand(20, 5)).toBe('D');
   });

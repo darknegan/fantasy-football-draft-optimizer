@@ -3,7 +3,7 @@ import { detectCliffs, DEFAULT_CLIFF_K } from '../cliffs.js';
 
 describe('detectCliffs', () => {
   it('flags a gap that is k times the median gap', () => {
-    // gaps: 1, 1, 8, 1  → median 1 → threshold 2.5 → only the 8 qualifies
+    // gaps: 1, 1, 8, 1  → median 1 → threshold 5 → only the 8 qualifies
     const cliffs = detectCliffs([50, 49, 48, 40, 39]);
     expect(cliffs).toHaveLength(1);
     expect(cliffs[0]!.afterIndex).toBe(2);
@@ -29,7 +29,7 @@ describe('detectCliffs', () => {
 
   it('falls back to the mean of nonzero gaps when the median gap is zero', () => {
     // gaps: 0, 0, 0, 9 → median 0, so the median rule would divide by zero.
-    // Mean of nonzero gaps = 9 → threshold 22.5 → 9 does not clear it.
+    // Mean of nonzero gaps = 9 → threshold 45 → 9 does not clear it.
     const cliffs = detectCliffs([40, 40, 40, 40, 31]);
     expect(cliffs).toEqual([]);
     // With a low k the same gap does clear the fallback threshold.
@@ -49,6 +49,6 @@ describe('detectCliffs', () => {
   });
 
   it('exposes a documented default k', () => {
-    expect(DEFAULT_CLIFF_K).toBe(2.5);
+    expect(DEFAULT_CLIFF_K).toBe(5);
   });
 });
