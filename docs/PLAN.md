@@ -96,10 +96,11 @@ set your draft slot and see its tier, get a round-by-round plan annotated with h
 league-winner rates, Monte Carlo the outcome distribution, compare strategies side by side, and
 build a tier cheat sheet with personal target and avoid markers.
 
-**Comprehensive positional rankings.** Every QB, RB, WR, and TE graded on twelve factors
-covering volume, team situation, and career-stage profile, producing a ceiling score, a
-career-stage archetype with its historical outcome rates, an injury risk profile, and a market
-value delta — all expressed in your league's own scoring.
+**Comprehensive positional rankings.** Every QB, RB, WR, and TE graded on position-configured
+factors covering volume, team situation, and career-stage profile, on a six-band rubric
+(elite/green/yellow/orange/red/critical), producing a ceiling score, a career-stage archetype
+with its historical outcome rates, an injury risk profile, and a market value delta — all
+expressed in your league's own scoring.
 
 **League sync.** Connect Sleeper with just your username and import as many of your leagues as
 you like — no password, no cookies, nothing to copy. Scoring settings are parsed into a
@@ -137,14 +138,11 @@ One thing this does *not* affect, since the naming invites confusion: the ESPN p
 in the value model come from the research already collected by hand in `public/stats/`, not from
 any API call. The FSE-versus-ESPN arbitrage signal is untouched.
 
-**Running back scores ship provisional.** The RB benchmarks will be supplied later. Until they
-arrive, the RB board runs on archetype expected value, VORP and injury risk, and RB rows show
-**no ceiling score at all** — a dash and a `provisional` marker rather than a computed-looking
-number. A placeholder that looked as authoritative as Ja'Marr Chase's verified 42 would be
-undetectable to the user and would quietly harden into an assumption; a visible gap is the
-honest representation and keeps the missing data obvious. The engine keeps benchmarks in
-versioned configuration and treats the factor set as data, so adding RB later is a config change
-rather than a code change.
+**Running back ceiling scores are shipped.** Per `01-player-evaluation-model.md` §1.5, RB is
+no longer provisional: DraftLab configures 16 factors from FSE's 40-league-winner cohort and
+public nflverse-derived proxies, and all 16 are currently sourced (raw range −80…80).
+Benchmarks remain versioned configuration, so future seasons are a config change rather than a
+code change.
 
 **Elite TE timing follows the outcome data.** The strategy definition says a "top 4-5 round
 tight end anchor"; the round-by-round table says round 4 tight ends have a 0% league-winner
@@ -169,8 +167,8 @@ draft tool on draft night, so it is a requirement rather than a nicety.
 **Some efficiency metrics are licensed.** PFF grades, DVOA, and Reception Perception
 percentiles are load-bearing in the WR and TE factor sets and are not freely redistributable.
 The realistic starting point is a manually maintained seasonal import, which is why every
-player carries a confidence score reflecting how many of their twelve factors are actually
-known.
+player carries a confidence score reflecting how many of their position-configured factors are
+actually known.
 
 **Two source images are cropped.** Zero RB and Elite QB have definitions but no visible tier
 grade, and draft slot 1.05 is missing. The app shows these as unrated rather than guessing.
