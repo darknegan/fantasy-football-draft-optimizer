@@ -8,13 +8,10 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { adpOverall, survivalBands, type SurvivalBandId } from '@draftlab/tiers';
+import { snakePickNumbers } from '@draftlab/strategy-engine';
 import { ApiService } from '../../core/api.service';
-import type {
-  BoardPlayer,
-  FactorGrade,
-  League,
-  Position,
-} from '../../core/api.types';
+import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
 
 type PosFilter = Position | 'ALL';
 type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
@@ -22,7 +19,8 @@ type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
 interface BoardSection {
-  tier: number;
+  id: SurvivalBandId;
+  label: string;
   note: string;
   rows: BoardPlayer[];
 }
@@ -132,9 +130,9 @@ const RISK_MAX = 100;
       </div>
 
       <div class="list" role="list">
-        @for (section of sections(); track section.tier) {
+        @for (section of sections(); track section.id) {
           <div class="tier-break">
-            <span class="tier-tag">TIER {{ section.tier }}</span>
+            <span class="tier-tag">{{ section.label }}</span>
             <span class="tier-note">{{ section.note }}</span>
             <span class="tier-rule" aria-hidden="true"></span>
           </div>
@@ -191,9 +189,11 @@ const RISK_MAX = 100;
                   <span class="ceil-score muted">—</span>
                   <span class="ceil-den muted">/60</span>
                 } @else {
-                  <span class="ceil-score" [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30">{{
-                    row.evaluation.ceiling.ceilingScore ?? '—'
-                  }}</span>
+                  <span
+                    class="ceil-score"
+                    [class.good]="(row.evaluation.ceiling.ceilingScore ?? 0) >= 30"
+                    >{{ row.evaluation.ceiling.ceilingScore ?? '—' }}</span
+                  >
                   <span class="ceil-den muted">/60</span>
                 }
               </span>
@@ -312,15 +312,20 @@ export class BoardComponent implements OnInit {
     if (value === 'even') list = list.filter((r) => r.evaluation.value.valueScore === 0);
 
     const key = this.sortKey();
-    return [...list].sort((a, b) => compareRows(a, b, key));
+    const teamCount = this.league()?.teamCount ?? 12;
+    return [...list].sort((a, b) => compareRows(a, b, key, teamCount));
   });
 
   readonly sections = computed((): BoardSection[] => {
     const rows = this.filteredSorted();
     if (!rows.length) return [];
     const league = this.league();
-    const nextPick = estimateNextUserPick(league);
-    return buildSections(rows, nextPick, league?.teamCount ?? 12);
+    // Recomputed on every pick: picksMade is derived from the rows themselves, so
+    // the bands re-partition live as the draft progresses.
+    const picksMade = this.rows().filter((r) => r.drafted).length;
+    const next = nextUserPick(league, picksMade);
+    if (!next) return [];
+    return buildSections(rows, next, league?.teamCount ?? 12);
   });
 
   ngOnInit() {
@@ -442,23 +447,20 @@ function riskBucket(risk: number): RiskFilter {
   return 'high';
 }
 
-function adpOverall(adp: string, teamCount: number): number {
-  const m = /^(\d+)\.(\d+)$/.exec(adp.trim());
-  if (!m) return 999;
-  const round = Number(m[1]);
-  const slot = Number(m[2]);
-  return (round - 1) * teamCount + slot;
-}
-
-function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey): number {
+function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number): number {
   switch (key) {
     case 'ceiling':
       return (b.evaluation.ceiling.ceilingScore ?? -1) - (a.evaluation.ceiling.ceilingScore ?? -1);
-    case 'adp':
-      return (
-        adpOverall(a.evaluation.value.adpRoundPick, 12) -
-        adpOverall(b.evaluation.value.adpRoundPick, 12)
-      );
+    case 'adp': {
+      // Package adpOverall returns null for unparseable ADP. Sort those last rather
+      // than letting a sentinel rank them as very early or very late.
+      const av = adpOverall(a.evaluation.value.adpRoundPick, teamCount);
+      const bv = adpOverall(b.evaluation.value.adpRoundPick, teamCount);
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return av - bv;
+    }
     case 'value':
       return b.evaluation.value.valueScore - a.evaluation.value.valueScore;
     case 'risk':
@@ -474,69 +476,74 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey): number {
   }
 }
 
-function estimateNextUserPick(league: League | null): number {
-  if (!league?.draftSlot) return 9;
-  return league.draftSlot;
+/** Rounds to plan for when projecting the user's remaining snake picks. */
+const PLANNING_ROUNDS = 15;
+
+/**
+ * The user's next pick as an overall number, plus how many picks fall before it.
+ * Replaces the previous placeholder, which returned the raw draft slot (or 9) and
+ * so never advanced as the draft progressed.
+ */
+function nextUserPick(
+  league: League | null,
+  picksMade: number,
+): { nextOverall: number; picksUntilNext: number } | null {
+  const slot = league?.draftSlot;
+  if (!slot) return null;
+  const teamCount = league?.teamCount ?? 12;
+  const picks = snakePickNumbers(slot, teamCount, PLANNING_ROUNDS);
+  const nextOverall = picks.find((p) => p > picksMade);
+  if (nextOverall === undefined) return null;
+  return { nextOverall, picksUntilNext: Math.max(0, nextOverall - picksMade - 1) };
 }
 
 function buildSections(
   rows: BoardPlayer[],
-  nextPickSlot: number,
+  next: { nextOverall: number; picksUntilNext: number },
   teamCount: number,
 ): BoardSection[] {
-  const scores = rows.map((r) => r.evaluation.draftScore).sort((a, b) => a - b);
-  const pct = (p: number) => scores[Math.max(0, Math.floor((scores.length - 1) * p))] ?? 0;
-  const cuts = [
-    { tier: 1, min: pct(0.9) },
-    { tier: 2, min: pct(0.75) },
-    { tier: 3, min: pct(0.5) },
-    { tier: 4, min: -Infinity },
-  ];
+  const tierRows = rows.map((row) => ({
+    id: row.player.id,
+    position: row.player.position,
+    draftScore: row.evaluation.draftScore,
+    ceilingKnownFactors: row.evaluation.ceiling.knownFactors,
+    adpRoundPick: row.evaluation.value.adpRoundPick,
+    row,
+  }));
 
-  const buckets = new Map<number, BoardPlayer[]>();
-  for (const row of rows) {
-    const score = row.evaluation.draftScore;
-    const cut = cuts.find((c) => score >= c.min) ?? cuts[cuts.length - 1]!;
-    const list = buckets.get(cut.tier) ?? [];
-    list.push(row);
-    buckets.set(cut.tier, list);
-  }
-
-  const nextOverall = nextPickSlot; // first-round pick approximation for pre-draft survival
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .filter(([, list]) => list.length > 0)
-    .map(([tier, list]) => ({
-      tier,
-      rows: list,
-      note: survivalNote(list, nextOverall, teamCount),
-    }));
+  return survivalBands(tierRows, next.nextOverall, next.picksUntilNext, teamCount).map((band) => {
+    const bandRows = band.rows.map((r) => r.row);
+    return {
+      id: band.id,
+      label: band.label,
+      note: survivalNote(band.id, bandRows, next.nextOverall, teamCount),
+      rows: bandRows,
+    };
+  });
 }
 
-function survivalNote(rows: BoardPlayer[], nextOverall: number, teamCount: number): string {
-  const left = rows.filter((r) => !r.drafted);
-  const n = left.length || rows.length;
-  const pickLabel = formatOverallPick(nextOverall + teamCount, teamCount);
-  const gone = left.filter(
-    (r) => adpOverall(r.evaluation.value.adpRoundPick, teamCount) <= nextOverall,
-  ).length;
-  if (gone >= n && n > 0) {
-    return `${n} players left · all ${n} gone before your next pick`;
+function survivalNote(
+  bandId: SurvivalBandId,
+  rows: BoardPlayer[],
+  nextOverall: number,
+  teamCount: number,
+): string {
+  const left = rows.filter((r) => !r.drafted).length;
+  const pickLabel = formatOverallPick(nextOverall, teamCount);
+  switch (bandId) {
+    case 'gone':
+      return `${left} players · unlikely to reach ${pickLabel}`;
+    case 'coin-flip':
+      return `${left} players · roughly even odds at ${pickLabel}`;
+    case 'available':
+      return `${left} players · should still be there at ${pickLabel}`;
+    case 'adp-unknown':
+      return `${left} players · no ADP on file, no survival estimate`;
   }
-  if (tierLooksTeWindow(rows)) {
-    return `${n} players · the elite TE window opens here`;
-  }
-  const survivors = Math.max(1, Math.round(n * 0.4));
-  return `${n} players · ${survivors}–${survivors + 1} should survive to ${pickLabel}`;
 }
 
 function formatOverallPick(overall: number, teamCount: number): string {
   const round = Math.floor((overall - 1) / teamCount) + 1;
   const slot = ((overall - 1) % teamCount) + 1;
   return `${round}.${String(slot).padStart(2, '0')}`;
-}
-
-function tierLooksTeWindow(rows: BoardPlayer[]): boolean {
-  const tes = rows.filter((r) => r.player.position === 'TE').length;
-  return tes >= Math.max(2, Math.floor(rows.length * 0.3));
 }
