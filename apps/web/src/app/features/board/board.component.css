@@ -255,6 +255,47 @@
   font-weight: 600;
 }
 
+.has-tip {
+  position: relative;
+  cursor: help;
+}
+
+.has-tip:hover,
+.has-tip:focus-within {
+  z-index: 4;
+}
+
+.has-tip .tip {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  min-width: 16rem;
+  max-width: 22rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+  border: 1px solid var(--dl-border-strong);
+  background: var(--dl-surface-overlay);
+  color: var(--dl-text-primary);
+  font-family: var(--dl-font-sans, inherit);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-align: left;
+  text-transform: none;
+  white-space: pre-line;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 35%, transparent);
+  pointer-events: none;
+}
+
+.has-tip:hover .tip,
+.has-tip:focus-within .tip {
+  display: block;
+}
+
 .c-ceiling {
   display: flex;
   justify-content: center;

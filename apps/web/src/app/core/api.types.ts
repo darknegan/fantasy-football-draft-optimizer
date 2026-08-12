@@ -10,6 +10,9 @@ export interface Player {
   age: number;
   seasonsInLeague: number;
   status: string;
+  positionalTop5FinishCount?: number;
+  positionalTop8FinishCount?: number;
+  positionalTop12FinishCount?: number;
   externalIds?: { sleeper?: string; gsis?: string };
   headshotUrl?: string | null;
   headshotThumbUrl?: string | null;
@@ -66,6 +69,12 @@ export interface PlayerEvaluation {
     usedMechanicalFallback?: boolean;
   };
   draftScore: number;
+  weights?: {
+    ceiling: number;
+    archetype: number;
+    value: number;
+    risk: number;
+  };
 }
 
 export interface RecommendationReason {

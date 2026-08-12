@@ -10,6 +10,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
+import {
+  BOARD_HEADER_PURPOSE,
+  buildArchetypeTooltip,
+  buildCeilingTooltip,
+  buildScoreTooltip,
+  explainBoardArchetype,
+} from './board-tooltips';
 import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-display';
 import { scoreLabel } from './score-label';
 
@@ -112,20 +119,20 @@ const RISK_MAX = 100;
         </a>
       </div>
 
-      <div class="col-head" aria-hidden="true">
-        <span class="c-rank">#</span>
-        <span class="c-pos">POS</span>
-        <span class="c-player">PLAYER</span>
-        <span class="c-adp">ADP</span>
-        <span class="c-score" title="Draft score">SCORE</span>
-        <span class="c-ceiling">CEILING</span>
-        <span class="c-conf">CONF</span>
-        <span class="c-arch">ARCHETYPE</span>
-        <span class="c-risk">RISK</span>
-        <span class="c-value">VALUE</span>
-        <span class="c-proj">PROJ</span>
-        <span class="c-factors">FACTORS</span>
-        <span class="c-flag"></span>
+      <div class="col-head">
+        <span class="c-rank" [title]="headerPurpose['#']">#</span>
+        <span class="c-pos" [title]="headerPurpose['POS']">POS</span>
+        <span class="c-player" [title]="headerPurpose['PLAYER']">PLAYER</span>
+        <span class="c-adp" [title]="headerPurpose['ADP']">ADP</span>
+        <span class="c-score" [title]="headerPurpose['SCORE']">SCORE</span>
+        <span class="c-ceiling" [title]="headerPurpose['CEILING']">CEILING</span>
+        <span class="c-conf" [title]="headerPurpose['CONF']">CONF</span>
+        <span class="c-arch" [title]="headerPurpose['ARCHETYPE']">ARCHETYPE</span>
+        <span class="c-risk" [title]="headerPurpose['RISK']">RISK</span>
+        <span class="c-value" [title]="headerPurpose['VALUE']">VALUE</span>
+        <span class="c-proj" [title]="headerPurpose['PROJ']">PROJ</span>
+        <span class="c-factors" [title]="headerPurpose['FACTORS']">FACTORS</span>
+        <span class="c-flag" [title]="headerPurpose['FLAG']"></span>
       </div>
 
       <div class="list" role="list">
@@ -183,9 +190,12 @@ const RISK_MAX = 100;
 
               <span class="c-adp mono">{{ row.evaluation.value.adpRoundPick }}</span>
 
-              <span class="c-score mono">{{ scoreLabel(row) }}</span>
+              <span class="c-score mono has-tip" tabindex="0">
+                {{ scoreLabel(row) }}
+                <span class="tip" role="tooltip">{{ scoreTooltip(row) }}</span>
+              </span>
 
-              <span class="c-ceiling mono">
+              <span class="c-ceiling mono has-tip" tabindex="0">
                 @if (row.evaluation.ceiling.provisional) {
                   <span class="ceil-score muted">—</span>
                 } @else {
@@ -193,6 +203,9 @@ const RISK_MAX = 100;
                     row.evaluation.ceiling.ceilingScore ?? '—'
                   }}</span>
                 }
+                <span class="tip" role="tooltip">{{
+                  ceilingTooltip(row, top5Ids().has(row.player.id))
+                }}</span>
               </span>
 
               <span class="c-conf mono" [class.prov]="row.evaluation.ceiling.provisional">
@@ -203,15 +216,12 @@ const RISK_MAX = 100;
                 }
               </span>
 
-              <span class="c-arch">
-                <span
-                  class="arch"
-                  [class]="archTone(row.evaluation.archetype.archetype)"
-                  [title]="archTitle(row)"
-                >
+              <span class="c-arch has-tip" tabindex="0">
+                <span class="arch" [class]="archTone(row.evaluation.archetype.archetype)">
                   <span class="arch-dot" aria-hidden="true"></span>
                   {{ formatArchetype(row.evaluation.archetype.archetype) }}
                 </span>
+                <span class="tip" role="tooltip">{{ archetypeTooltip(row) }}</span>
               </span>
 
               <span class="c-risk">
@@ -272,6 +282,9 @@ export class BoardComponent implements OnInit {
   readonly sortOptions = SORT_OPTIONS;
   readonly configuredFactorCount = configuredFactorCount;
   readonly scoreLabel = scoreLabel;
+  readonly headerPurpose = BOARD_HEADER_PURPOSE;
+  readonly scoreTooltip = buildScoreTooltip;
+  readonly ceilingTooltip = buildCeilingTooltip;
 
   leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
@@ -408,8 +421,8 @@ export class BoardComponent implements OnInit {
     }
   }
 
-  archTitle(row: BoardPlayer): string {
-    return `${this.formatArchetype(row.evaluation.archetype.archetype)} · EV ${row.evaluation.archetype.archetypeEv.toFixed(2)}`;
+  archetypeTooltip(row: BoardPlayer): string {
+    return buildArchetypeTooltip(row, explainBoardArchetype(row));
   }
 
   riskTone(risk: number): string {
