@@ -41,7 +41,7 @@ that only awarded Trusty at age ≥34 left Allen / Mahomes / Lamar in
 | QB veteran (rule 6) | **age ≥34** only (not year ≥7) |
 | Skill veteran (rule 6) | year ≥7 **or** age ≥28 |
 | Rate tables | Interim reuse; mark provisional |
-| Ceiling board UI | **Out of scope** — separate follow-up |
+| Ceiling board UI | See `2026-08-12-drop-licensed-factors-te-yprr-design.md` (raw + top-5 green) |
 
 ## Taxonomy
 
@@ -196,7 +196,8 @@ top-5/8/12 so R2-miss bootstrap does not zero all counts.
 
 - New empirical boom/bust study (interim rates only).
 - Restoring team-rank WR1/RB2 split.
-- Ceiling board denominator / top-N green styling.
+- Ceiling board display (raw + top-5 green) — see
+  `2026-08-12-drop-licensed-factors-te-yprr-design.md`.
 - Changing six-band ratio grading.
 
 ## Open notes
