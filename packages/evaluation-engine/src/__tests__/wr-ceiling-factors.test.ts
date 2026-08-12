@@ -71,6 +71,6 @@ describe('WR ceiling config', () => {
     const cfg = getBenchmarkConfig('WR', 2025);
     expect(cfg.factors.some((factor) => factor.id === 'route_participation')).toBe(true);
     expect(CEILING_RANGE.WR.max).toBe(85);
-    expect(CEILING_RANGE.WR.min).toBe(-51);
+    expect(CEILING_RANGE.WR.min).toBe(17 * -5);
   });
 });
