@@ -106,7 +106,12 @@
 
 - [ ] **Step 2: Add the package to root scripts**
 
-In the root `package.json`, add `-w @draftlab/tiers` to `build`, `build:packages`, `test`, and `test:engines`. Place it immediately after `-w @draftlab/domain` in each, since it depends only on domain and must build early.
+In the root `package.json`, add `-w @draftlab/tiers` to all four of `build`, `build:packages`, `test`, and `test:engines`.
+
+Placement differs per script — `@draftlab/domain` appears in the build scripts but **not** in the test scripts:
+
+- `build` and `build:packages`: insert immediately after `-w @draftlab/domain`, since tiers depends only on domain and must build early.
+- `test` and `test:engines`: these start at `-w @draftlab/evaluation-engine`; insert `-w @draftlab/tiers` at the **front** of the list.
 
 - [ ] **Step 3: Install so npm links the workspace**
 
@@ -1316,6 +1321,23 @@ interface BoardSection {
 ```
 
 Delete `buildSections` entirely (lines 482-514) and delete the local `adpOverall` helper (lines 445-451) — it is replaced by the package version, which returns `null` instead of `999`.
+
+**`adpOverall` has a second caller you must fix in the same step.** `compareRows` uses it for the `'adp'` sort case at lines 458-461. The package version returns `number | null`, so the existing subtraction will not type-check. Replace that case with null-last ordering:
+
+```ts
+case 'adp': {
+  // Package adpOverall returns null for unparseable ADP. Sort those last rather
+  // than letting a sentinel rank them as very early or very late.
+  const av = adpOverall(a.evaluation.value.adpRoundPick, teamCount);
+  const bv = adpOverall(b.evaluation.value.adpRoundPick, teamCount);
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1;
+  if (bv === null) return -1;
+  return av - bv;
+}
+```
+
+This requires `compareRows` to take `teamCount`. Its current signature is `compareRows(a, b, key)` and it **hardcodes `12`** at lines 459-460 — a pre-existing bug that silently mis-sorts every non-12-team league. Change the signature to `compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number)` and pass `league?.teamCount ?? 12` from the `filteredSorted` computed at line 315. Fixing this is in scope: the plan is already changing this exact expression, and leaving a known wrong constant in a line being rewritten is not acceptable.
 
 - [ ] **Step 3: Implement the replacement section builder**
 
