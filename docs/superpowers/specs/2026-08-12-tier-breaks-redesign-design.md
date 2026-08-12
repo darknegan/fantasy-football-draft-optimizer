@@ -7,7 +7,7 @@
 
 The board's tier breaks do not detect anything. `buildSections`
 (`apps/web/src/app/features/board/board.component.ts:482-514`) cuts the visible
-players at the 90th, 75th, and 50th percentiles *by count*, so tier 1 is always
+players at the 90th, 75th, and 50th percentiles _by count_, so tier 1 is always
 the top ~10% of whatever is on screen, tier 2 the next 15%, and so on —
 regardless of what the scores look like. A flat group of eight near-identical
 players gets cut at ten percent anyway; a genuine cliff goes unmarked.
@@ -22,7 +22,7 @@ Three further defects follow from the same code:
 
 1. **Tiers are relative to the active filter.** Sections are computed over
    `filteredSorted()` (`board.component.ts:318-324`), so filtering to RB makes the
-   top 10% *of RBs* "TIER 1". The same player is tier 1 in one view and tier 3 in
+   top 10% _of RBs_ "TIER 1". The same player is tier 1 in one view and tier 3 in
    another. With `hideDrafted` defaulting true (`:286`), grades also drift upward
    as the draft thins the pool, with nothing about the player having changed.
 
@@ -58,12 +58,12 @@ value 20%, risk 15% — `packages/evaluation-engine/src/draft-score.ts`).
 
 ## Channel assignment
 
-| Concept | Visual channel | Depends on visible pool? |
-|---|---|---|
-| Survival band | The horizontal rule (section partition) | Yes — recomputed live |
-| Scoring cliff | Inline `⌄ N pt gap` marker within a section | Yes — within band |
-| Quality grade | Per-row letter chip `[S]`…`[D]` | **No** — absolute |
-| Replacement band | Per-row chip `[RB1]`, `[FLEX]`, `[BENCH]` | **No** — league shape only |
+| Concept          | Visual channel                              | Depends on visible pool?   |
+| ---------------- | ------------------------------------------- | -------------------------- |
+| Survival band    | The horizontal rule (section partition)     | Yes — recomputed live      |
+| Scoring cliff    | Inline `⌄ N pt gap` marker within a section | Yes — within band          |
+| Quality grade    | Per-row letter chip `[S]`…`[D]`             | **No** — absolute          |
+| Replacement band | Per-row chip `[RB1]`, `[FLEX]`, `[BENCH]`   | **No** — league shape only |
 
 Survival owns the rule because it answers the actual draft-day question: take now
 or wait. A consequence to accept deliberately: **the board is no longer globally
@@ -127,7 +127,7 @@ double-apply that correction, so the function does not take a position at all.
 
 Stateless by design: a grade never moves because someone else was drafted, and it
 is identical on the board and the cheat sheet. Returns `null` when
-`ceilingKnownFactors === 0` (see *No-data players*).
+`ceilingKnownFactors === 0` (see _No-data players_).
 
 Starting thresholds, to be confirmed against the real score distribution during
 implementation: S ≥ 85, A ≥ 75, B ≥ 62, C ≥ 48, D below.
@@ -147,7 +147,7 @@ mid-board cliffs.
 
 `k` is a parameter with a default tuned against real data, not a constant buried
 in the function body. Starting value: **2.5**, to be confirmed by inspecting where
-the resulting cliffs land on the real seed artifact (see *Testing*).
+the resulting cliffs land on the real seed artifact (see _Testing_).
 
 ### survivalBands
 
@@ -162,24 +162,24 @@ the move is contained. `scarcityUrgencyMultiplier` stays in `recommendation-engi
 
 `adpOverall()` also moves into this package from `board.component.ts:445-451`, and
 changes its unparseable-input return from the `999` sentinel to `null`, so callers
-cannot mistake "unknown" for "very late" (see *Edge cases*).
+cannot mistake "unknown" for "very late" (see _Edge cases_).
 
 `survivalBands` partitions into three bands plus a trailing unknown band:
 
-| Band | Survival probability | Meaning |
-|---|---|---|
-| Gone before your next pick | `p < 0.25` | Take now or lose them |
-| Coin flip | `0.25 ≤ p < 0.65` | Genuinely uncertain |
-| Should be there | `p ≥ 0.65` | Safe to wait |
-| ADP unknown | n/a | No usable ADP — no survival claim made |
+| Band                       | Survival probability | Meaning                                |
+| -------------------------- | -------------------- | -------------------------------------- |
+| Gone before your next pick | `p < 0.25`           | Take now or lose them                  |
+| Coin flip                  | `0.25 ≤ p < 0.65`    | Genuinely uncertain                    |
+| Should be there            | `p ≥ 0.65`           | Safe to wait                           |
+| ADP unknown                | n/a                  | No usable ADP — no survival claim made |
 
 These cut-points are starting values, confirmed against real data alongside `k`.
 They are parameters of `survivalBands`, not literals in its body.
 
 ### replacementBand
 
-Band *i* covers positional ranks `(i-1) × teamCount + 1` through `i × teamCount`,
-for *i* up to `roster[position]`; then a flex band, then bench. In a 12-team,
+Band _i_ covers positional ranks `(i-1) × teamCount + 1` through `i × teamCount`,
+for _i_ up to `roster[position]`; then a flex band, then bench. In a 12-team,
 2-RB league, RB ranks 1–12 are `RB1` and 13–24 are `RB2`. `roster.superflex`
 extends the QB bands. Driven entirely by `RosterShape` and `teamCount`, so it is
 independent of the visible pool.
@@ -188,14 +188,14 @@ independent of the visible pool.
 
 **Sections.** `buildSections` is deleted. Sections come from `survivalBands()`,
 so horizontal rules are stable across sort changes. The chosen sort key applies
-*within* each band. This removes the current scrambling defect by construction:
+_within_ each band. This removes the current scrambling defect by construction:
 sorting by ADP now reads sensibly, because bands are themselves ADP-ordered.
 
 **Chips.** Quality letter and replacement band render on every row in every sort
 and filter. Neither depends on the visible pool, so neither changes when you
 filter to RB or when picks come off the board.
 
-**Cliff markers are axis-bound.** A cliff is a claim about two *adjacent rows*, so
+**Cliff markers are axis-bound.** A cliff is a claim about two _adjacent rows_, so
 it is computed on whatever score currently orders the list —
 `contextualScore ?? draftScore`, matching `compareRows`. Under a risk or ADP sort,
 adjacent rows are not score-ordered and a gap marker would be meaningless, so
@@ -235,13 +235,13 @@ side list.
 
 ## Edge cases
 
-| Case | Rule |
-|---|---|
-| Median gap is 0 (many tied scores) | `k × 0 = 0` would flag every nonzero gap. Fall back to the mean of nonzero gaps; if none exist, report no cliffs. |
-| Missing / unparseable ADP | `adpOverall()` returns a `999` sentinel (`board.component.ts:445-451`), which silently reads as "very late". Route these to the **ADP unknown** band instead of fabricating a survival claim. |
-| Empty pool | Return no sections, no cliffs. |
-| Single player | One band, no cliffs. |
-| All scores identical | No cliffs; all players share one quality band. |
+| Case                               | Rule                                                                                                                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Median gap is 0 (many tied scores) | `k × 0 = 0` would flag every nonzero gap. Fall back to the mean of nonzero gaps; if none exist, report no cliffs.                                                                             |
+| Missing / unparseable ADP          | `adpOverall()` returns a `999` sentinel (`board.component.ts:445-451`), which silently reads as "very late". Route these to the **ADP unknown** band instead of fabricating a survival claim. |
+| Empty pool                         | Return no sections, no cliffs.                                                                                                                                                                |
+| Single player                      | One band, no cliffs.                                                                                                                                                                          |
+| All scores identical               | No cliffs; all players share one quality band.                                                                                                                                                |
 
 ## Testing
 
@@ -271,15 +271,15 @@ default is fixed.
 
 ## Migration
 
-| File | Change |
-|---|---|
-| `packages/tiers/` | New package: four functions, `adpOverall`, the relocated survival estimator, plus tests. |
-| `packages/strategy-engine/src/tiers.ts` | Deleted. |
-| `packages/recommendation-engine/src/scarcity.ts` | `estimateSurvivalProbability` + `SurvivalInput` removed; `recommend.ts:130` and its tests import from `@draftlab/tiers`. |
-| `packages/strategy-engine/src/__tests__/simulate.test.ts:99-136` | `buildCheatSheet` tests move to the new package and are rewritten. |
-| `apps/api/src/services/store.ts:647` | `cheatSheet()` repoints to the new package. |
-| `apps/web/.../board.component.ts` | Remove `buildSections`; replace `estimateNextUserPick` and `survivalNote` internals; render the two chips and cliff markers. |
-| `apps/web/package.json`, `apps/api/package.json` | Add `@draftlab/tiers`. |
+| File                                                             | Change                                                                                                                       |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `packages/tiers/`                                                | New package: four functions, `adpOverall`, the relocated survival estimator, plus tests.                                     |
+| `packages/strategy-engine/src/tiers.ts`                          | Deleted.                                                                                                                     |
+| `packages/recommendation-engine/src/scarcity.ts`                 | `estimateSurvivalProbability` + `SurvivalInput` removed; `recommend.ts:130` and its tests import from `@draftlab/tiers`.     |
+| `packages/strategy-engine/src/__tests__/simulate.test.ts:99-136` | `buildCheatSheet` tests move to the new package and are rewritten.                                                           |
+| `apps/api/src/services/store.ts:647`                             | `cheatSheet()` repoints to the new package.                                                                                  |
+| `apps/web/.../board.component.ts`                                | Remove `buildSections`; replace `estimateNextUserPick` and `survivalNote` internals; render the two chips and cliff markers. |
+| `apps/web/package.json`, `apps/api/package.json`                 | Add `@draftlab/tiers`.                                                                                                       |
 
 The cheat sheet's S–D letters become the same absolute bands as the board chip, so
 there is one definition of "S" across the product.

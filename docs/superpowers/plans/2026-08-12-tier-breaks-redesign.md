@@ -27,25 +27,26 @@
 
 ## File Structure
 
-| File | Responsibility |
-|---|---|
-| `packages/tiers/package.json` | Workspace manifest; depends only on `@draftlab/domain`. |
-| `packages/tiers/tsconfig.json` | Build config; references `../domain`. |
-| `packages/tiers/src/types.ts` | Shared types: `TierRow`, `QualityBand`, `CliffMarker`, `SurvivalBand`, `ReplacementBand`. |
-| `packages/tiers/src/quality.ts` | `qualityBand` + thresholds. |
-| `packages/tiers/src/cliffs.ts` | `detectCliffs` + `DEFAULT_CLIFF_K`. |
-| `packages/tiers/src/replacement.ts` | `replacementBand`. |
-| `packages/tiers/src/survival.ts` | `adpOverall`, relocated `estimateSurvivalProbability`, `survivalBands`. |
-| `packages/tiers/src/cheat-sheet.ts` | `buildCheatSheet` rebuilt on the shared functions. |
-| `packages/tiers/src/index.ts` | Barrel re-export. |
-| `packages/tiers/src/__tests__/*.test.ts` | One suite per module. |
-| `scripts/inspect-cliffs.mts` | Throwaway tuning harness (Task 5), deleted in the same task. |
+| File                                     | Responsibility                                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `packages/tiers/package.json`            | Workspace manifest; depends only on `@draftlab/domain`.                                   |
+| `packages/tiers/tsconfig.json`           | Build config; references `../domain`.                                                     |
+| `packages/tiers/src/types.ts`            | Shared types: `TierRow`, `QualityBand`, `CliffMarker`, `SurvivalBand`, `ReplacementBand`. |
+| `packages/tiers/src/quality.ts`          | `qualityBand` + thresholds.                                                               |
+| `packages/tiers/src/cliffs.ts`           | `detectCliffs` + `DEFAULT_CLIFF_K`.                                                       |
+| `packages/tiers/src/replacement.ts`      | `replacementBand`.                                                                        |
+| `packages/tiers/src/survival.ts`         | `adpOverall`, relocated `estimateSurvivalProbability`, `survivalBands`.                   |
+| `packages/tiers/src/cheat-sheet.ts`      | `buildCheatSheet` rebuilt on the shared functions.                                        |
+| `packages/tiers/src/index.ts`            | Barrel re-export.                                                                         |
+| `packages/tiers/src/__tests__/*.test.ts` | One suite per module.                                                                     |
+| `scripts/inspect-cliffs.mts`             | Throwaway tuning harness (Task 5), deleted in the same task.                              |
 
 ---
 
 ## Task 1: Scaffold `@draftlab/tiers` and implement `qualityBand`
 
 **Files:**
+
 - Create: `packages/tiers/package.json`
 - Create: `packages/tiers/tsconfig.json`
 - Create: `packages/tiers/src/types.ts`
@@ -55,6 +56,7 @@
 - Modify: `package.json` (root, scripts)
 
 **Interfaces:**
+
 - Consumes: `Position`, `RosterShape` from `@draftlab/domain`.
 - Produces: `QualityBand = 'S'|'A'|'B'|'C'|'D'`; `qualityBand(draftScore: number, ceilingKnownFactors: number): QualityBand | null`; `QUALITY_THRESHOLDS`; the `TierRow` interface used by every later task.
 
@@ -247,10 +249,7 @@ export const QUALITY_THRESHOLDS = {
  * Returns null when no ceiling factor is actually measured — the underlying
  * draftScore is then mostly generic defaults, so a letter would overstate it.
  */
-export function qualityBand(
-  draftScore: number,
-  ceilingKnownFactors: number,
-): QualityBand | null {
+export function qualityBand(draftScore: number, ceilingKnownFactors: number): QualityBand | null {
   if (ceilingKnownFactors === 0) return null;
   if (draftScore >= QUALITY_THRESHOLDS.S) return 'S';
   if (draftScore >= QUALITY_THRESHOLDS.A) return 'A';
@@ -290,11 +289,13 @@ git commit -m "feat(tiers): scaffold @draftlab/tiers with absolute quality bands
 ## Task 2: `detectCliffs`
 
 **Files:**
+
 - Create: `packages/tiers/src/cliffs.ts`
 - Create: `packages/tiers/src/__tests__/cliffs.test.ts`
 - Modify: `packages/tiers/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `CliffMarker` from `./types.js` (Task 1).
 - Produces: `detectCliffs(scores: number[], k?: number): CliffMarker[]`; `DEFAULT_CLIFF_K: number`.
 
@@ -452,11 +453,13 @@ git commit -m "feat(tiers): add median-gap cliff detection"
 ## Task 3: `replacementBand`
 
 **Files:**
+
 - Create: `packages/tiers/src/replacement.ts`
 - Create: `packages/tiers/src/__tests__/replacement.test.ts`
 - Modify: `packages/tiers/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `ReplacementBand` from `./types.js`; `Position`, `RosterShape` from `@draftlab/domain`.
 - Produces: `replacementBand(positionRank: number, position: Position, roster: RosterShape, teamCount: number): ReplacementBand`.
 
@@ -620,6 +623,7 @@ git commit -m "feat(tiers): add positional replacement bands from roster shape"
 Moving `estimateSurvivalProbability` out of `recommendation-engine` keeps `@draftlab/tiers` a leaf package (domain-only dependency), which is what lets the Angular app import it without dragging engine code toward the browser bundle. It has exactly one internal consumer.
 
 **Files:**
+
 - Create: `packages/tiers/src/survival.ts`
 - Create: `packages/tiers/src/__tests__/survival.test.ts`
 - Modify: `packages/tiers/src/index.ts`
@@ -630,6 +634,7 @@ Moving `estimateSurvivalProbability` out of `recommendation-engine` keeps `@draf
 - Modify: `packages/recommendation-engine/tsconfig.json` (add reference)
 
 **Interfaces:**
+
 - Consumes: `TierRow`, `SurvivalBand`, `SurvivalCuts` from `./types.js` (Task 1).
 - Produces: `adpOverall(adpRoundPick: string, teamCount: number): number | null`; `estimateSurvivalProbability(input: SurvivalInput): number`; `SurvivalInput`; `survivalBands<T extends TierRow>(rows: T[], nextPickOverall: number, picksUntilNext: number, teamCount: number, cuts?: SurvivalCuts): SurvivalBand<T>[]`; `SURVIVAL_CUTS`.
 
@@ -911,16 +916,18 @@ git commit -m "feat(tiers): add survival bands; relocate survival estimator into
 
 ## Task 5: Tune `k` and the thresholds against real artifact data
 
-The working agreement calls this out directly: every real bug in this project produced *plausible output* rather than an error, and none was caught by a test suite. A wrong `k` yields a board that looks entirely reasonable while marking the wrong places. This task exists to read the actual numbers before the defaults are treated as settled. It is not optional and it does not end with "tests pass".
+The working agreement calls this out directly: every real bug in this project produced _plausible output_ rather than an error, and none was caught by a test suite. A wrong `k` yields a board that looks entirely reasonable while marking the wrong places. This task exists to read the actual numbers before the defaults are treated as settled. It is not optional and it does not end with "tests pass".
 
 Real data lives at `C:\Code\sleeperMCP\artifacts\player_factors.json` — 221 players, `schema_version` 5. `apps/api/src/data/load-artifact.ts` already parses exactly this file.
 
 **Files:**
+
 - Create (temporary): `scripts/inspect-cliffs.mts`
 - Modify (only if the data says so): `packages/tiers/src/cliffs.ts`, `packages/tiers/src/quality.ts`
 - Delete: `scripts/inspect-cliffs.mts` before committing
 
 **Interfaces:**
+
 - Consumes: `detectCliffs`, `DEFAULT_CLIFF_K`, `qualityBand`, `QUALITY_THRESHOLDS` from `@draftlab/tiers`.
 - Produces: confirmed constants. No new API.
 
@@ -972,7 +979,8 @@ console.log(`players with measured data: ${scored.length}`);
 console.log(`score range: ${scored.at(-1)!.draftScore} .. ${scored[0]!.draftScore}`);
 
 const gaps: number[] = [];
-for (let i = 0; i < scored.length - 1; i++) gaps.push(scored[i]!.draftScore - scored[i + 1]!.draftScore);
+for (let i = 0; i < scored.length - 1; i++)
+  gaps.push(scored[i]!.draftScore - scored[i + 1]!.draftScore);
 const sortedGaps = [...gaps].sort((a, b) => a - b);
 console.log(`median gap: ${sortedGaps[Math.floor(sortedGaps.length / 2)]}`);
 console.log(`max gap: ${sortedGaps.at(-1)}`);
@@ -986,7 +994,10 @@ for (const p of scored) {
 console.log(Object.fromEntries(bandCounts), 'thresholds:', QUALITY_THRESHOLDS);
 
 for (const k of [1.5, 2.0, 2.5, 3.0, 4.0]) {
-  const cliffs = detectCliffs(scored.map((p) => p.draftScore), k);
+  const cliffs = detectCliffs(
+    scored.map((p) => p.draftScore),
+    k,
+  );
   console.log(`\n--- k=${k}: ${cliffs.length} cliffs ---`);
   for (const c of cliffs.slice(0, 12)) {
     const above = scored[c.afterIndex]!;
@@ -1001,7 +1012,9 @@ console.log('\n--- per position, k=2.5 ---');
 for (const pos of ['QB', 'RB', 'WR', 'TE']) {
   const atPos = scored.filter((p) => p.position === pos);
   const cliffs = detectCliffs(atPos.map((p) => p.draftScore));
-  console.log(`${pos}: ${atPos.length} players, ${cliffs.length} cliffs at ranks ${cliffs.map((c) => c.afterIndex + 1).join(', ') || '(none)'}`);
+  console.log(
+    `${pos}: ${atPos.length} players, ${cliffs.length} cliffs at ranks ${cliffs.map((c) => c.afterIndex + 1).join(', ') || '(none)'}`,
+  );
 }
 ```
 
@@ -1049,6 +1062,7 @@ chosen k, the named players either side of the top 3 cliffs, and the band spread
 ## Task 6: Rebuild the cheat sheet on the shared functions
 
 **Files:**
+
 - Create: `packages/tiers/src/cheat-sheet.ts`
 - Create: `packages/tiers/src/__tests__/cheat-sheet.test.ts`
 - Modify: `packages/tiers/src/index.ts`
@@ -1059,6 +1073,7 @@ chosen k, the named players either side of the top 3 cliffs, and the band spread
 - Modify: `apps/api/package.json`, `apps/api/tsconfig.json`
 
 **Interfaces:**
+
 - Consumes: `qualityBand` (Task 1), `detectCliffs` (Task 2), `TierRow`, `QualityBand` (Task 1).
 - Produces: `buildCheatSheet(players: CheatSheetPlayer[]): CheatSheetGroup[]` where `CheatSheetPlayer extends TierRow` adds `name`, `ceilingScore`, `provisional`, `target?`, `avoid?`; `CheatSheetGroup = { position, tiers: CheatSheetTier[] }`; `CheatSheetTier = { tier: QualityBand, label: string, players: CheatSheetPlayer[] }`.
 
@@ -1113,9 +1128,8 @@ describe('buildCheatSheet', () => {
       player({ id: 'rb', position: 'RB', draftScore: 78 }),
     ]);
     const bandOf = (pos: string, id: string) =>
-      sheet
-        .find((g) => g.position === pos)!
-        .tiers.find((t) => t.players.some((p) => p.id === id))!.tier;
+      sheet.find((g) => g.position === pos)!.tiers.find((t) => t.players.some((p) => p.id === id))!
+        .tier;
     expect(bandOf('WR', 'wr')).toBe(bandOf('RB', 'rb'));
   });
 
@@ -1291,10 +1305,12 @@ git commit -m "refactor(tiers): rebuild cheat sheet on shared bands, delete min-
 ## Task 7: Replace the board's percentile sections with survival bands
 
 **Files:**
+
 - Modify: `apps/web/src/app/features/board/board.component.ts` (`BoardSection` interface ~line 24; `sections` computed ~318-324; `buildSections` 482-514; `survivalNote` 516-531; `estimateNextUserPick` 477-480; `adpOverall` 445-451)
 - Modify: `apps/web/package.json`, `apps/web/tsconfig.json` (or `tsconfig.app.json`, whichever holds `references`)
 
 **Interfaces:**
+
 - Consumes: `survivalBands`, `adpOverall`, `SurvivalBand` from `@draftlab/tiers` (Task 4); `snakePickNumbers` from `@draftlab/strategy-engine`.
 - Produces: `BoardSection = { id: SurvivalBandId; label: string; note: string; rows: BoardPlayer[] }` — note `id` replaces the old numeric `tier`, so the template `track` expression must change with it.
 
@@ -1443,11 +1459,11 @@ In the template (lines 135-140), change the track expression and the tier chrome
 
 ```html
 @for (section of sections(); track section.id) {
-  <div class="tier-break">
-    <span class="tier-tag">{{ section.label }}</span>
-    <span class="tier-note">{{ section.note }}</span>
-    <span class="tier-rule" aria-hidden="true"></span>
-  </div>
+<div class="tier-break">
+  <span class="tier-tag">{{ section.label }}</span>
+  <span class="tier-note">{{ section.note }}</span>
+  <span class="tier-rule" aria-hidden="true"></span>
+</div>
 ```
 
 - [ ] **Step 7: Verify it builds**
@@ -1468,10 +1484,12 @@ git commit -m "feat(board): partition by survival bands instead of fixed percent
 ## Task 8: Render quality and replacement chips, and cliff markers
 
 **Files:**
+
 - Modify: `apps/web/src/app/features/board/board.component.ts` (template rows ~142-175, plus helpers)
 - Modify: `apps/web/src/app/features/board/board.component.css`
 
 **Interfaces:**
+
 - Consumes: `qualityBand` (Task 1), `detectCliffs` (Task 2), `replacementBand` (Task 3) from `@draftlab/tiers`.
 - Produces: no exported API — this is presentation only.
 
@@ -1560,9 +1578,9 @@ Inside the row loop, after the position badge, add the two chips:
 ```html
 <span class="c-band">
   @if (bandOf(row); as band) {
-    <span class="chip band" [class]="'band-' + band">{{ band }}</span>
+  <span class="chip band" [class]="'band-' + band">{{ band }}</span>
   } @else {
-    <span class="chip band band-none" title="No measured data">—</span>
+  <span class="chip band band-none" title="No measured data">—</span>
   }
   <span class="chip slot">{{ replacementOf(row) }}</span>
 </span>
@@ -1572,9 +1590,9 @@ After the closing `</div>` of the row, add the cliff marker:
 
 ```html
 @if (cliffAfterIds().get(row.player.id); as gap) {
-  <div class="cliff-marker" role="separator">
-    <span class="cliff-label">⌄ cliff — {{ gap }} pt gap</span>
-  </div>
+<div class="cliff-marker" role="separator">
+  <span class="cliff-label">⌄ cliff — {{ gap }} pt gap</span>
+</div>
 }
 ```
 
@@ -1599,11 +1617,26 @@ Add to `board.component.css`, reusing the existing tier colour tokens from `pack
   border-radius: 0.25rem;
 }
 
-.chip.band-S { background: var(--dl-tier-s); color: #10131a; }
-.chip.band-A { background: var(--dl-tier-a); color: #10131a; }
-.chip.band-B { background: var(--dl-tier-b); color: #10131a; }
-.chip.band-C { background: var(--dl-tier-c); color: #10131a; }
-.chip.band-D { background: var(--dl-tier-unrated); color: #e6ecf7; }
+.chip.band-S {
+  background: var(--dl-tier-s);
+  color: #10131a;
+}
+.chip.band-A {
+  background: var(--dl-tier-a);
+  color: #10131a;
+}
+.chip.band-B {
+  background: var(--dl-tier-b);
+  color: #10131a;
+}
+.chip.band-C {
+  background: var(--dl-tier-c);
+  color: #10131a;
+}
+.chip.band-D {
+  background: var(--dl-tier-unrated);
+  color: #e6ecf7;
+}
 
 /* No measured data: same hue as D, dimmed, so "unknown" reads as weaker than
    "graded low" rather than identical to it. */
@@ -1672,6 +1705,7 @@ git commit -m "feat(board): add quality and replacement chips with axis-bound cl
 ## Task 9: Full verification and cleanup
 
 **Files:**
+
 - Modify: `docs/06-design-system-and-screens.md:222` (TierBreak description)
 - Verify only: everything else
 
@@ -1731,7 +1765,7 @@ Do not open a PR without asking first.
 
 ## Verification Checklist
 
-Against the spec's *Visible behaviour changes* section — confirm each by looking, not by assuming:
+Against the spec's _Visible behaviour changes_ section — confirm each by looking, not by assuming:
 
 - [ ] Board groups by survival urgency; the top-ranked player is not necessarily the top row.
 - [ ] Quality letters do not change when filtering by position.
