@@ -1,4 +1,7 @@
 import type { DraftSlotInfo, DraftSlotTier } from '@draftlab/domain';
+import { snakePickNumbers } from '@draftlab/tiers';
+
+export { snakePickNumbers } from '@draftlab/tiers';
 
 /** Draft slot tiers from Best Spot To Draft From.PNG. Slot 1.05 is unrated (cropped). */
 const SLOT_TIERS: Record<number, DraftSlotTier> = {
@@ -18,16 +21,6 @@ const SLOT_TIERS: Record<number, DraftSlotTier> = {
 
 export function slotTier(slot: number): DraftSlotTier {
   return SLOT_TIERS[slot] ?? 'unrated';
-}
-
-/** Snake draft pick numbers for a given slot. */
-export function snakePickNumbers(slot: number, teamCount: number, rounds: number): number[] {
-  const picks: number[] = [];
-  for (let round = 1; round <= rounds; round++) {
-    const pickInRound = round % 2 === 1 ? slot : teamCount - slot + 1;
-    picks.push((round - 1) * teamCount + pickInRound);
-  }
-  return picks;
 }
 
 export function getDraftSlotInfo(slot: number, teamCount = 12, rounds = 15): DraftSlotInfo {

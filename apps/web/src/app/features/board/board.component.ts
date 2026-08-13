@@ -8,8 +8,18 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import {
+  adpOverall,
+  survivalBands,
+  qualityBand,
+  detectCliffs,
+  replacementBand,
+  projectUserPickProgress,
+  type SurvivalBandId,
+  type QualityBand,
+} from '@draftlab/tiers';
 import { ApiService } from '../../core/api.service';
-import type { BoardPlayer, FactorGrade, League, Position } from '../../core/api.types';
+import type { BoardPlayer, DraftState, FactorGrade, League, Position } from '../../core/api.types';
 import {
   BOARD_HEADER_PURPOSE,
   buildArchetypeTooltip,
@@ -25,8 +35,17 @@ type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
 type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
+/**
+ * 'unbanded' is not produced by `survivalBands()` — it's a board-local fallback
+ * id used only when there is no next-pick projection to band against at all
+ * (the planning window is exhausted), so the board can still show every row in
+ * one ungrouped section instead of rendering nothing. See `sections` below.
+ */
+type BoardSectionId = SurvivalBandId | 'unbanded';
+
 interface BoardSection {
-  tier: number;
+  id: BoardSectionId;
+  label: string;
   note: string;
   rows: BoardPlayer[];
 }
@@ -122,6 +141,7 @@ const RISK_MAX = 100;
       <div class="col-head">
         <span class="c-rank" [title]="headerPurpose['#']">#</span>
         <span class="c-pos" [title]="headerPurpose['POS']">POS</span>
+        <span class="c-band">GRADE</span>
         <span class="c-player" [title]="headerPurpose['PLAYER']">PLAYER</span>
         <span class="c-adp" [title]="headerPurpose['ADP']">ADP</span>
         <span class="c-score" [title]="headerPurpose['SCORE']">SCORE</span>
@@ -136,9 +156,9 @@ const RISK_MAX = 100;
       </div>
 
       <div class="list" role="list">
-        @for (section of sections(); track section.tier) {
+        @for (section of sections(); track section.id) {
           <div class="tier-break">
-            <span class="tier-tag">TIER {{ section.tier }}</span>
+            <span class="tier-tag">{{ section.label }}</span>
             <span class="tier-note">{{ section.note }}</span>
             <span class="tier-rule" aria-hidden="true"></span>
           </div>
@@ -157,6 +177,15 @@ const RISK_MAX = 100;
 
               <span class="c-pos">
                 <span class="pos" [class]="row.player.position">{{ row.player.position }}</span>
+              </span>
+
+              <span class="c-band">
+                @if (bandOf(row); as band) {
+                  <span class="chip band" [class]="'band-' + band">{{ band }}</span>
+                } @else {
+                  <span class="chip band band-none" title="No measured data">—</span>
+                }
+                <span class="chip slot">{{ replacementOf(row) }}</span>
               </span>
 
               <a
@@ -263,6 +292,13 @@ const RISK_MAX = 100;
                 ★
               </button>
             </div>
+            @if (cliffAfterIds().get(row.player.id); as cliff) {
+              <div class="cliff-marker" role="separator">
+                <span class="cliff-label"
+                  >⌄ cliff — {{ cliff.gap }} pt gap ({{ cliff.multiple }}× typical)</span
+                >
+              </div>
+            }
           }
         } @empty {
           <p class="empty">No players match these filters.</p>
@@ -289,6 +325,7 @@ export class BoardComponent implements OnInit {
   leagueId = '';
   readonly rows = signal<BoardPlayer[]>([]);
   readonly league = signal<League | null>(null);
+  readonly draft = signal<DraftState | null>(null);
 
   readonly posFilter = signal<PosFilter>('ALL');
   readonly archetypeFilter = signal('all');
@@ -325,15 +362,103 @@ export class BoardComponent implements OnInit {
     if (value === 'even') list = list.filter((r) => r.evaluation.value.valueScore === 0);
 
     const key = this.sortKey();
-    return [...list].sort((a, b) => compareRows(a, b, key));
+    const teamCount = this.league()?.teamCount ?? 12;
+    return [...list].sort((a, b) => compareRows(a, b, key, teamCount));
   });
 
   readonly sections = computed((): BoardSection[] => {
     const rows = this.filteredSorted();
+    // Only reachable via the template's @empty branch ("No players match
+    // these filters"). That message must never appear while rows exist —
+    // see the fallback below for the other way `sections` can end up short.
     if (!rows.length) return [];
     const league = this.league();
-    const nextPick = estimateNextUserPick(league);
-    return buildSections(rows, nextPick, league?.teamCount ?? 12);
+    const draft = this.draft();
+    // Recomputed on every pick: uses the same draft clock as recommendations
+    // (`draft.currentPick` / `picksUntilUser`), not a derived drafted count.
+    const next =
+      league && draft
+        ? projectUserPickProgress(
+            league.draftSlot ?? 1,
+            league.teamCount ?? 12,
+            draft.currentPick,
+            draft.picksUntilUser,
+          )
+        : null;
+    if (!next) {
+      // No next-pick projection to band against — either the league hasn't
+      // loaded yet, or (far more commonly) the draft has run past
+      // PLANNING_ROUNDS. rows.length > 0 here, so returning [] would render
+      // the "No players match these filters" empty state, which is simply
+      // false: the board has players, there's just no survival estimate to
+      // group them by. Show everything, ungrouped, instead of nothing.
+      return [
+        {
+          id: 'unbanded',
+          label: 'All remaining players',
+          note: 'Past the planning window — showing every player, unsorted by survival odds.',
+          rows,
+        },
+      ];
+    }
+    return buildSections(rows, next, league?.teamCount ?? 12);
+  });
+
+  /**
+   * Positional rank by draftScore, over the FULL board rather than the filtered
+   * view. Replacement chips must not change when the user filters to one
+   * position — that's the exact defect this redesign removes.
+   */
+  private readonly positionRanks = computed(() => {
+    const ranks = new Map<string, number>();
+    const byPosition = new Map<Position, BoardPlayer[]>();
+    for (const row of this.rows()) {
+      const list = byPosition.get(row.player.position) ?? [];
+      list.push(row);
+      byPosition.set(row.player.position, list);
+    }
+    for (const list of byPosition.values()) {
+      list
+        .slice()
+        .sort((a, b) => b.evaluation.draftScore - a.evaluation.draftScore)
+        .forEach((row, index) => ranks.set(row.player.id, index + 1));
+    }
+    return ranks;
+  });
+
+  /** True when the current sort orders rows by a score, making adjacency meaningful. */
+  private readonly cliffsApply = computed(() => this.sortKey() === 'draft');
+
+  /**
+   * Row ids after which a cliff falls, per section. Computed on the same axis the
+   * list is sorted by (contextualScore ?? draftScore), so the marker always sits
+   * between the two rows it describes. Hidden entirely under any other sort,
+   * since adjacency is not score-ordered there.
+   */
+  readonly cliffAfterIds = computed((): ReadonlyMap<string, { gap: number; multiple: number }> => {
+    const out = new Map<string, { gap: number; multiple: number }>();
+    if (!this.cliffsApply()) return out;
+    for (const section of this.sections()) {
+      const measured = section.rows.filter(
+        (r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted,
+      );
+      const scores = measured.map(
+        (r) => r.recommendation?.contextualScore ?? r.evaluation.draftScore,
+      );
+      for (const cliff of detectCliffs(scores)) {
+        const row = measured[cliff.afterIndex];
+        const nextRow = measured[cliff.afterIndex + 1];
+        if (!row || !nextRow) continue;
+        // Only mark a cliff when the two measured rows are adjacent in the
+        // rendered list. With "Show drafted" on, drafted rows sit between
+        // measured neighbors and would otherwise get a misleading marker.
+        const idxA = section.rows.findIndex((r) => r.player.id === row.player.id);
+        const idxB = section.rows.findIndex((r) => r.player.id === nextRow.player.id);
+        if (idxB !== idxA + 1) continue;
+        out.set(row.player.id, { gap: cliff.gap, multiple: cliff.multiple });
+      }
+    }
+    return out;
   });
 
   ngOnInit() {
@@ -341,9 +466,11 @@ export class BoardComponent implements OnInit {
     forkJoin({
       board: this.api.board(this.leagueId),
       league: this.api.league(this.leagueId),
-    }).subscribe(({ board, league }) => {
+      draft: this.api.draft(this.leagueId),
+    }).subscribe(({ board, league, draft }) => {
       this.rows.set(board);
       this.league.set(league);
+      this.draft.set(draft);
     });
   }
 
@@ -366,6 +493,27 @@ export class BoardComponent implements OnInit {
   rankOf(row: BoardPlayer): number {
     const idx = this.filteredSorted().findIndex((r) => r.player.id === row.player.id);
     return idx >= 0 ? idx + 1 : 0;
+  }
+
+  /** Absolute quality grade. Independent of filter and of who has been drafted. */
+  bandOf(row: BoardPlayer): QualityBand | null {
+    return qualityBand(row.evaluation.draftScore, row.evaluation.ceiling.knownFactors);
+  }
+
+  /** Which roster slot this player realistically fills in THIS league. */
+  replacementOf(row: BoardPlayer): string {
+    const league = this.league();
+    if (!league?.roster) return '';
+    return replacementBand(
+      this.positionRank(row),
+      row.player.position,
+      league.roster,
+      league.teamCount,
+    ).label;
+  }
+
+  private positionRank(row: BoardPlayer): number {
+    return this.positionRanks().get(row.player.id) ?? Number.MAX_SAFE_INTEGER;
   }
 
   headshotOf(row: BoardPlayer): string | null {
@@ -475,23 +623,20 @@ function riskBucket(risk: number): RiskFilter {
   return 'high';
 }
 
-function adpOverall(adp: string, teamCount: number): number {
-  const m = /^(\d+)\.(\d+)$/.exec(adp.trim());
-  if (!m) return 999;
-  const round = Number(m[1]);
-  const slot = Number(m[2]);
-  return (round - 1) * teamCount + slot;
-}
-
-function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey): number {
+function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number): number {
   switch (key) {
     case 'ceiling':
       return (b.evaluation.ceiling.ceilingScore ?? -1) - (a.evaluation.ceiling.ceilingScore ?? -1);
-    case 'adp':
-      return (
-        adpOverall(a.evaluation.value.adpRoundPick, 12) -
-        adpOverall(b.evaluation.value.adpRoundPick, 12)
-      );
+    case 'adp': {
+      // Package adpOverall returns null for unparseable ADP. Sort those last rather
+      // than letting a sentinel rank them as very early or very late.
+      const av = adpOverall(a.evaluation.value.adpRoundPick, teamCount);
+      const bv = adpOverall(b.evaluation.value.adpRoundPick, teamCount);
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return av - bv;
+    }
     case 'value':
       return b.evaluation.value.valueScore - a.evaluation.value.valueScore;
     case 'risk':
@@ -507,69 +652,53 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey): number {
   }
 }
 
-function estimateNextUserPick(league: League | null): number {
-  if (!league?.draftSlot) return 9;
-  return league.draftSlot;
-}
-
 function buildSections(
   rows: BoardPlayer[],
-  nextPickSlot: number,
+  next: { nextOverall: number; picksUntilNext: number },
   teamCount: number,
 ): BoardSection[] {
-  const scores = rows.map((r) => r.evaluation.draftScore).sort((a, b) => a - b);
-  const pct = (p: number) => scores[Math.max(0, Math.floor((scores.length - 1) * p))] ?? 0;
-  const cuts = [
-    { tier: 1, min: pct(0.9) },
-    { tier: 2, min: pct(0.75) },
-    { tier: 3, min: pct(0.5) },
-    { tier: 4, min: -Infinity },
-  ];
+  const tierRows = rows.map((row) => ({
+    id: row.player.id,
+    position: row.player.position,
+    draftScore: row.evaluation.draftScore,
+    ceilingKnownFactors: row.evaluation.ceiling.knownFactors,
+    adpRoundPick: row.evaluation.value.adpRoundPick,
+    row,
+  }));
 
-  const buckets = new Map<number, BoardPlayer[]>();
-  for (const row of rows) {
-    const score = row.evaluation.draftScore;
-    const cut = cuts.find((c) => score >= c.min) ?? cuts[cuts.length - 1]!;
-    const list = buckets.get(cut.tier) ?? [];
-    list.push(row);
-    buckets.set(cut.tier, list);
-  }
-
-  const nextOverall = nextPickSlot; // first-round pick approximation for pre-draft survival
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .filter(([, list]) => list.length > 0)
-    .map(([tier, list]) => ({
-      tier,
-      rows: list,
-      note: survivalNote(list, nextOverall, teamCount),
-    }));
+  return survivalBands(tierRows, next.nextOverall, next.picksUntilNext, teamCount).map((band) => {
+    const bandRows = band.rows.map((r) => r.row);
+    return {
+      id: band.id,
+      label: band.label,
+      note: survivalNote(band.id, bandRows, next.nextOverall, teamCount),
+      rows: bandRows,
+    };
+  });
 }
 
-function survivalNote(rows: BoardPlayer[], nextOverall: number, teamCount: number): string {
-  const left = rows.filter((r) => !r.drafted);
-  const n = left.length || rows.length;
-  const pickLabel = formatOverallPick(nextOverall + teamCount, teamCount);
-  const gone = left.filter(
-    (r) => adpOverall(r.evaluation.value.adpRoundPick, teamCount) <= nextOverall,
-  ).length;
-  if (gone >= n && n > 0) {
-    return `${n} players left · all ${n} gone before your next pick`;
+function survivalNote(
+  bandId: SurvivalBandId,
+  rows: BoardPlayer[],
+  nextOverall: number,
+  teamCount: number,
+): string {
+  const left = rows.filter((r) => !r.drafted).length;
+  const pickLabel = formatOverallPick(nextOverall, teamCount);
+  switch (bandId) {
+    case 'gone':
+      return `${left} players · unlikely to reach ${pickLabel}`;
+    case 'coin-flip':
+      return `${left} players · roughly even odds at ${pickLabel}`;
+    case 'available':
+      return `${left} players · should still be there at ${pickLabel}`;
+    case 'adp-unknown':
+      return `${left} players · no ADP on file, no survival estimate`;
   }
-  if (tierLooksTeWindow(rows)) {
-    return `${n} players · the elite TE window opens here`;
-  }
-  const survivors = Math.max(1, Math.round(n * 0.4));
-  return `${n} players · ${survivors}–${survivors + 1} should survive to ${pickLabel}`;
 }
 
 function formatOverallPick(overall: number, teamCount: number): string {
   const round = Math.floor((overall - 1) / teamCount) + 1;
   const slot = ((overall - 1) % teamCount) + 1;
   return `${round}.${String(slot).padStart(2, '0')}`;
-}
-
-function tierLooksTeWindow(rows: BoardPlayer[]): boolean {
-  const tes = rows.filter((r) => r.player.position === 'TE').length;
-  return tes >= Math.max(2, Math.floor(rows.length * 0.3));
 }

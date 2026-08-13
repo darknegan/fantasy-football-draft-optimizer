@@ -29,7 +29,10 @@ export function computePositionNeeds(roster: Player[], shape: RosterShape): Posi
     if (filled < required) {
       urgency = 1.0 - filled / Math.max(required, 1);
     } else if (flexEligible) {
-      const flexFilled = Math.max(0, counts.RB + counts.WR + counts.TE - shape.rb - shape.wr - shape.te);
+      const flexFilled = Math.max(
+        0,
+        counts.RB + counts.WR + counts.TE - shape.rb - shape.wr - shape.te,
+      );
       if (flexFilled < shape.flex) {
         urgency = 0.35 * (1 - flexFilled / Math.max(shape.flex, 1));
       } else {

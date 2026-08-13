@@ -41,7 +41,6 @@ import {
 } from '@draftlab/integrations';
 import { recommendPlayers } from '@draftlab/recommendation-engine';
 import {
-  buildCheatSheet,
   compareStrategies,
   getDraftSlotInfo,
   listStrategies,
@@ -50,6 +49,7 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
+import { buildCheatSheet, projectUserPickProgress } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
@@ -369,16 +369,22 @@ export class AppStore {
       .map((p) => this.getPlayer(p.playerId!)!)
       .filter(Boolean);
 
-    const available = this.seeds.filter((s) => !draftedIds.has(s.player.id)).map((s) => ({
-      player: s.player,
-      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
-    }));
+    const available = this.seeds
+      .filter((s) => !draftedIds.has(s.player.id))
+      .map((s) => ({
+        player: s.player,
+        evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
+      }));
 
     const round = Math.floor((draft.currentPick - 1) / league.teamCount) + 1;
-    const slotInfo = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
-    const nextUserPick =
-      slotInfo.pickNumbers.find((n) => n >= draft.currentPick) ?? draft.currentPick;
-    const picksUntilNext = Math.max(0, nextUserPick - draft.currentPick);
+    const progress = projectUserPickProgress(
+      league.draftSlot ?? 1,
+      league.teamCount,
+      draft.currentPick,
+      draft.picksUntilUser,
+    );
+    const nextUserPick = progress?.nextOverall ?? draft.currentPick;
+    const picksUntilNext = progress?.picksUntilNext ?? 0;
     const positionRunByPosition = this.detectPositionRuns(draft.picks, 10);
 
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
@@ -411,19 +417,21 @@ export class AppStore {
 
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
-    return this.seeds.map((s) => ({
-      player: withHeadshot(s.player),
-      evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
-      recommendation: recById.get(s.player.id),
-      drafted: draftedIds.has(s.player.id),
-      target: targetSet.has(s.player.id),
-      avoid: avoidSet.has(s.player.id),
-      projectedPoints: s.market.projectedPoints ?? null,
-    })).sort((a, b) => {
-      const ar = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
-      const br = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
-      return br - ar;
-    });
+    return this.seeds
+      .map((s) => ({
+        player: withHeadshot(s.player),
+        evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
+        recommendation: recById.get(s.player.id),
+        drafted: draftedIds.has(s.player.id),
+        target: targetSet.has(s.player.id),
+        avoid: avoidSet.has(s.player.id),
+        projectedPoints: s.market.projectedPoints ?? null,
+      }))
+      .sort((a, b) => {
+        const ar = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
+        const br = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
+        return br - ar;
+      });
   }
 
   applyPick(leagueId: string, pick: Omit<PickEvent, 'pickedAt'> & { pickedAt?: string }) {
@@ -455,9 +463,12 @@ export class AppStore {
     draft.status = 'drafting';
     const league = this.leagues.get(leagueId);
     if (league) {
-      const info = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
-      const next = info.pickNumbers.find((n) => n >= draft.currentPick);
-      draft.picksUntilUser = next != null ? Math.max(0, next - draft.currentPick) : null;
+      const progress = projectUserPickProgress(
+        league.draftSlot ?? 1,
+        league.teamCount,
+        draft.currentPick,
+      );
+      draft.picksUntilUser = progress?.picksUntilNext ?? null;
     }
 
     if (prePickRecs && event.playerId) {
@@ -624,6 +635,13 @@ export class AppStore {
     return value;
   }
 
+  /**
+   * Positional cheat sheet grouped by absolute quality band.
+   *
+   * Contract note: `tier` may be `null` for no-data players (zero known ceiling
+   * factors). The legacy `unranked` side-list was removed — those rows appear
+   * inline with `tier: null`.
+   */
   cheatSheet(leagueId: string) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
@@ -704,7 +722,9 @@ export class AppStore {
       };
     };
 
-    const rosterBoard = rosterPlayers.map((p) => toRow(p.id)).sort((a, b) => b.dynastyScore - a.dynastyScore);
+    const rosterBoard = rosterPlayers
+      .map((p) => toRow(p.id))
+      .sort((a, b) => b.dynastyScore - a.dynastyScore);
 
     const board = this.seeds
       .map((s) => toRow(s.player.id))

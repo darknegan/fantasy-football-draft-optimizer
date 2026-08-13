@@ -4,4 +4,3 @@ export * from './slots.js';
 export * from './fit.js';
 export * from './adherence.js';
 export * from './simulate.js';
-export * from './tiers.js';

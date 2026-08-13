@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Player, PlayerEvaluation, RosterShape } from '@draftlab/domain';
+import { estimateSurvivalProbability } from '@draftlab/tiers';
 import { recommendPlayers } from '../recommend.js';
-import { estimateSurvivalProbability } from '../scarcity.js';
 
 function stubPlayer(id: string, position: Player['position'], name = id): Player {
   return {

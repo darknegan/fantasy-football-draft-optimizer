@@ -13,9 +13,10 @@ import {
   strategyFitMultiplier,
   strategyFitReason,
 } from '@draftlab/strategy-engine';
+import { estimateSurvivalProbability } from '@draftlab/tiers';
 import { positionalFormatScarcity } from './format-scarcity.js';
 import { computePositionNeeds, rosterNeedMultiplier } from './roster-need.js';
-import { estimateSurvivalProbability, scarcityUrgencyMultiplier } from './scarcity.js';
+import { scarcityUrgencyMultiplier } from './scarcity.js';
 
 export interface RecommendContext {
   strategyId: StrategyId;
@@ -56,8 +57,7 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
     poolSizeByPosition[player.position] += 1;
   }
 
-  const nextUserPickOverall =
-    ctx.nextUserPickOverall ?? Math.max(1, ctx.picksUntilNext + 1);
+  const nextUserPickOverall = ctx.nextUserPickOverall ?? Math.max(1, ctx.picksUntilNext + 1);
 
   const scored = ctx.available.map(({ player, evaluation }) => {
     const strategyFit = strategyFitMultiplier(ctx.strategyId, ctx.round, player.position);
