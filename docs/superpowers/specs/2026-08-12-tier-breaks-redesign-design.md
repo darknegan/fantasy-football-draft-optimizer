@@ -129,8 +129,10 @@ Stateless by design: a grade never moves because someone else was drafted, and i
 is identical on the board and the cheat sheet. Returns `null` when
 `ceilingKnownFactors === 0` (see _No-data players_).
 
-Starting thresholds, to be confirmed against the real score distribution during
-implementation: S ≥ 85, A ≥ 75, B ≥ 62, C ≥ 48, D below.
+Confirmed against 218 real players (sleeperMCP player_factors.json v5): **S ≥ 70,
+A ≥ 63, B ≥ 56, C ≥ 48, D below.** The design doc's provisional { S: 85, A: 75,
+B: 62, C: 48 } assumed a 0–100 spread the weighted draftScore never occupies (real
+range 33.0–75.7), so S was unreachable on the seed artifact.
 
 ### detectCliffs
 
@@ -146,8 +148,8 @@ z-score keeps a few huge tail gaps from inflating the threshold and masking real
 mid-board cliffs.
 
 `k` is a parameter with a default tuned against real data, not a constant buried
-in the function body. Starting value: **2.5**, to be confirmed by inspecting where
-the resulting cliffs land on the real seed artifact (see _Testing_).
+in the function body. Confirmed value: **5.0** (the provisional **2.5** fired on
+near-tie rounding noise — 42 cliffs on a 221-row board).
 
 ### survivalBands
 
@@ -173,8 +175,9 @@ cannot mistake "unknown" for "very late" (see _Edge cases_).
 | Should be there            | `p ≥ 0.65`           | Safe to wait                           |
 | ADP unknown                | n/a                  | No usable ADP — no survival claim made |
 
-These cut-points are starting values, confirmed against real data alongside `k`.
-They are parameters of `survivalBands`, not literals in its body.
+These cut-points were confirmed against real ADP on the same artifact (see
+`packages/tiers/src/survival.ts`). Alternative values (0.20/0.70, 0.30/0.60)
+either collapsed coin-flip to noise or inflated "gone" on mid-round boards.
 
 ### replacementBand
 

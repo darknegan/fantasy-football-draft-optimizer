@@ -5,7 +5,7 @@ import {
   SleeperClient,
   type SleeperPick,
 } from '@draftlab/integrations';
-import { getDraftSlotInfo } from '@draftlab/strategy-engine';
+import { projectUserPickProgress } from '@draftlab/tiers';
 import type { AppStore } from './store.js';
 
 export type DraftBroadcast = (leagueId: string, payload: unknown) => void;
@@ -95,10 +95,13 @@ export class DraftPoller {
     const draft = this.store.getDraft(leagueId);
     if (!league || !draft) return null;
     const slot = league.draftSlot ?? 1;
-    const info = getDraftSlotInfo(slot, league.teamCount, 15);
-    const next = info.pickNumbers.find((n) => n >= draft.currentPick);
-    if (next == null) return null;
-    return Math.max(0, next - draft.currentPick);
+    const progress = projectUserPickProgress(
+      slot,
+      league.teamCount,
+      draft.currentPick,
+      draft.picksUntilUser,
+    );
+    return progress?.picksUntilNext ?? null;
   }
 
   private async pollOnce(leagueId: string) {

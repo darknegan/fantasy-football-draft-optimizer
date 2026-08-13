@@ -49,7 +49,7 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { buildCheatSheet } from '@draftlab/tiers';
+import { buildCheatSheet, projectUserPickProgress } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
@@ -377,10 +377,14 @@ export class AppStore {
       }));
 
     const round = Math.floor((draft.currentPick - 1) / league.teamCount) + 1;
-    const slotInfo = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
-    const nextUserPick =
-      slotInfo.pickNumbers.find((n) => n >= draft.currentPick) ?? draft.currentPick;
-    const picksUntilNext = Math.max(0, nextUserPick - draft.currentPick);
+    const progress = projectUserPickProgress(
+      league.draftSlot ?? 1,
+      league.teamCount,
+      draft.currentPick,
+      draft.picksUntilUser,
+    );
+    const nextUserPick = progress?.nextOverall ?? draft.currentPick;
+    const picksUntilNext = progress?.picksUntilNext ?? 0;
     const positionRunByPosition = this.detectPositionRuns(draft.picks, 10);
 
     const strategyId = (league.strategyId ?? 'balanced') as StrategyId;
@@ -459,9 +463,12 @@ export class AppStore {
     draft.status = 'drafting';
     const league = this.leagues.get(leagueId);
     if (league) {
-      const info = getDraftSlotInfo(league.draftSlot ?? 1, league.teamCount, 15);
-      const next = info.pickNumbers.find((n) => n >= draft.currentPick);
-      draft.picksUntilUser = next != null ? Math.max(0, next - draft.currentPick) : null;
+      const progress = projectUserPickProgress(
+        league.draftSlot ?? 1,
+        league.teamCount,
+        draft.currentPick,
+      );
+      draft.picksUntilUser = progress?.picksUntilNext ?? null;
     }
 
     if (prePickRecs && event.playerId) {
@@ -628,6 +635,13 @@ export class AppStore {
     return value;
   }
 
+  /**
+   * Positional cheat sheet grouped by absolute quality band.
+   *
+   * Contract note: `tier` may be `null` for no-data players (zero known ceiling
+   * factors). The legacy `unranked` side-list was removed — those rows appear
+   * inline with `tier: null`.
+   */
   cheatSheet(leagueId: string) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;

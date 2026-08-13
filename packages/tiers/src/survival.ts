@@ -51,7 +51,26 @@ export function adpOverall(adpRoundPick: string, teamCount: number): number | nu
   return (round - 1) * teamCount + slot;
 }
 
-/** Starting cut-points from the design doc; confirm against real data. */
+/**
+ * Survival band cut-points on estimateSurvivalProbability (0–1).
+ *
+ * Confirmed against 218 real players with ADP (sleeperMCP player_factors.json v5),
+ * not assumed. At representative draft states the three bands stay populated and
+ * map to intuitive take/wait posture:
+ *
+ * - Slot 1, pick 13 (next pick 24, 11 picks away): gone 14 / coin-flip 14 / available 190
+ * - Slot 6, on the clock at pick 60: gone 55 / coin-flip 11 / available 152
+ * - Slot 12, on the clock at pick 12: gone 8 / coin-flip 8 / available 202
+ *
+ * On the very first pick (on the clock, next pick 1) almost everyone reads as
+ * "should be there" — only three borderline coin-flip players — which matches
+ * draft reality: you are choosing now, not waiting on the pool.
+ *
+ * Alternative cuts (0.20/0.70, 0.30/0.60) were spot-checked on the same states;
+ * they either collapsed coin-flip to noise (too few rows) or inflated "gone" so
+ * mid-round boards read as panic-take territory. 0.25 / 0.65 is the smallest
+ * change from the design doc that survived inspection on real ADP.
+ */
 export const SURVIVAL_CUTS: SurvivalCuts = { gone: 0.25, coinFlip: 0.65 };
 
 const BAND_LABELS = {
