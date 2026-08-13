@@ -274,17 +274,22 @@
   color: var(--dl-text-secondary);
 }
 
-.arch.prime {
-  background: color-mix(in srgb, var(--dl-accent) 14%, transparent);
-  color: var(--dl-accent);
+.arch.good {
+  background: var(--dl-grade-green-fill);
+  color: var(--dl-grade-green);
 }
 
-.arch.breakout {
+.arch.mid {
+  background: var(--dl-grade-yellow-fill);
+  color: var(--dl-grade-yellow);
+}
+
+.arch.warn {
   background: var(--dl-grade-orange-fill);
   color: var(--dl-grade-orange);
 }
 
-.arch.vet {
+.arch.bad {
   background: var(--dl-grade-red-fill);
   color: var(--dl-grade-red);
 }

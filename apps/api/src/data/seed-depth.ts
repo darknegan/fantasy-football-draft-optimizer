@@ -13,7 +13,9 @@ const DEPTH: Array<{
   fse: number;
   espn: number;
   draftScoreHint?: number;
-  /** RB only: prior top-12-at-position finish count. See Player.positionalTop12FinishCount. */
+  /** Prior top-5/top-8/top-12-at-position finish counts. */
+  top5FinishCount?: number;
+  top8FinishCount?: number;
   top12FinishCount?: number;
 }> = [
   {
@@ -26,6 +28,8 @@ const DEPTH: Array<{
     adp: '2.02',
     fse: 14,
     espn: 16,
+    top5FinishCount: 2,
+    top8FinishCount: 3,
   },
   {
     id: 'aj-brown',
@@ -37,6 +41,8 @@ const DEPTH: Array<{
     adp: '2.06',
     fse: 16,
     espn: 15,
+    top5FinishCount: 4,
+    top8FinishCount: 5,
   },
   {
     id: 'puka-nacua',
@@ -48,6 +54,8 @@ const DEPTH: Array<{
     adp: '2.10',
     fse: 17,
     espn: 19,
+    top5FinishCount: 2,
+    top8FinishCount: 3,
   },
   {
     id: 'tyreek-hill',
@@ -59,6 +67,8 @@ const DEPTH: Array<{
     adp: '3.02',
     fse: 26,
     espn: 24,
+    top5FinishCount: 7,
+    top8FinishCount: 8,
   },
   {
     id: 'drake-london',
@@ -70,6 +80,8 @@ const DEPTH: Array<{
     adp: '3.06',
     fse: 29,
     espn: 31,
+    top5FinishCount: 1,
+    top8FinishCount: 2,
   },
   {
     id: 'malik-nabers',
@@ -81,6 +93,8 @@ const DEPTH: Array<{
     adp: '2.12',
     fse: 20,
     espn: 21,
+    top5FinishCount: 1,
+    top8FinishCount: 1,
   },
   {
     id: 'devonta-smith',
@@ -92,6 +106,8 @@ const DEPTH: Array<{
     adp: '4.02',
     fse: 38,
     espn: 36,
+    top5FinishCount: 0,
+    top8FinishCount: 2,
   },
   {
     id: 'garrett-wilson',
@@ -103,6 +119,8 @@ const DEPTH: Array<{
     adp: '3.10',
     fse: 33,
     espn: 34,
+    top5FinishCount: 0,
+    top8FinishCount: 1,
   },
   {
     id: 'breece-hall',
@@ -114,6 +132,8 @@ const DEPTH: Array<{
     adp: '2.01',
     fse: 12,
     espn: 13,
+    top5FinishCount: 0,
+    top8FinishCount: 2,
   },
   {
     id: 'jonathan-taylor',
@@ -125,6 +145,8 @@ const DEPTH: Array<{
     adp: '2.05',
     fse: 13,
     espn: 14,
+    top5FinishCount: 3,
+    top8FinishCount: 4,
   },
   {
     id: 'derrick-henry',
@@ -136,6 +158,8 @@ const DEPTH: Array<{
     adp: '2.09',
     fse: 19,
     espn: 17,
+    top5FinishCount: 6,
+    top8FinishCount: 7,
   },
   {
     id: 'kyren-williams',
@@ -147,6 +171,8 @@ const DEPTH: Array<{
     adp: '3.03',
     fse: 24,
     espn: 26,
+    top5FinishCount: 2,
+    top8FinishCount: 2,
   },
   {
     id: 'josh-jacobs',
@@ -158,6 +184,8 @@ const DEPTH: Array<{
     adp: '3.07',
     fse: 27,
     espn: 28,
+    top5FinishCount: 2,
+    top8FinishCount: 4,
   },
   {
     id: 'james-cook',
@@ -169,6 +197,8 @@ const DEPTH: Array<{
     adp: '3.11',
     fse: 31,
     espn: 33,
+    top5FinishCount: 2,
+    top8FinishCount: 3,
   },
   {
     id: 'kenneth-walker',
@@ -180,6 +210,8 @@ const DEPTH: Array<{
     adp: '4.04',
     fse: 40,
     espn: 42,
+    top5FinishCount: 0,
+    top8FinishCount: 1,
   },
   {
     id: 'chase-brown',
@@ -191,10 +223,9 @@ const DEPTH: Array<{
     adp: '4.08',
     fse: 44,
     espn: 46,
-    top12FinishCount: 2,
-  }, // sleeperMCP build_factors.py: top-12 by PPR season total in both 2024 and 2025
-  // (corrects an earlier estimate of 1 based on the video's PPG-rank framing rather
-  // than season-total rank)
+    top5FinishCount: 1,
+    top8FinishCount: 2,
+  },
   {
     id: 'jayden-daniels',
     name: 'Jayden Daniels',
@@ -205,6 +236,8 @@ const DEPTH: Array<{
     adp: '3.04',
     fse: 32,
     espn: 29,
+    top5FinishCount: 2,
+    top8FinishCount: 2,
   },
   {
     id: 'jalen-hurts',
@@ -216,6 +249,8 @@ const DEPTH: Array<{
     adp: '3.08',
     fse: 34,
     espn: 35,
+    top5FinishCount: 4,
+    top8FinishCount: 5,
   },
   {
     id: 'joe-burrow',
@@ -227,6 +262,8 @@ const DEPTH: Array<{
     adp: '4.01',
     fse: 41,
     espn: 39,
+    top5FinishCount: 3,
+    top8FinishCount: 4,
   },
   {
     id: 'patrick-mahomes',
@@ -238,6 +275,8 @@ const DEPTH: Array<{
     adp: '5.02',
     fse: 55,
     espn: 50,
+    top5FinishCount: 7,
+    top8FinishCount: 8,
   },
   {
     id: 'bo-nix',
@@ -249,6 +288,8 @@ const DEPTH: Array<{
     adp: '6.04',
     fse: 70,
     espn: 68,
+    top5FinishCount: 1,
+    top8FinishCount: 2,
   },
   {
     id: 'sam-laoporta',
@@ -260,6 +301,8 @@ const DEPTH: Array<{
     adp: '3.12',
     fse: 36,
     espn: 37,
+    top5FinishCount: 1,
+    top8FinishCount: 2,
   },
   {
     id: 'tucker-kraft',
@@ -271,6 +314,8 @@ const DEPTH: Array<{
     adp: '5.06',
     fse: 58,
     espn: 62,
+    top5FinishCount: 0,
+    top8FinishCount: 1,
   },
   {
     id: 'mark-andrews',
@@ -282,6 +327,8 @@ const DEPTH: Array<{
     adp: '5.10',
     fse: 64,
     espn: 60,
+    top5FinishCount: 4,
+    top8FinishCount: 6,
   },
   {
     id: 'david-njoku',
@@ -293,6 +340,8 @@ const DEPTH: Array<{
     adp: '7.02',
     fse: 78,
     espn: 75,
+    top5FinishCount: 0,
+    top8FinishCount: 2,
   },
   {
     id: 'oronde-gadsden',
@@ -316,8 +365,9 @@ const DEPTH: Array<{
     adp: '1.04',
     fse: 8,
     espn: 9,
-    top12FinishCount: 0,
-  }, // rookie, no NFL seasons played yet
+    top5FinishCount: 0,
+    top8FinishCount: 0,
+  },
   {
     id: 'tetairoa-mcmillan',
     name: 'Tetairoa McMillan',
@@ -370,8 +420,9 @@ function toPlayer(d: (typeof DEPTH)[number]): Player {
     draftYear: d.seasons === 0 ? 2025 : 2025 - d.seasons + 1,
     draftRound: d.seasons === 0 ? 1 : 2,
     status: 'active',
-    hasPositionalTop12Finish: d.position !== 'TE' || d.adp.startsWith('3') || d.adp.startsWith('2'),
-    positionalTop12FinishCount: d.top12FinishCount,
+    positionalTop5FinishCount: d.top5FinishCount ?? 0,
+    positionalTop8FinishCount: d.top8FinishCount ?? 0,
+    positionalTop12FinishCount: d.top12FinishCount ?? d.top8FinishCount ?? 0,
     // Crude ADP-based heuristic (early pick -> presumed team-position lead), same as the
     // old isClearWr1 stood in for before real team_position_rank data existed. Applied to
     // both WR and RB now that classifyRb also uses this field.
@@ -403,7 +454,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
         factorId: 'archetype',
         value: 1,
         categorical:
-          quality > 0.7 ? 'PRIME_WR1' : quality > 0.4 ? 'PRIME_WR2' : 'BREAKOUT_CANDIDATE',
+          quality > 0.7 ? 'ELITE' : quality > 0.4 ? 'IN_THEIR_PRIME' : 'BREAKOUT_CANDIDATE',
       },
       { factorId: 'injury_concern', value: 1, categorical: quality > 0.5 ? 'minimal' : 'some' },
     ];
@@ -419,8 +470,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
       { factorId: 'team_target_rank', value: quality > 0.5 ? 1 : 3 },
       { factorId: 'rec_td_rank', value: quality > 0.5 ? 1 : 3 },
       { factorId: 'route_participation', value: 79.8 * mid },
-      { factorId: 'inline_pct', value: quality > 0.5 ? 32 : 50 },
-      { factorId: 'yprr_rank', value: 5.14 / mid },
+      { factorId: 'yprr', value: 1.956 * mid },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
     ];
   }
@@ -437,7 +487,7 @@ function syntheticFactors(position: Position, quality: number): FactorInput[] {
       { factorId: 'red_zone_attempts', value: 6.3 * mid },
       { factorId: 'injury_concern', value: 1, categorical: 'minimal' },
       { factorId: 'neutral_pace_rank', value: 12.86 / mid },
-      { factorId: 'pass_dvoa_rank', value: 7.01 / mid },
+      { factorId: 'pass_epa_rank', value: 5.03 / mid },
     ];
   }
   return emptyFactors(position);

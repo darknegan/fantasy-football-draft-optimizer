@@ -6,10 +6,13 @@ import type {
   Player,
   Position,
 } from '@draftlab/domain';
-import { getBenchmarkConfig } from './config/benchmarks.js';
 
 const RB_RATES: Record<
-  'BREAKOUT_CANDIDATE' | 'PROVEN_BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_RB1' | 'PRIME_RB2',
+  | 'BREAKOUT_CANDIDATE'
+  | 'PROVEN_BREAKOUT_CANDIDATE'
+  | 'ELITE'
+  | 'IN_THEIR_PRIME'
+  | 'TRUSTY_VETERAN',
   ArchetypeRates
 > = {
   BREAKOUT_CANDIDATE: {
@@ -26,19 +29,15 @@ const RB_RATES: Record<
     bustRate: 0.1667,
     fineRate: 0.2833,
   },
-  // No dedicated bell-cow-vs-committee historical study yet — both tiers reuse the old
-  // undifferentiated IN_THEIR_PRIME rates as an interim stand-in (same pattern as
-  // PROVEN_BREAKOUT_CANDIDATE below). The archetype LABEL is still real and useful —
-  // team_position_rank distinguishes a true lead back from a committee piece — it's only
-  // the numeric EV that doesn't yet reflect a measured difference between them.
-  PRIME_RB1: {
+  // Provisional: reuse the former undifferentiated prime rates until a dedicated study.
+  ELITE: {
     returnRate: 0.4615,
     injuryRate: 0.1538,
     boomRate: 0.2788,
     bustRate: 0.2019,
     fineRate: 0.1827,
   },
-  PRIME_RB2: {
+  IN_THEIR_PRIME: {
     returnRate: 0.4615,
     injuryRate: 0.1538,
     boomRate: 0.2788,
@@ -57,7 +56,11 @@ const RB_RATES: Record<
 };
 
 const WR_RATES: Record<
-  'BREAKOUT_CANDIDATE' | 'TRUSTY_VETERAN' | 'PRIME_WR1' | 'PRIME_WR2',
+  | 'BREAKOUT_CANDIDATE'
+  | 'PROVEN_BREAKOUT_CANDIDATE'
+  | 'ELITE'
+  | 'IN_THEIR_PRIME'
+  | 'TRUSTY_VETERAN',
   ArchetypeRates
 > = {
   BREAKOUT_CANDIDATE: {
@@ -74,19 +77,29 @@ const WR_RATES: Record<
     bustRate: 0.1667,
     fineRate: 0.25,
   },
-  PRIME_WR1: {
+  // Provisional: reuse the former PRIME_WR1 rates until a dedicated study.
+  ELITE: {
     returnRate: 0.5352,
     injuryRate: 0.1127,
     boomRate: 0.338,
     bustRate: 0.1268,
     fineRate: 0.2254,
   },
-  PRIME_WR2: {
+  // Provisional: reuse the former PRIME_WR2 rates until a dedicated study.
+  IN_THEIR_PRIME: {
     returnRate: 0.379,
     injuryRate: 0.138,
     boomRate: 0.31,
     bustRate: 0.31,
     fineRate: 0.172,
+  },
+  // Provisional: proven candidates reuse the breakout rates.
+  PROVEN_BREAKOUT_CANDIDATE: {
+    returnRate: 0.2727,
+    injuryRate: 0.1591,
+    boomRate: 0.1818,
+    bustRate: 0.2955,
+    fineRate: 0.2727,
   },
 };
 
@@ -99,41 +112,6 @@ const NEUTRAL_RATES: ArchetypeRates = {
   fineRate: 0.23,
 };
 
-const PRIMARY_VOLUME_FACTOR: Partial<Record<Position, string>> = {
-  WR: 'targets',
-  RB: 'touches',
-};
-
-/**
- * How much of the WR1/RB1 "lead option" rates a player earns, scaled by their own primary
- * volume (targets/g for WR, touches/g for RB) against the position's real benchmark.
- * teamPositionRank === 1 only means "biggest share on his own roster" — it says nothing
- * about how big that share is. A low-volume leading receiver on a run-heavy offense (e.g.
- * Khalil Shakir: team's #1 WR by target share, but well under the WR benchmark) shouldn't
- * get the same elite-alpha boom/bust profile as a true target hog just for edging out
- * weaker teammates. At/above benchmark: full WR1/RB1 credit. Below it: blend down toward
- * WR2/RB2. No signal (factor missing): keep the old flat full-credit behavior.
- */
-function volumeRatio(position: Position, factors: FactorInput[]): number {
-  const factorId = PRIMARY_VOLUME_FACTOR[position];
-  if (!factorId) return 1;
-  const value = factors.find((f) => f.factorId === factorId)?.value;
-  if (value == null) return 1;
-  const benchmark = getBenchmarkConfig(position).factors.find((f) => f.id === factorId)?.benchmark;
-  if (!benchmark) return 1;
-  return Math.max(0, Math.min(1, value / benchmark));
-}
-
-function blendRates(low: ArchetypeRates, high: ArchetypeRates, t: number): ArchetypeRates {
-  return {
-    returnRate: low.returnRate + t * (high.returnRate - low.returnRate),
-    injuryRate: low.injuryRate + t * (high.injuryRate - low.injuryRate),
-    boomRate: low.boomRate + t * (high.boomRate - low.boomRate),
-    bustRate: low.bustRate + t * (high.bustRate - low.bustRate),
-    fineRate: low.fineRate + t * (high.fineRate - low.fineRate),
-  };
-}
-
 export function computeArchetypeEv(rates: ArchetypeRates): number {
   return (
     2 * rates.boomRate +
@@ -144,39 +122,50 @@ export function computeArchetypeEv(rates: ArchetypeRates): number {
   );
 }
 
-export function classifyRb(player: Player): ArchetypeId {
-  if (player.seasonsInLeague <= 3) {
-    const finishCount = player.positionalTop12FinishCount;
-    if (finishCount === undefined) {
-      // No count on record — fall back to the boolean's coarse split (unchanged legacy
-      // behavior). true-with-no-count is treated as already established, same as before.
-      if (!player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
-    } else if (finishCount === 0) {
-      return 'BREAKOUT_CANDIDATE';
-    } else if (finishCount === 1) {
-      return 'PROVEN_BREAKOUT_CANDIDATE';
-    }
-    // finishCount >= 2 falls through — already entrenched, not a breakout.
-  }
-  if (player.seasonsInLeague >= 7 || player.age >= 27) return 'TRUSTY_VETERAN';
-  return player.teamPositionRank === 1 ? 'PRIME_RB1' : 'PRIME_RB2';
+/** Finish count strictly greater than half of seasons in league (e.g. 8 yrs → ≥5). */
+export function overHalf(finishCount: number, seasonsInLeague: number): boolean {
+  return finishCount > seasonsInLeague / 2;
 }
 
-export function classifyWr(player: Player): ArchetypeId {
-  if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
-  if (player.seasonsInLeague >= 7 || player.age >= 28) return 'TRUSTY_VETERAN';
-  return player.teamPositionRank === 1 ? 'PRIME_WR1' : 'PRIME_WR2';
-}
+function classifySkillPosition(player: Player): ArchetypeId {
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
 
-export function classifyTe(player: Player): ArchetypeId {
-  if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
-  if (player.seasonsInLeague >= 8 || player.age >= 30) return 'TRUSTY_VETERAN';
+  if (seasons <= 3 && top5 === 0) return 'BREAKOUT_CANDIDATE';
+  if (seasons <= 3 && top5 === 1) return 'PROVEN_BREAKOUT_CANDIDATE';
+  if (seasons <= 4 && top5 >= 2) return 'ELITE';
+  if (seasons > 4 && overHalf(top8, seasons)) return 'ELITE';
+  if (seasons > 4 && overHalf(top12, seasons)) return 'TRUSTY_VETERAN';
+  if (seasons >= 7 || player.age >= 28) return 'VETERAN';
   return 'IN_THEIR_PRIME';
 }
 
+export function classifyRb(player: Player): ArchetypeId {
+  return classifySkillPosition(player);
+}
+
+export function classifyWr(player: Player): ArchetypeId {
+  return classifySkillPosition(player);
+}
+
+export function classifyTe(player: Player): ArchetypeId {
+  return classifySkillPosition(player);
+}
+
 export function classifyQb(player: Player): ArchetypeId {
-  if (player.seasonsInLeague <= 3 && !player.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
-  if (player.age >= 34) return 'TRUSTY_VETERAN';
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
+
+  if (seasons <= 3 && top5 === 0) return 'BREAKOUT_CANDIDATE';
+  if (seasons <= 3 && top5 === 1) return 'PROVEN_BREAKOUT_CANDIDATE';
+  if (seasons <= 4 && top5 >= 2) return 'ELITE';
+  if (seasons > 4 && overHalf(top8, seasons)) return 'ELITE';
+  if (seasons > 4 && overHalf(top12, seasons)) return 'TRUSTY_VETERAN';
+  if (player.age >= 34) return 'VETERAN';
   return 'IN_THEIR_PRIME';
 }
 
@@ -193,29 +182,97 @@ export function classifyArchetype(player: Player): ArchetypeId {
   }
 }
 
-function ratesFor(
-  position: Position,
-  archetype: ArchetypeId,
-  factors: FactorInput[],
-): ArchetypeRates {
-  if (position === 'RB' && archetype === 'PRIME_RB1') {
-    return blendRates(RB_RATES.PRIME_RB2, RB_RATES.PRIME_RB1, volumeRatio(position, factors));
+function explainSkillPosition(player: Player): string {
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
+
+  if (seasons <= 3 && top5 === 0) {
+    return `yr ${seasons}, no top-5 finishes → rule 1`;
   }
-  if (position === 'WR' && archetype === 'PRIME_WR1') {
-    return blendRates(WR_RATES.PRIME_WR2, WR_RATES.PRIME_WR1, volumeRatio(position, factors));
+  if (seasons <= 3 && top5 === 1) {
+    return `yr ${seasons}, 1 top-5 finish → rule 2`;
   }
+  if (seasons <= 4 && top5 >= 2) {
+    return `yr ${seasons}, ${top5} top-5 finishes → rule 3`;
+  }
+  if (seasons > 4 && overHalf(top8, seasons)) {
+    return `yr ${seasons}, top-8 in ${top8}/${seasons} seasons (over half) → rule 4`;
+  }
+  if (seasons > 4 && overHalf(top12, seasons)) {
+    return `yr ${seasons}, top-12 in ${top12}/${seasons} seasons (over half) → rule 5`;
+  }
+  if (seasons >= 7 || player.age >= 28) {
+    const gates: string[] = [];
+    if (player.age >= 28) gates.push(`age ${player.age}`);
+    if (seasons >= 7) gates.push(`yr ${seasons}`);
+    return `${gates.join(', ')} — aging without half-rate pedigree → rule 6`;
+  }
+  return `yr ${seasons}, mid-career without half-rate pedigree → rule 7`;
+}
+
+function explainQb(player: Player): string {
+  const top5 = player.positionalTop5FinishCount ?? 0;
+  const top8 = player.positionalTop8FinishCount ?? 0;
+  const top12 = player.positionalTop12FinishCount ?? 0;
+  const seasons = player.seasonsInLeague;
+
+  if (seasons <= 3 && top5 === 0) {
+    return `yr ${seasons}, no top-5 finishes → rule 1`;
+  }
+  if (seasons <= 3 && top5 === 1) {
+    return `yr ${seasons}, 1 top-5 finish → rule 2`;
+  }
+  if (seasons <= 4 && top5 >= 2) {
+    return `yr ${seasons}, ${top5} top-5 finishes → rule 3`;
+  }
+  if (seasons > 4 && overHalf(top8, seasons)) {
+    return `yr ${seasons}, top-8 in ${top8}/${seasons} seasons (over half) → rule 4`;
+  }
+  if (seasons > 4 && overHalf(top12, seasons)) {
+    return `yr ${seasons}, top-12 in ${top12}/${seasons} seasons (over half) → rule 5`;
+  }
+  if (player.age >= 34) {
+    return `age ${player.age} — aging without half-rate pedigree → rule 6`;
+  }
+  return `yr ${seasons}, mid-career without half-rate pedigree → rule 7`;
+}
+
+/** Short "Why" phrase for board tooltips — mirrors classifyArchetype ladder rules. */
+export function explainArchetype(player: Player): string {
+  if (player.position === 'QB') {
+    return explainQb(player);
+  }
+  return explainSkillPosition(player);
+}
+
+function ratesFor(position: Position, archetype: ArchetypeId): ArchetypeRates {
   if (position === 'RB' && archetype in RB_RATES) {
     return RB_RATES[archetype as keyof typeof RB_RATES];
   }
   if (position === 'WR' && archetype in WR_RATES) {
     return WR_RATES[archetype as keyof typeof WR_RATES];
   }
+  if (archetype === 'VETERAN') {
+    const trusty =
+      position === 'RB'
+        ? RB_RATES.TRUSTY_VETERAN
+        : position === 'WR'
+          ? WR_RATES.TRUSTY_VETERAN
+          : NEUTRAL_RATES;
+    return {
+      ...trusty,
+      injuryRate: Math.min(1, trusty.injuryRate + 0.05),
+      boomRate: Math.max(0, trusty.boomRate - 0.05),
+    };
+  }
   return NEUTRAL_RATES;
 }
 
-export function evaluateArchetype(player: Player, factors: FactorInput[] = []): ArchetypeResult {
+export function evaluateArchetype(player: Player, _factors: FactorInput[] = []): ArchetypeResult {
   const archetype = classifyArchetype(player);
-  const rates = ratesFor(player.position, archetype, factors);
+  const rates = ratesFor(player.position, archetype);
   return {
     archetype,
     rates,

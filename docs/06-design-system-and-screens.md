@@ -184,7 +184,7 @@ Eight of these exist as variant component sets in the Figma file's **Components*
 instanced throughout the mocks: `Cell/FactorGrade` (elite / green / yellow / orange / red /
 critical / unknown),
 `Badge/Position` (QB / RB / WR / TE), `Chip/Tier` (S / A / B / C / D / F / Unrated),
-`Badge/Archetype` (Prime WR1 / Prime WR2 / Prime RB / Prime / Breakout / Trusty Vet),
+`Badge/Archetype` (Elite / Proven / In Their Prime / Breakout / Trusty Vet / Veteran),
 `Chip/ValueDelta` (Discount / Neutral / Premium), `Control/Toggle` (On / Off / Locked),
 `Row/Player`, `Nav/Sidebar` and `Nav/TopBar`.
 Each carries a description explaining what it encodes, and the archetype badges carry their

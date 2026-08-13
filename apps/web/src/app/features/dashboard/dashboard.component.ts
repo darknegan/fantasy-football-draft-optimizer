@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ActiveLeagueService } from '../../core/active-league.service';
@@ -38,7 +45,7 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
   {
     badge: '53.52%',
     tone: 'green',
-    title: 'Prime WR1s are the most reliable asset in fantasy football',
+    title: 'Elite wide receivers are the most reliable asset in fantasy football',
     body: 'Highest return on ADP of any bucket, 33.80% boom rate, only 12.68% bust, and the lowest injury rate at 11.27%. Nothing else at any position is close.',
   },
   {
@@ -72,8 +79,8 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
           <div class="conflict-copy">
             <strong>Multiple live drafts connected</strong>
             <p>
-              You have {{ sleeperLeagueCount() }} Sleeper leagues on this account. The draft room can
-              only poll one live draft per tab — open a second tab if two drafts run at once.
+              You have {{ sleeperLeagueCount() }} Sleeper leagues on this account. The draft room
+              can only poll one live draft per tab — open a second tab if two drafts run at once.
             </p>
           </div>
           <a class="conflict-action" routerLink="/leagues/connect">Review connections</a>
@@ -135,7 +142,11 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
                 </div>
               </div>
               <div class="card-foot">
-                <div class="status" [class.warn]="card.statusTone === 'warn'" [class.muted]="card.statusTone === 'muted'">
+                <div
+                  class="status"
+                  [class.warn]="card.statusTone === 'warn'"
+                  [class.muted]="card.statusTone === 'muted'"
+                >
                   <span class="dot" aria-hidden="true"></span>
                   <span>{{ card.statusLabel }}</span>
                 </div>
@@ -182,7 +193,12 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
             <ul class="checklist">
               @for (step of readinessSteps(); track step.label) {
                 <li [class.done]="step.done">
-                  <span class="check" [class.on]="step.done" [class.off]="!step.done" aria-hidden="true">
+                  <span
+                    class="check"
+                    [class.on]="step.done"
+                    [class.off]="!step.done"
+                    aria-hidden="true"
+                  >
                     @if (step.done) {
                       ✓
                     }
@@ -249,7 +265,12 @@ export class DashboardComponent implements OnInit {
     const slots = this.draftSlots();
     const selectedId = this.active.selectedId();
     return this.leagues().map((league, index) =>
-      toLeagueCard(league, strategies, slots, league.id === selectedId || (!selectedId && index === 0)),
+      toLeagueCard(
+        league,
+        strategies,
+        slots,
+        league.id === selectedId || (!selectedId && index === 0),
+      ),
     );
   });
 
@@ -258,7 +279,9 @@ export class DashboardComponent implements OnInit {
     return selected ?? this.leagues()[0] ?? null;
   });
 
-  readonly readinessLeagueName = computed(() => this.readinessFocus()?.name ?? 'No league selected');
+  readonly readinessLeagueName = computed(
+    () => this.readinessFocus()?.name ?? 'No league selected',
+  );
 
   readonly readinessSteps = computed((): ReadinessStep[] => {
     const league = this.readinessFocus();
@@ -267,7 +290,7 @@ export class DashboardComponent implements OnInit {
       : undefined;
     const slot = league?.draftSlot;
     const slotInfo = slot ? this.draftSlots().find((s) => s.slot === slot) : undefined;
-    const scoringOk = !!league?.scoringSummary && !(league.scoringSummary.warnings?.length);
+    const scoringOk = !!league?.scoringSummary && !league.scoringSummary.warnings?.length;
     const hasScoring = !!league?.scoringSummary;
 
     return [

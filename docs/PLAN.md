@@ -56,7 +56,7 @@ supporting numbers rather than buried in a ranking:
 gimmick grades A or lower, and Robust RB and Double Hero WR land in C. The app should default
 to Balanced and make the sharper strategies an explicit opt-in.
 
-**Prime WR1s are the single most reliable asset in fantasy football** — 53.52% return on ADP,
+**`ELITE` wide receivers (interim Prime WR1 rates) are the single most reliable asset in fantasy football** — 53.52% return on ADP,
 33.80% boom rate, only 12.68% bust, and the lowest injury rate in either study at 11.27%. No
 other bucket at any position comes close.
 

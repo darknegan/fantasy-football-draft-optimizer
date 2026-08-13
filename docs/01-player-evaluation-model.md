@@ -15,7 +15,7 @@ single `DraftScore`:
 | `ValueScore` | -100 … 100 | Is the market price a discount or a premium? |
 
 Keeping them separate matters: two players can share a `CeilingScore` of 36 while one is a
-23-year-old Prime WR1 at a discount and the other is a 31-year-old Trusty Veteran going a
+23-year-old `ELITE` WR at a discount and the other is a 31-year-old Trusty Veteran going a
 round early. The UI must always be able to show *why* a player ranks where they do.
 
 ---
@@ -53,7 +53,7 @@ source images:
 Positions do not all have the same number of configured or currently sourced factors.
 The raw range is therefore position-specific:
 `CEILING_RANGE[position] = knownFactorCount × [−5, +5]`. Current known coverage is QB
-11/12 (−55…55), RB 16/16 (−80…80), WR 17/17 (−85…85), and TE 12/14 (−60…60).
+12/12 (−60…60), RB 16/16 (−80…80), WR 17/17 (−85…85), and TE 13/13 (−65…65).
 Cross-position comparisons normalise against the applicable positional range.
 
 ```ts
@@ -131,7 +131,7 @@ multiplying by 17.
 | Rank in QBR | 6.90 | lower better |
 | Red zone combined attempts | 6.848 | higher better |
 | Rank in neutral pace | 12.697 | lower better |
-| Rank in pass offense DVOA | 7.01 | lower better |
+| Pass EPA rank (proxy) | 5.03 | lower better |
 | Injury concern | categorical | lower better |
 
 The elite-QB archetype this encodes is worth stating plainly, because it should drive copy
@@ -145,7 +145,8 @@ green-heavy QB profile.
 
 The shipped factor list deliberately excludes `ADP`: market price belongs in the separate
 `ValueScore`, not in `CeilingScore`. The twelfth QB factor is injury concern. Pass-offense
-DVOA remains the one unsourced QB gap, so current ceiling coverage is 11/12.
+efficiency is sourced as team **pass EPA/play rank** (`pass_epa_rank`), a free nflverse
+proxy — not opponent-adjusted DVOA. Current ceiling coverage is 12/12.
 
 ### 1.3 Wide receiver factors
 
@@ -177,9 +178,9 @@ Benchmarks from `WR Scoring Avgs.PNG`.
 | Catch percentage (NGS proxy) | 68.864% | higher better |
 
 **Profile factors** (2): `Archetype` and `Injury/Suspension Concern`. These appear as graded
-rows in `WR ADP #1-9.PNG` — archetype cells are green for Prime WR1 and red for Trusty
-Veteran, and the concern row is graded `Minimal Concern` (green) / `Some Concern` (yellow) /
-worse. Together these bring WR to 17 configured and known factors.
+rows in `WR ADP #1-9.PNG` — the source images use legacy Prime WR1 / Trusty Veteran labels;
+the shipped engine grades the archetype row per §2.2 (`ELITE` elite, Breakout orange,
+Trusty Veteran green, etc.). Together these bring WR to 17 configured and known factors.
 
 "Highest targeted secondary option" is the target volume of the *next* most-targeted
 receiver on the team, and it is graded as `More` / `Same` / `Less` rather than by ratio —
@@ -195,7 +196,7 @@ Benchmarks from `TE Avg Scoring.PNG`.
 **Volume factors** (3): targets 8.10/g (137.67 paced), receptions 5.71/g (97.02),
 touchdowns 0.56/g (9.49).
 
-**Situational factors** (10):
+**Situational factors** (9):
 
 | Factor | Benchmark | Direction |
 | --- | --- | --- |
@@ -205,14 +206,14 @@ touchdowns 0.56/g (9.49).
 | Rank in team targets | 1.43 | lower better |
 | Rank in receiving touchdowns | 1.38 | lower better |
 | Route participation | 79.8% | higher better |
-| In-line % | 39.0% | lower better |
-| Rank in yards per route run | 5.14 | lower better |
+| Yards per route run (proxy) | 1.956 | higher better |
 | Offensive line rank in pass blocking (proxy) | 14.667 | lower better |
 | Rank in neutral pace | 14.667 | lower better |
 
 **Profile factor** (1): `Injury/Age Concern`, graded in `TE ADPs #1-8.PNG` as `Minimal
-Concerns` / `Some Concern` / `Concerned`. In-line percentage and YPRR rank remain licensed
-data gaps, giving TE 12 known factors out of 14 configured.
+Concerns` / `Some Concern` / `Concerned`. YPRR is the same participation proxy as WR
+(`yprr`, higher-better rate). In-line % is not a live factor (no honest free alignment
+proxy). All 13 configured TE factors are currently sourced.
 
 The TE position has the sharpest, most usable signal of any position, and the annotations in
 `TE Avg Scoring.PNG` state it directly: of the 37 league-winning TE seasons studied, only
@@ -228,10 +229,10 @@ in the same annotation — the 4 TEs who cleared with sub-70% route participatio
 touchdown-dependent, which is the least stable production source in fantasy football, so
 those profiles should carry a volatility flag.
 
-The in-line percentage direction is counterintuitive and worth a tooltip: a *lower* in-line
-rate is better because it means the TE is being deployed as a receiver in the slot or out
-wide rather than as a blocker. `TE League Winners 2025-2024.PNG` shows Trey McBride at 28.0%
-and Brock Bowers at 30.5% in-line, versus George Kittle at 57.0%.
+The historical in-line finding is still worth stating in copy, even though `inline_pct` is
+not a scored factor: a *lower* in-line rate meant the TE was deployed as a receiver in the
+slot or out wide rather than as a blocker. `TE League Winners 2025-2024.PNG` shows Trey
+McBride at 28.0% and Brock Bowers at 30.5% in-line, versus George Kittle at 57.0%.
 
 ### 1.5 Running back factors
 
@@ -266,105 +267,140 @@ factor definitions as data and iterates, so neither the factor count nor names a
 inputs surface as unknown without special-casing a position or silently rewarding incomplete
 coverage.
 
+### 1.6 Board display
+
+The player board shows **raw** `CeilingScore` with no `/60` (or any position-max denominator).
+Green styling marks the **top 5 raw ceilings at that position** (ties at the cutoff included;
+provisional rows excluded). A **SCORE** column shows `DraftScore` (or contextual score when
+present). **CONF** is `known / configured` using that position's catalog size (QB 12, RB 16,
+TE 13, WR 17), not a hardcoded 12.
+
 ---
 
 ## 2. Career-Stage Archetypes
 
 Both the RB and WR studies bucket players by age and experience and then measure how each
-bucket actually performed. This is the most decision-relevant data in the entire folder,
-because it converts "is this player old?" into a probability distribution over outcomes.
+bucket actually performed. DraftLab replaces the old positional top-12 breakout gate and the
+WR1/RB1 vs WR2 label split with a shared **top-5 / top-8 / top-12 at-position finish ladder**.
+Finish counts come from season-total fantasy points (full PPR) at the player's fantasy
+position. Nested ranks: top-5 ⊆ top-8 ⊆ top-12 for the same season window.
+
+```ts
+type ArchetypeId =
+  | 'BREAKOUT_CANDIDATE'
+  | 'PROVEN_BREAKOUT_CANDIDATE' // UI may shorten to "Proven"
+  | 'ELITE'
+  | 'IN_THEIR_PRIME'
+  | 'TRUSTY_VETERAN'
+  | 'VETERAN';
+```
+
+**Removed:** `PRIME_WR1`, `PRIME_WR2`, `PRIME_RB1`, `PRIME_RB2` and any volume blend on
+those labels.
+
+Helper: `overHalf(count, seasons) => count > seasons / 2` (e.g. 8 seasons → need ≥5 finishes).
 
 ### 2.1 Classification rules
 
-From `Player Type Breakdown.PNG`, verbatim for RBs:
+Evaluate **in order 1→7**; first match wins. RB / WR / TE share the same ladder; QB uses
+rules 1–5 and 7 unchanged, with a narrower veteran gate (age ≥ 34 only — not
+`seasonsInLeague ≥ 7`).
 
-| Archetype | Rule |
+| # | Rule (RB / WR / TE) | Archetype |
+| --- | --- | --- |
+| 1 | `seasonsInLeague ≤ 3` **and** top-5 finishes `= 0` | `BREAKOUT_CANDIDATE` |
+| 2 | `seasonsInLeague ≤ 3` **and** top-5 finishes `= 1` | `PROVEN_BREAKOUT_CANDIDATE` |
+| 3 | `seasonsInLeague ≤ 4` **and** top-5 finishes `≥ 2` | `ELITE` |
+| 4 | `seasonsInLeague > 4` **and** `overHalf(top8, seasons)` | `ELITE` |
+| 5 | `seasonsInLeague > 4` **and** `overHalf(top12, seasons)` | `TRUSTY_VETERAN` |
+| 6 | (`seasonsInLeague ≥ 7` **or** `age ≥ 28`) — missed 4 and 5 | `VETERAN` |
+| 7 | Else | `IN_THEIR_PRIME` |
+
+**QB rule 6:** `age ≥ 34` if rules 4–5 did not match → `VETERAN`. Rules 4–5 can keep mid-career
+QBs `ELITE` / `TRUSTY_VETERAN` without waiting for age 34 (e.g. Allen with 7 top-8s in 8
+seasons → `ELITE`).
+
+Load-bearing gaps (do not relax without evidence):
+
+- Year 5–6 with 2× top-5 but failing half-rates → usually `IN_THEIR_PRIME` (not `ELITE`).
+- `ELITE` **can** persist past year 6/7 while the top-8 half-rate holds.
+- Young players hit rules 1–2 before age-based veteran rules.
+
+The source spreadsheets in `public/stats/` still show the older Prime WR1 / Prime WR2 labels
+from the original study; the shipped engine uses this ladder instead.
+
+### 2.2 Ceiling factor grades (archetype row)
+
+The archetype row on the ceiling board maps categorically to the six-band weights. `ELITE` is
+the deliberate exception to "categoricals never emit elite":
+
+| Archetype | Factor grade | Weight |
+| --- | --- | ---: |
+| `ELITE` | elite | +5 |
+| `PROVEN_BREAKOUT_CANDIDATE` | green | +3 |
+| `TRUSTY_VETERAN` | green | +3 |
+| `IN_THEIR_PRIME` | yellow | +1 |
+| `BREAKOUT_CANDIDATE` | orange | −1 |
+| `VETERAN` | red | −3 |
+
+Aging cliff on the ceiling row: `ELITE` (+5) → `TRUSTY_VETERAN` (+3), not +5 → +1.
+
+### 2.3 Historical outcome rates (interim)
+
+Until a dedicated study exists for the new buckets, **ArchetypeEV reuses provisional rates**
+mapped from the legacy tables below. Flag these as interim in UI copy where rates are cited.
+
+| New bucket | Interim rates source |
 | --- | --- |
-| Breakout Candidate | Year 3 or younger without any RB1 finishes (can happen multiple times) |
-| Trusty Veteran | Either in Year 7+ **or** 27+ years old |
-| RB in their Prime | Under age 27 **and/or** has an RB1 finish already |
-
-These rules overlap, which the source acknowledges with "and/or". Precedence must be fixed
-in code to make classification deterministic; evaluate in this order:
-
-```ts
-function classifyRb(p: Player): RbArchetype {
-  if (p.seasonsInLeague <= 3 && !p.hasPositionalTop12Finish) return 'BREAKOUT_CANDIDATE';
-  if (p.seasonsInLeague >= 7 || p.age >= 27)                 return 'TRUSTY_VETERAN';
-  return 'IN_THEIR_PRIME';
-}
-```
-
-Breakout-candidate status is checked first because the rule explicitly permits a player to
-re-enter that bucket in consecutive seasons, and a Year-3 RB with no RB1 finish is a
-different bet than a Year-3 RB who already broke out.
-
-The WR study uses four buckets — `Breakout Candidate`, `Trusty Veteran`, `Prime WR1`, and
-`Prime WR2` — splitting "prime" by whether the player is his team's clear number one
-target. `WR #28-36 Scoring Factors.PNG` shows the split in use (Christian Watson as Prime
-WR2, Brian Thomas as Prime WR1). The archetype rows across the WR factor images also show
-this bucket being graded as a factor: Prime WR1 green, Breakout Candidate yellow/orange,
-Trusty Veteran red.
-
-### 2.2 Historical outcome rates
+| `ELITE` | WR: former Prime WR1 table; RB: former prime RB table; QB/TE: neutral |
+| `PROVEN_BREAKOUT_CANDIDATE` | Existing breakout tables (same as prior "proven" interim) |
+| `BREAKOUT_CANDIDATE` | Existing breakout tables (RB/WR); neutral for QB/TE |
+| `IN_THEIR_PRIME` | WR: former Prime WR2; RB: former prime RB2; QB/TE: neutral |
+| `TRUSTY_VETERAN` | Existing trusty veteran tables (RB/WR); neutral for QB/TE |
+| `VETERAN` | Provisional: trusty rates with `injuryRate + 0.05`, `boomRate − 0.05` (clamped) |
 
 **Running backs** — 220 RBs drafted in the top 20 of ADP since 2015, from
-`RB Player Type Stats since 2015.PNG`:
+`RB Player Type Stats since 2015.PNG` (legacy bucket names):
 
-| Bucket | Returned on ADP | Got injured | Boomed (18+ PPG or beat ADP by 10) | Busted (lost 10+) | Fine (lost 1–9) |
+| Bucket | Returned on ADP | Got injured | Boomed | Busted | Fine |
 | --- | --- | --- | --- | --- | --- |
 | Breakout Candidates | 42.86% | 17.86% | 19.64% | 19.64% | 19.64% |
 | Trusty Veterans | 33.33% | 21.67% | 20.00% | 16.67% | 28.33% |
 | RBs in their Prime | 46.15% | 15.38% | 27.88% | 20.19% | 18.27% |
-| All RBs | 41.82% | 17.73% | 24.09% | 19.09% | 21.36% |
-
-`RB Simplified Player Stats since 2015.PNG` collapses this to Crushed / Hit / Missed and is
-the cleaner version for a UI summary: Prime RBs crushed 27.88% and hit 46.15%, versus
-Trusty Veterans at 20.00% crushed and 33.33% hit.
 
 **Wide receivers** — 180 WRs drafted in the top 36 WRs of ADP since 2020, from
-`WR Top 36 of ADP since 2020.PNG`:
+`WR Top 36 of ADP since 2020.PNG` (legacy bucket names):
 
-| Bucket | Returned on ADP (17+ PPR PPG) | Got injured | Boomed (18+ or beat ADP by 10) | Busted (lost 12+) | Fine (lost 1–11) |
+| Bucket | Returned on ADP | Got injured | Boomed | Busted | Fine |
 | --- | --- | --- | --- | --- | --- |
 | Breakout Candidates | 27.27% | 15.91% | 18.18% | 29.55% | 27.27% |
 | Trusty Veterans | 27.78% | 30.56% | 8.33% | 16.67% | 25.00% |
-| Prime WR1s | 53.52% | 11.27% | 33.80% | 12.68% | 22.54% |
-| Prime WR2s | 37.90% | 13.80% | 31.00% | 31.00% | 17.20% |
-| Averages | 39.44% | 16.67% | 23.33% | 20.56% | 23.33% |
+| Prime WR1s (→ `ELITE` interim) | 53.52% | 11.27% | 33.80% | 12.68% | 22.54% |
+| Prime WR2s (→ `IN_THEIR_PRIME` interim) | 37.90% | 13.80% | 31.00% | 31.00% | 17.20% |
 
-Three conclusions the app should state outright rather than leaving the user to infer:
+Three conclusions the app should state outright (from the legacy WR/RB studies, mapped to
+today's buckets):
 
-**Prime WR1s are the most reliable asset class in fantasy football.** A 53.52% return rate
-with only a 12.68% bust rate and the lowest injury rate of any bucket (11.27%) is not close
-to any other cell in either table. The best RB bucket returns 46.15%.
+**`ELITE` (interim Prime WR1 rates) is the most reliable asset class in fantasy football.**
+53.52% return, 12.68% bust, 11.27% injured — no other legacy cell comes close.
 
-**Trusty Veteran WRs are the worst bet in either table.** An 8.33% boom rate paired with a
-30.56% injury rate means you are paying an early-round price for a player who almost never
-wins you the position and misses time nearly a third of the time. The gap between veteran
-WRs (30.56% injured) and veteran RBs (21.67%) is large enough that the app should apply the
-age penalty more aggressively at WR than at RB — which is the opposite of conventional
-fantasy wisdom about running backs aging faster, and is therefore exactly the sort of
-finding worth featuring prominently in the UI.
+**Trusty Veteran WRs are the worst bet in either table** (8.33% boom, 30.56% injured). Apply
+the age penalty harder at WR than at RB.
 
-**Breakout Candidate WRs bust more than they boom** (29.55% vs 18.18%), whereas Breakout
-Candidate RBs are roughly break-even (19.64% each) with a strong 42.86% return rate. Young
-RB upside is real; young WR upside is a coin flip weighted against you.
+**Breakout Candidate WRs bust more than they boom** (29.55% vs 18.18%); young RB upside is
+stronger (42.86% return, break-even boom/bust).
 
-### 2.3 Using the rates
-
-Archetype rates give a genuine expected value rather than a vibes-based adjustment:
+### 2.4 Using the rates
 
 ```
 ArchetypeEV = 2·P(boom) + 1·P(return) + 0·P(fine) − 1·P(bust) − 1.5·P(injury)
 ```
 
 The injury coefficient exceeds the bust coefficient because an injured pick costs a roster
-spot and the waiver capital to replace it, not just the points. Applying this to the WR
-table produces a Prime WR1 EV of roughly `0.676 + 0.535 − 0.127 − 0.169 = +0.915` against
-a Trusty Veteran WR EV of roughly `0.167 + 0.278 − 0.167 − 0.458 = −0.180`, a spread of
-over a full point of EV. That is a full round or more of draft value, and it is derived
-entirely from age and experience.
+spot and the waiver capital to replace it, not just the points. Using interim `ELITE` WR
+rates: roughly `0.676 + 0.535 − 0.127 − 0.169 = +0.915` vs Trusty Veteran WR
+`0.167 + 0.278 − 0.167 − 0.458 = −0.180` — over a full point of EV, or roughly a round of
+draft value, derived from finish history and age.
 
 ---
 

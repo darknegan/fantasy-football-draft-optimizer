@@ -12,6 +12,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
+  BoardPlayer,
   FactorGrade,
   GameLogTone,
   GameLogWeek,
@@ -22,6 +23,11 @@ import type {
   PlayerGameLog,
   Position,
 } from '../../core/api.types';
+import {
+  configuredFactorCount,
+  isTop5Ceiling,
+  top5CeilingIdsByPosition,
+} from '../board/ceiling-display';
 
 type FactorCategory = 'volume' | 'situational' | 'profile';
 type DetailTab = 'summary' | 'game-log';
@@ -60,18 +66,17 @@ const CATEGORY_META: Record<FactorCategory, { label: string; hint: string }> = {
   profile: { label: 'PROFILE', hint: 'durability and age' },
 };
 
-const PCT_FACTORS = new Set(['route_participation', 'inline_pct', 'snap_share']);
+const PCT_FACTORS = new Set(['route_participation', 'snap_share']);
 const RANK_FACTORS = new Set([
   'off_ppg_rank',
   'qb_qbr_rank',
   'team_pass_att_rank',
   'team_target_rank',
   'rec_td_rank',
-  'yprr_rank',
   'ol_pass_block_rank',
   'qbr_rank',
   'neutral_pace_rank',
-  'pass_dvoa_rank',
+  'pass_epa_rank',
 ]);
 
 const INJURY_LABELS: Record<FactorGrade, string> = {
@@ -130,6 +135,7 @@ export class PlayerDetailComponent implements OnInit {
   readonly player = signal<Player | null>(null);
   readonly evaluation = signal<PlayerEvaluation | null>(null);
   readonly league = signal<League | null>(null);
+  readonly boardRows = signal<BoardPlayer[]>([]);
   readonly isTarget = signal(false);
   readonly flagBusy = signal(false);
 
@@ -149,8 +155,9 @@ export class PlayerDetailComponent implements OnInit {
 
   readonly metrics = computed((): MetricCard[] => {
     const e = this.evaluation();
+    const p = this.player();
     if (!e) return [];
-    return this.buildMetrics(e);
+    return this.buildMetrics(e, p);
   });
 
   readonly teChecks = computed((): TeCheck[] => {
@@ -195,10 +202,20 @@ export class PlayerDetailComponent implements OnInit {
 
   readonly knownChip = computed(() => {
     const e = this.evaluation();
-    if (!e) return '';
+    const p = this.player();
+    if (!e || !p) return '';
     const known = e.ceiling.knownFactors;
-    const total = e.ceiling.factors?.length || 12;
+    const total = configuredFactorCount({ player: p, evaluation: e });
     return `${known} of ${total} known`;
+  });
+
+  readonly top5Ids = computed(() => top5CeilingIdsByPosition(this.boardRows()));
+
+  readonly ceilingIsTop5 = computed(() => {
+    const e = this.evaluation();
+    const p = this.player();
+    if (!e || !p || e.ceiling.provisional) return false;
+    return isTop5Ceiling({ player: p, evaluation: e }, this.top5Ids());
   });
 
   readonly benchHint = computed(() => {
@@ -254,6 +271,7 @@ export class PlayerDetailComponent implements OnInit {
       .subscribe(({ detail, board, league }) => {
         this.loading.set(false);
         this.league.set(league);
+        this.boardRows.set(board);
         if (!detail) return;
         this.player.set(detail.player);
         this.evaluation.set(detail.evaluation);
@@ -417,15 +435,17 @@ export class PlayerDetailComponent implements OnInit {
       }));
   }
 
-  private buildMetrics(e: PlayerEvaluation): MetricCard[] {
+  private buildMetrics(e: PlayerEvaluation, p: Player | null): MetricCard[] {
     const factors = e.ceiling.factors ?? [];
     const counts = this.gradeCounts(factors);
     const ceil = e.ceiling.ceilingScore;
     const known = e.ceiling.knownFactors;
-    const total = factors.length || 12;
+    const total = p ? configuredFactorCount({ player: p, evaluation: e }) : factors.length;
     const risk = Math.round(e.risk.riskProfile);
     const value = e.value.valueScore;
     const diff = this.marketDiffFromEval(e);
+    const ceilingTop5 =
+      !!p && !e.ceiling.provisional && isTop5Ceiling({ player: p, evaluation: e }, this.top5Ids());
 
     const riskSub =
       risk < 25
@@ -462,11 +482,11 @@ export class PlayerDetailComponent implements OnInit {
       {
         label: 'Ceiling score',
         value: e.ceiling.provisional || ceil == null ? '—' : String(ceil),
-        unit: '/60',
+        unit: '',
         sub: e.ceiling.provisional
           ? 'provisional'
           : `${counts.elite}E ${counts.green}G ${counts.yellow}Y ${counts.orange}O ${counts.red}R ${counts.critical}C`,
-        tone: !e.ceiling.provisional && (ceil ?? 0) >= 30 ? 'good' : 'muted',
+        tone: ceilingTop5 ? 'good' : 'muted',
       },
       {
         label: 'Confidence',
@@ -496,13 +516,10 @@ export class PlayerDetailComponent implements OnInit {
     const byId = new Map(factors.map((f) => [f.factorId, f]));
     const target = byId.get('team_target_rank');
     const td = byId.get('rec_td_rank');
-    const inline = byId.get('inline_pct');
     const routes = byId.get('route_participation');
 
     const targetVal = target?.value;
     const tdVal = td?.value;
-    const inlineVal =
-      inline?.value != null ? (inline.value <= 1 ? inline.value * 100 : inline.value) : null;
     const routeVal =
       routes?.value != null ? (routes.value <= 1 ? routes.value * 100 : routes.value) : null;
 
@@ -518,12 +535,6 @@ export class PlayerDetailComponent implements OnInit {
         label: 'First or second in receiving TDs',
         valueLabel: tdVal != null ? this.toOrdinal(tdVal) : '—',
         passed: tdVal != null && tdVal <= 2,
-      },
-      {
-        key: 'inline_pct',
-        label: 'In-line rate under 50%',
-        valueLabel: inlineVal != null ? `${inlineVal.toFixed(1)}%` : '—',
-        passed: inlineVal != null && inlineVal < 50,
       },
       {
         key: 'route_participation',

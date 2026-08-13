@@ -27,9 +27,9 @@ export const GRADE_WEIGHTS: Record<FactorGrade, number> = {
  * build_benchmarks.py).
  */
 const CEILING_KNOWN_FACTORS: Record<Position, number> = {
-  QB: 11,
+  QB: 12,
   RB: 16,
-  TE: 12,
+  TE: 13,
   WR: 17,
 };
 

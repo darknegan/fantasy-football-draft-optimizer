@@ -30,9 +30,9 @@ describe('ITEM-006 factor lists', () => {
   });
 
   it('known-factor ranges match ITEM-006 coverage', () => {
-    expect(CEILING_RANGE.QB.max).toBe(11 * 5);
+    expect(CEILING_RANGE.QB.max).toBe(12 * 5);
     expect(CEILING_RANGE.RB.max).toBe(16 * 5);
-    expect(CEILING_RANGE.TE.max).toBe(12 * 5);
+    expect(CEILING_RANGE.TE.max).toBe(13 * 5);
     expect(CEILING_RANGE.WR.max).toBe(17 * 5);
   });
 });

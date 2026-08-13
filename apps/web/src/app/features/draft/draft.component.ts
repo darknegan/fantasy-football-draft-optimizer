@@ -325,7 +325,13 @@ export class DraftComponent implements OnInit, OnDestroy {
       const urgency =
         need > 0 ? 1 - filled / Math.max(required[position], 1) : filled === 0 ? 0.2 : 0.08;
       const tone =
-        urgency >= 0.75 ? 'critical' : urgency >= 0.45 ? 'high' : urgency >= 0.2 ? 'moderate' : 'low';
+        urgency >= 0.75
+          ? 'critical'
+          : urgency >= 0.45
+            ? 'high'
+            : urgency >= 0.2
+              ? 'moderate'
+              : 'low';
       const label =
         tone === 'critical'
           ? 'Critical'
@@ -383,7 +389,9 @@ export class DraftComponent implements OnInit, OnDestroy {
       const pos = this.board().find((b) => b.player.id === p.playerId)?.player.position;
       if (pos) counts[pos] += 1;
     }
-    const top = (Object.entries(counts) as Array<[Position, number]>).sort((a, b) => b[1] - a[1])[0];
+    const top = (Object.entries(counts) as Array<[Position, number]>).sort(
+      (a, b) => b[1] - a[1],
+    )[0];
     if (!top || top[1] / recent.length < 0.45) return null;
     const [position, count] = top;
     const label =
@@ -462,7 +470,9 @@ export class DraftComponent implements OnInit, OnDestroy {
   strategyLabel() {
     const id = this.league()?.strategyId ?? 'balanced';
     return (
-      this.strategies().find((s) => s.id === id)?.name ?? STRATEGY_NAMES[id] ?? id.replaceAll('_', ' ')
+      this.strategies().find((s) => s.id === id)?.name ??
+      STRATEGY_NAMES[id] ??
+      id.replaceAll('_', ' ')
     );
   }
 
@@ -496,7 +506,12 @@ export class DraftComponent implements OnInit, OnDestroy {
   playerMeta(row: BoardPlayer): string {
     const p = row.player;
     const adp = row.evaluation.value.adpRoundPick;
-    const bits = [p.team, p.age != null ? String(p.age) : null, p.seasonsInLeague != null ? `Yr ${p.seasonsInLeague}` : null, adp || null];
+    const bits = [
+      p.team,
+      p.age != null ? String(p.age) : null,
+      p.seasonsInLeague != null ? `Yr ${p.seasonsInLeague}` : null,
+      adp || null,
+    ];
     return bits.filter(Boolean).join(' · ');
   }
 
@@ -531,14 +546,42 @@ export class DraftComponent implements OnInit, OnDestroy {
   }
 
   formatArchetype(a: string): string {
-    return a
-      .replaceAll('_', ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\bWr\b/g, 'WR')
-      .replace(/\bRb\b/g, 'RB')
-      .replace(/\bTe\b/g, 'TE')
-      .replace(/\bQb\b/g, 'QB');
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+        return 'Elite';
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+        return 'Proven';
+      case 'TRUSTY_VETERAN':
+        return 'Trusty Veteran';
+      case 'VETERAN':
+        return 'Veteran';
+      case 'IN_THEIR_PRIME':
+        return 'In Their Prime';
+      case 'BREAKOUT_CANDIDATE':
+        return 'Breakout';
+      default:
+        return a
+          .replaceAll('_', ' ')
+          .toLowerCase()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  }
+
+  archTone(a: string): string {
+    switch (a.toUpperCase()) {
+      case 'ELITE':
+      case 'PROVEN_BREAKOUT_CANDIDATE':
+      case 'TRUSTY_VETERAN':
+        return 'good';
+      case 'IN_THEIR_PRIME':
+        return 'mid';
+      case 'BREAKOUT_CANDIDATE':
+        return 'warn';
+      case 'VETERAN':
+        return 'bad';
+      default:
+        return 'mid';
+    }
   }
 
   primaryReason(row: BoardPlayer): string | null {
@@ -624,7 +667,12 @@ export class DraftComponent implements OnInit, OnDestroy {
     if (!userId) return;
 
     if (!navigator.onLine) {
-      await queuePick({ userId, leagueId: this.leagueId, ...body, queuedAt: new Date().toISOString() });
+      await queuePick({
+        userId,
+        leagueId: this.leagueId,
+        ...body,
+        queuedAt: new Date().toISOString(),
+      });
       this.draft.set({
         ...d,
         syncBanner: 'Offline — pick queued locally and will sync on reconnect.',
@@ -675,7 +723,7 @@ export class DraftComponent implements OnInit, OnDestroy {
         if (slot === this.userSlot()) break;
 
         const taken = new Set(d.picks.filter((p) => p.playerId).map((p) => p.playerId!));
-          const teams = l.teamCount;
+        const teams = l.teamCount;
         const nextPlayer = [...this.board()]
           .filter((b) => !b.drafted && !taken.has(b.player.id))
           .sort((a, b) => adpRank(a, teams) - adpRank(b, teams))[0];

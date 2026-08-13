@@ -131,10 +131,9 @@
             <div class="weighted">
               <span class="weighted-label">Weighted total</span>
               <span class="weighted-math mono">{{ weightedBreakdown() }}</span>
-              <span class="weighted-score mono" [class.good]="(e.ceiling.ceilingScore ?? 0) >= 30">
+              <span class="weighted-score mono" [class.good]="ceilingIsTop5()">
                 {{ e.ceiling.ceilingScore ?? '—' }}
               </span>
-              <span class="weighted-den mono">/60</span>
             </div>
           }
         </section>
