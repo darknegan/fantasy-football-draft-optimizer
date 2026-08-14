@@ -537,51 +537,170 @@
   padding: 0.9rem;
 }
 
-.budget-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+.team-room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: min(62vh, 640px);
+  overflow: auto;
+  padding-right: 0.15rem;
 }
 
-.budget-card {
-  padding: 0.65rem 0.7rem;
-  border-radius: 10px;
-  background: var(--dl-surface-overlay);
-  border: 1px solid transparent;
+.team-room {
+  background: var(--dl-surface-raised);
+  border: 1px solid var(--dl-border-subtle);
+  border-radius: 12px;
+  padding: 0.9rem;
 }
 
-.budget-card.you {
+.team-room.you {
   border-color: var(--dl-accent);
-  background: color-mix(in srgb, var(--dl-accent) 10%, var(--dl-surface-overlay));
+  background: color-mix(in srgb, var(--dl-accent) 6%, var(--dl-surface-raised));
 }
 
-.budget-name {
-  font-size: 0.72rem;
-  font-weight: 600;
+.team-room-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+
+.team-room-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.team-room.you .team-room-head h3 {
+  color: var(--dl-accent);
+}
+
+.team-need-summary {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
   color: var(--dl-text-secondary);
+}
+
+.team-budget {
+  text-align: right;
+}
+
+.team-budget-amt {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dl-accent);
+  line-height: 1.2;
+}
+
+.team-budget-meta {
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  color: var(--dl-text-tertiary);
+}
+
+.team-room-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+.team-signed h4,
+.team-needs h4,
+.team-targets h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dl-text-tertiary);
+}
+
+.team-signed ul,
+.team-needs ul,
+.team-targets ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.team-signed li,
+.team-needs li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.78rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--dl-border-subtle);
+}
+
+.team-signed li:last-child,
+.team-needs li:last-child {
+  border-bottom: 0;
+}
+
+.signed-name,
+.target-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.budget-card.you .budget-name {
-  color: var(--dl-accent);
-}
-
-.budget-amt {
-  margin-top: 0.2rem;
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-
-.budget-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.35rem;
-  margin-top: 0.25rem;
+.signed-years {
   font-size: 0.68rem;
   color: var(--dl-text-tertiary);
+}
+
+.need-detail {
+  color: var(--dl-text-secondary);
+}
+
+.need-level {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.need-level.critical {
+  color: var(--dl-grade-red);
+}
+
+.need-level.high {
+  color: var(--dl-grade-orange);
+}
+
+.need-level.moderate {
+  color: var(--dl-warning);
+}
+
+.need-level.low {
+  color: var(--dl-pos-qb);
+}
+
+.need-level.filled {
+  color: var(--dl-text-tertiary);
+}
+
+.target-btn {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  border: 1px solid var(--dl-border-subtle);
+  background: var(--dl-surface-overlay);
+  color: inherit;
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.target-btn:hover {
+  border-color: var(--dl-accent);
 }
 
 .chip {
@@ -592,60 +711,6 @@
   color: var(--dl-accent);
   font-size: 0.72rem;
   font-weight: 600;
-}
-
-.spend-bar {
-  display: flex;
-  height: 6px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--dl-surface-sunken);
-  margin-bottom: 0.75rem;
-}
-
-.spend-bar .WR {
-  background: var(--dl-pos-wr);
-}
-
-.spend-bar .RB {
-  background: var(--dl-pos-rb);
-}
-
-.spend-bar .TE {
-  background: var(--dl-pos-te);
-}
-
-.spend-bar .QB {
-  background: var(--dl-pos-qb);
-}
-
-.signed-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.signed-card {
-  display: flex;
-  gap: 0.5rem;
-  align-items: start;
-  padding: 0.65rem;
-  border-radius: 10px;
-  background: var(--dl-surface-overlay);
-}
-
-.signed-card strong {
-  display: block;
-  font-size: 0.85rem;
-}
-
-.signed-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  margin-top: 0.2rem;
-  font-size: 0.7rem;
-  color: var(--dl-text-tertiary);
 }
 
 .empty-note {
@@ -783,12 +848,8 @@
 }
 
 @media (max-width: 1200px) {
-  .budget-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .signed-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .team-room-body {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -823,8 +884,6 @@
     margin: -1rem;
   }
 
-  .budget-grid,
-  .signed-row,
   .side-rail {
     grid-template-columns: 1fr;
   }
@@ -846,6 +905,14 @@
     justify-content: center;
     padding: 0.55rem 0.65rem;
     font-size: 0.8rem;
+  }
+
+  .team-room-head {
+    flex-direction: column;
+  }
+
+  .team-budget {
+    text-align: left;
   }
 
   .avail-col-head {

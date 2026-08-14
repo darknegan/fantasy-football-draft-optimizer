@@ -872,19 +872,32 @@ export class AppStore {
       })
       .sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
 
-    const signedRoster = pool.bids
-      .filter((b) => b.rosterId === user.rosterId)
-      .map((b) => {
-        const player = this.getPlayer(b.playerId);
-        return {
-          playerId: b.playerId,
-          name: player?.name ?? b.playerId,
-          position: player?.position ?? ('WR' as const),
-          amount: b.amount,
-          contractYears: b.contractYears ?? 1,
-          team: player?.team ?? '',
-        };
-      });
+    const toSigned = (b: (typeof pool.bids)[number]): {
+      playerId: string;
+      name: string;
+      position: 'QB' | 'RB' | 'WR' | 'TE';
+      amount: number;
+      contractYears: number;
+      team: string;
+    } => {
+      const player = this.getPlayer(b.playerId);
+      return {
+        playerId: b.playerId,
+        name: player?.name ?? b.playerId,
+        position: player?.position ?? 'WR',
+        amount: b.amount,
+        contractYears: b.contractYears ?? 1,
+        team: player?.team ?? '',
+      };
+    };
+
+    const signedRoster = pool.bids.filter((b) => b.rosterId === user.rosterId).map(toSigned);
+
+    const teamRosters = budgets.map((budget) => ({
+      rosterId: budget.rosterId,
+      name: budget.name,
+      players: pool.bids.filter((b) => b.rosterId === budget.rosterId).map(toSigned),
+    }));
 
     return {
       leagueId,
@@ -899,6 +912,7 @@ export class AppStore {
       })),
       userBudget: user,
       signedRoster,
+      teamRosters,
       lotNumber: pool.bids.length + 1,
       lotTotal: budgets.reduce((n, b) => n + b.rosterSlotsTotal, 0),
       cap: user.startingBudget,

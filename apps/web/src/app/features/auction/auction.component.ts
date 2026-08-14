@@ -21,22 +21,42 @@ import type {
 type ValueRow = AuctionState['values'][number];
 type PosFilter = Position | 'ALL';
 type MainTab = 'available' | 'room';
+type NeedUrgency = 'critical' | 'high' | 'moderate' | 'low' | 'filled';
 
-interface BudgetCard {
+interface TeamNeedView {
+  position: Position;
+  filled: number;
+  required: number;
+  open: number;
+  urgency: NeedUrgency;
+  label: string;
+  detail: string;
+}
+
+interface TeamTargetView {
+  playerId: string;
+  name: string;
+  position: Position;
+  inflatedValue: number;
+  draftScore: number;
+}
+
+interface TeamRoomView {
   rosterId: string;
   label: string;
   remaining: number;
+  spent: number;
   spotsLeft: number;
   perSlot: number;
   isYou: boolean;
-}
-
-interface SpendSegment {
-  position: Position;
-  pct: number;
+  players: AuctionSignedPlayer[];
+  needs: TeamNeedView[];
+  needSummary: string;
+  targets: TeamTargetView[];
 }
 
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
+const DEFAULT_ROSTER = { qb: 1, rb: 2, wr: 2, te: 1, flex: 1, superflex: 0, bench: 6, totalStarters: 7 };
 
 @Component({
   selector: 'app-auction',
@@ -126,40 +146,79 @@ export class AuctionComponent implements OnInit {
     return Math.min(this.maxBidAmount(), Math.max(next, this.currentBid()));
   });
 
-  readonly budgetCards = computed((): BudgetCard[] => {
-    const s = this.state();
-    if (!s) return [];
-    const you = s.userBudget.rosterId;
-    return s.budgets.map((b) => {
-      const spotsLeft = Math.max(0, b.rosterSlotsTotal - b.rosterSlotsFilled);
-      const perSlot = spotsLeft > 0 ? Math.round(b.remaining / spotsLeft) : b.remaining;
-      return {
-        rosterId: b.rosterId,
-        label: b.rosterId === you ? 'YOU' : b.name,
-        remaining: b.remaining,
-        spotsLeft,
-        perSlot,
-        isYou: b.rosterId === you,
-      };
-    });
-  });
-
   readonly signedRoster = computed(
     (): AuctionSignedPlayer[] => this.state()?.signedRoster ?? [],
   );
 
-  readonly nominations = computed(() => (this.state()?.nominations ?? []).slice(0, 4));
+  /** Per-team budget, roster, needs, and suggested remaining targets. */
+  readonly teamRooms = computed((): TeamRoomView[] => {
+    const s = this.state();
+    const league = this.league();
+    if (!s) return [];
+    const shape = league?.roster ?? DEFAULT_ROSTER;
+    const you = s.userBudget.rosterId;
+    const byTeam = new Map((s.teamRosters ?? []).map((t) => [t.rosterId, t.players] as const));
+    const available = s.values;
 
-  readonly spendSegments = computed((): SpendSegment[] => {
-    const roster = this.signedRoster();
-    const total = roster.reduce((n, p) => n + p.amount, 0);
-    if (total <= 0) return [];
-    const byPos: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
-    for (const p of roster) byPos[p.position] += p.amount;
-    return (Object.entries(byPos) as Array<[Position, number]>)
-      .filter(([, amt]) => amt > 0)
-      .map(([position, amt]) => ({ position, pct: Math.round((amt / total) * 100) }));
+    return s.budgets.map((b) => {
+      let players = byTeam.get(b.rosterId) ?? [];
+      if (!players.length && b.rosterId === you) players = s.signedRoster ?? [];
+
+      const spotsLeft = Math.max(0, b.rosterSlotsTotal - b.rosterSlotsFilled);
+      const perSlot = spotsLeft > 0 ? Math.round(b.remaining / spotsLeft) : b.remaining;
+      const needs = buildTeamNeeds(players, shape);
+      const openNeeds = needs.filter((n) => n.open > 0);
+      const needSummary = openNeeds.length
+        ? `Still need ${openNeeds.map((n) => `${n.open} ${n.position}`).join(', ')}`
+        : spotsLeft > 0
+          ? `${spotsLeft} flex/bench spot${spotsLeft === 1 ? '' : 's'} left`
+          : 'Roster complete';
+
+      const targets: TeamTargetView[] = [];
+      const used = new Set<string>();
+      for (const need of [...needs].sort((a, c) => urgencyRank(c.urgency) - urgencyRank(a.urgency))) {
+        if (need.open <= 0 || targets.length >= 3) continue;
+        const affordable = available
+          .filter(
+            (v) =>
+              v.position === need.position &&
+              !used.has(v.playerId) &&
+              v.inflatedValue <= Math.max(1, Math.min(b.remaining, Math.max(perSlot * 2, perSlot))),
+          )
+          .sort((a, c) => c.draftScore - a.draftScore)[0];
+        const pick =
+          affordable ??
+          available
+            .filter((v) => v.position === need.position && !used.has(v.playerId))
+            .sort((a, c) => a.inflatedValue - c.inflatedValue)[0];
+        if (!pick) continue;
+        used.add(pick.playerId);
+        targets.push({
+          playerId: pick.playerId,
+          name: pick.name,
+          position: pick.position,
+          inflatedValue: pick.inflatedValue,
+          draftScore: pick.draftScore,
+        });
+      }
+
+      return {
+        rosterId: b.rosterId,
+        label: b.rosterId === you ? 'YOU' : b.name,
+        remaining: b.remaining,
+        spent: b.spent,
+        spotsLeft,
+        perSlot,
+        isYou: b.rosterId === you,
+        players: [...players].sort((a, c) => c.amount - a.amount),
+        needs,
+        needSummary,
+        targets,
+      };
+    });
   });
+
+  readonly nominations = computed(() => (this.state()?.nominations ?? []).slice(0, 4));
 
   readonly yearOptions = computed(() => {
     const max = this.state()?.contractRules.maxLength ?? 4;
@@ -363,4 +422,77 @@ export class AuctionComponent implements OnInit {
         error: () => this.contract.set(null),
       });
   }
+}
+
+function urgencyRank(u: NeedUrgency): number {
+  if (u === 'critical') return 4;
+  if (u === 'high') return 3;
+  if (u === 'moderate') return 2;
+  if (u === 'low') return 1;
+  return 0;
+}
+
+function buildTeamNeeds(
+  players: AuctionSignedPlayer[],
+  shape: {
+    qb: number;
+    rb: number;
+    wr: number;
+    te: number;
+    flex: number;
+    superflex: number;
+  },
+): TeamNeedView[] {
+  const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  for (const p of players) counts[p.position] += 1;
+
+  const required: Record<Position, number> = {
+    QB: shape.qb + shape.superflex,
+    RB: shape.rb,
+    WR: shape.wr,
+    TE: shape.te,
+  };
+
+  const flexFilled = Math.max(
+    0,
+    counts.RB + counts.WR + counts.TE - shape.rb - shape.wr - shape.te,
+  );
+  const flexOpen = Math.max(0, shape.flex - flexFilled);
+
+  return (['QB', 'RB', 'WR', 'TE'] as Position[]).map((position) => {
+    const filled = counts[position];
+    const req = required[position];
+    const starterOpen = Math.max(0, req - filled);
+    // Soft flex need once starters are filled for flex-eligible positions.
+    const open =
+      starterOpen > 0
+        ? starterOpen
+        : position !== 'QB' && flexOpen > 0
+          ? Math.min(flexOpen, 1)
+          : 0;
+    let urgency: NeedUrgency = 'filled';
+    if (starterOpen > 0) {
+      const ratio = filled / Math.max(req, 1);
+      urgency = ratio === 0 ? 'critical' : ratio < 0.5 ? 'high' : 'moderate';
+    } else if (position !== 'QB' && flexOpen > 0) {
+      urgency = 'low';
+    }
+    const label =
+      urgency === 'critical'
+        ? 'Critical'
+        : urgency === 'high'
+          ? 'High'
+          : urgency === 'moderate'
+            ? 'Moderate'
+            : urgency === 'low'
+              ? 'Flex'
+              : 'Filled';
+    const detail =
+      starterOpen > 0
+        ? `${starterOpen} starter${starterOpen === 1 ? '' : 's'} open`
+        : position !== 'QB' && flexOpen > 0
+          ? 'Can fill flex'
+          : `${filled}/${req} starters`;
+    return { position, filled, required: req, open, urgency, label, detail };
+  });
 }
