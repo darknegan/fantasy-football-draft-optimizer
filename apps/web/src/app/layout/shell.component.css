@@ -41,17 +41,9 @@
 }
 
 .mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 26px;
   height: 26px;
-  border-radius: 7px;
-  background: var(--dl-accent);
-  color: var(--dl-text-inverse);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1;
   flex-shrink: 0;
 }
 

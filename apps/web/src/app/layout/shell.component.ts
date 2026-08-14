@@ -74,7 +74,7 @@ const PAGE_TITLES: Array<{ match: RegExp; title: string }> = [
         [attr.aria-hidden]="isCompact() && !navOpen() ? 'true' : null"
       >
         <div class="brand">
-          <span class="mark" aria-hidden="true">D</span>
+          <img class="mark" src="/brand/logo-mark.svg" width="26" height="26" alt="" aria-hidden="true" />
           <div class="name">DraftLab</div>
         </div>
 
