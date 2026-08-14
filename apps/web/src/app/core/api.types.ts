@@ -380,6 +380,7 @@ export interface AuctionState {
     fairValue: number;
     inflatedValue: number;
     vorpShare: number;
+    archetype?: string;
   }>;
   nominations: Array<{
     playerId: string;
