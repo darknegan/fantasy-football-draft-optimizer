@@ -1,31 +1,28 @@
 <div class="setup">
-  <header class="intro">
-    <div class="intro-copy">
-      <span class="mark" aria-hidden="true">M</span>
-      <div>
-        <p class="kicker">First-class path for ESPN and any platform without an API</p>
-        <p class="lede">
-          Configure the league yourself in about a minute, then confirm scoring in plain language
-          before the board opens. Manual leagues get the full evaluation model — they simply do not
-          auto-sync.
+  @if (!reviewing()) {
+    <header class="intro">
+      <div class="intro-copy">
+        <span class="mark" aria-hidden="true">M</span>
+        <p class="kicker">
+          Configure the league, then confirm scoring in plain language before the board opens.
         </p>
       </div>
-    </div>
-    <ol class="steps" aria-label="Setup progress">
-      <li [class.current]="!reviewing()" [class.done]="reviewing()">
-        <span class="step-num" aria-hidden="true">1</span>
-        <span class="step-label">Configure</span>
-      </li>
-      <li [class.current]="reviewing()">
-        <span class="step-num" aria-hidden="true">2</span>
-        <span class="step-label">Review scoring</span>
-      </li>
-      <li>
-        <span class="step-num" aria-hidden="true">3</span>
-        <span class="step-label">Open board</span>
-      </li>
-    </ol>
-  </header>
+      <ol class="steps" aria-label="Setup progress">
+        <li class="current">
+          <span class="step-num" aria-hidden="true">1</span>
+          <span class="step-label">Configure</span>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">2</span>
+          <span class="step-label">Review scoring</span>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">3</span>
+          <span class="step-label">Open board</span>
+        </li>
+      </ol>
+    </header>
+  }
 
   @if (summary(); as s) {
     <aside class="validation" [class.warn]="s.warnings.length > 0" role="status">
