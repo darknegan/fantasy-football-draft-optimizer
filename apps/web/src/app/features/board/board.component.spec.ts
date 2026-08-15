@@ -148,63 +148,80 @@ describe('BoardComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
 
     expect(el.querySelector('.empty')).toBeNull();
-    expect(fixture.componentInstance.sections()).toHaveLength(1);
-    expect(fixture.componentInstance.sections()[0]!.id).toBe('unbanded');
     expect(el.querySelectorAll('.row')).toHaveLength(2);
-    expect(el.querySelector('.tier-tag')?.textContent).toContain('All remaining players');
+    expect(el.querySelector('.tier-break')).toBeNull();
   });
 
-  it('defaults a missing draftSlot to a real survival partition instead of blanking the board', () => {
-    const league = makeLeague({ draftSlot: undefined });
-    const rows = [
-      makeRow('a', 'RB', 70, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 } },
-      }),
-      makeRow('b', 'WR', 60, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 } },
-      }),
-    ];
-    return createBoard(rows, league).then((fixture) => {
-      const el: HTMLElement = fixture.nativeElement;
-      const sections = fixture.componentInstance.sections();
-
-      expect(el.querySelector('.empty')).toBeNull();
-      expect(sections.length).toBeGreaterThan(0);
-      expect(sections.some((s) => s.id === 'unbanded')).toBe(false);
-      expect(el.querySelectorAll('.row')).toHaveLength(2);
+  it('renders one flat list ordered by ceiling then proj, ignoring survival bands', async () => {
+    const earlyLow = makeRow('early-low', 'RB', 90, {
+      projectedPoints: 200,
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 10,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+        value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 },
+      },
     });
+    const lateHigh = makeRow('late-high', 'WR', 60, {
+      projectedPoints: 380,
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 40,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+        value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 },
+      },
+    });
+    const fixture = await createBoard(
+      [earlyLow, lateHigh],
+      makeLeague({ draftSlot: 1 }),
+      makeDraft({ currentPick: 13, picksUntilUser: 11 }),
+    );
+    const el: HTMLElement = fixture.nativeElement;
+    const names = [...el.querySelectorAll('.row .name')].map((n) => n.textContent?.trim());
+
+    expect(el.querySelector('.tier-break')).toBeNull();
+    expect(names).toEqual(['late-high', 'early-low']);
   });
 
-  it('partitions survival bands from draft.currentPick, not drafted row count', async () => {
-    const league = makeLeague({ draftSlot: 1 });
-    const draft = makeDraft({ currentPick: 13, picksUntilUser: 11 });
-    const rows = [
-      makeRow('early', 'RB', 70, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 } },
-      }),
-      makeRow('late', 'WR', 60, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 } },
-      }),
-    ];
+  it('breaks ceiling ties using projected points, highest first', async () => {
+    const lowProj = makeRow('low-proj', 'RB', 70, {
+      projectedPoints: 376.3,
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 20,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+      },
+    });
+    const highProj = makeRow('high-proj', 'WR', 70, {
+      projectedPoints: 386.1,
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 20,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+      },
+    });
+    const fixture = await createBoard([lowProj, highProj], null, null);
 
-    const fixture = await createBoard(rows, league, draft);
-    const goneIds =
-      fixture.componentInstance.sections().find((s) => s.id === 'gone')?.rows.map((r) => r.player.id) ??
-      [];
-
-    expect(fixture.componentInstance.sections().some((s) => s.id === 'unbanded')).toBe(false);
-    expect(goneIds).toContain('early');
-
-    // The retired picksMade=0 heuristic would have used next pick 1 instead of 24,
-    // so 'early' would not land in the gone band at the start of the draft.
-    fixture.componentInstance.draft.set(makeDraft({ currentPick: 1, picksUntilUser: 0 }));
-    fixture.detectChanges();
-    const earlyGoneAtPickOne =
-      fixture.componentInstance
-        .sections()
-        .find((s) => s.id === 'gone')
-        ?.rows.some((r) => r.player.id === 'early') ?? false;
-    expect(earlyGoneAtPickOne).toBe(false);
+    expect(fixture.componentInstance.filteredSorted().map((r) => r.player.id)).toEqual([
+      'high-proj',
+      'low-proj',
+    ]);
   });
 
   it('renders quality and replacement chips independent of which position is filtered', async () => {
