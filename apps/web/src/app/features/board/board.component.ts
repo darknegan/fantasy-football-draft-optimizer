@@ -14,6 +14,7 @@ import {
   detectCliffs,
   replacementBand,
   computeVor,
+  resolveVorScoringFormat,
   type QualityBand,
 } from '@draftlab/tiers';
 import { ApiService } from '../../core/api.service';
@@ -370,6 +371,10 @@ export class BoardComponent implements OnInit {
       })),
       league?.roster ?? DEFAULT_ROSTER,
       league?.teamCount ?? 12,
+      resolveVorScoringFormat({
+        reception: league?.scoring?.reception,
+        variant: league?.scoring?.variant ?? league?.scoringSummary?.variant,
+      }),
     );
   });
 

@@ -59,9 +59,66 @@ export function replacementBand(
   return { id: 'BENCH', label: 'BENCH' };
 }
 
+export type VorScoringFormat = 'ppr' | 'half_ppr' | 'standard';
+
+/** How much of the FLEX pool each skill position typically claims. */
+const FLEX_SHARES: Record<VorScoringFormat, Record<'RB' | 'WR' | 'TE', number>> = {
+  ppr: { RB: 0.25, WR: 0.65, TE: 0.1 },
+  half_ppr: { RB: 0.4, WR: 0.5, TE: 0.1 },
+  standard: { RB: 0.55, WR: 0.35, TE: 0.1 },
+};
+
+export function resolveVorScoringFormat(input: {
+  reception?: number | null;
+  variant?: string | null;
+} = {}): VorScoringFormat {
+  const variant = input.variant?.toLowerCase();
+  if (variant === 'ppr' || variant === 'half_ppr' || variant === 'standard') {
+    return variant;
+  }
+  const reception = input.reception;
+  if (typeof reception === 'number') {
+    if (reception >= 0.75) return 'ppr';
+    if (reception >= 0.25) return 'half_ppr';
+    return 'standard';
+  }
+  return 'ppr';
+}
+
+/**
+ * Split `total` across keys by share using largest-remainder so the parts
+ * always sum back to `total` (plain Math.round can over-allocate).
+ */
+function allocateByShare<K extends string>(
+  total: number,
+  shares: Record<K, number>,
+): Record<K, number> {
+  const keys = Object.keys(shares) as K[];
+  const raw = keys.map((key) => {
+    const exact = total * shares[key];
+    const floor = Math.floor(exact);
+    return { key, floor, remainder: exact - floor };
+  });
+  const allocated = Object.fromEntries(raw.map((row) => [row.key, row.floor])) as Record<
+    K,
+    number
+  >;
+  let leftover = total - raw.reduce((sum, row) => sum + row.floor, 0);
+  raw
+    .slice()
+    .sort((a, b) => b.remainder - a.remainder)
+    .forEach((row) => {
+      if (leftover <= 0) return;
+      allocated[row.key] += 1;
+      leftover -= 1;
+    });
+  return allocated;
+}
+
 /**
  * How many players at this position can start in THIS league (dedicated
- * slots + flex for RB/WR/TE, dedicated + superflex for QB).
+ * slots + a format-weighted share of FLEX for RB/WR/TE, dedicated +
+ * superflex for QB).
  *
  * This is the VOR replacement rank: the last startable player, 1-indexed.
  */
@@ -69,12 +126,14 @@ export function startableCapacity(
   position: Position,
   roster: RosterShape,
   teamCount: number,
+  format: VorScoringFormat = 'ppr',
 ): number {
   const starters = starterSlotsPerTeam(position, roster) * teamCount;
-  if (FLEX_ELIGIBLE.includes(position)) {
-    return starters + roster.flex * teamCount;
+  if (position !== 'RB' && position !== 'WR' && position !== 'TE') {
+    return starters;
   }
-  return starters;
+  const flexPool = roster.flex * teamCount;
+  return starters + allocateByShare(flexPool, FLEX_SHARES[format])[position];
 }
 
 export interface VorPlayer {
@@ -95,6 +154,7 @@ export function computeVor(
   players: readonly VorPlayer[],
   roster: RosterShape,
   teamCount: number,
+  format: VorScoringFormat = 'ppr',
 ): ReadonlyMap<string, number | null> {
   const byPos = new Map<Position, VorPlayer[]>();
   for (const player of players) {
@@ -108,7 +168,7 @@ export function computeVor(
     const ranked = list
       .filter((p) => p.projectedPoints != null && Number.isFinite(p.projectedPoints))
       .sort((a, b) => (b.projectedPoints ?? 0) - (a.projectedPoints ?? 0));
-    const cap = startableCapacity(position, roster, teamCount);
+    const cap = startableCapacity(position, roster, teamCount, format);
     const replIndex = Math.min(cap, ranked.length) - 1;
     const baseline = replIndex >= 0 ? ranked[replIndex]!.projectedPoints! : 0;
     for (const player of list) {
