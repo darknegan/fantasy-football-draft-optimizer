@@ -42,8 +42,8 @@
 
 .mark {
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
 }
 

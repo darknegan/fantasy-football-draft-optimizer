@@ -1,58 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="DraftLab">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DraftLab">
   <title>DraftLab</title>
+  <defs>
+    <clipPath id="flask-clip">
+      <path
+        d="M53 34 L53 48
+           C53 52 30 90 27 102
+           C24 114 38 118 64 118
+           C90 118 104 114 101 102
+           C98 90 75 52 75 48
+           L75 34 Z"
+      />
+    </clipPath>
+    <filter id="mint-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
   <!-- vapor -->
-  <path
-    d="M52 26 C48 18 54 12 50 6"
+  <g fill="none" stroke="#00e5a0" stroke-linecap="round" filter="url(#mint-glow)">
+    <path d="M56 30 C50 22 56 16 50 8" stroke-width="2.2" opacity="0.9" />
+    <path d="M64 28 C70 20 64 12 70 6" stroke-width="2.2" opacity="0.75" />
+    <path d="M72 31 C70 24 74 18 72 12" stroke-width="1.6" opacity="0.45" />
+  </g>
+
+  <!-- liquid + football clipped to flask -->
+  <g clip-path="url(#flask-clip)">
+    <path
+      d="M20 90
+         C36 84 50 88 64 90
+         C78 92 92 86 108 90
+         L108 128 L20 128 Z"
+      fill="#00e5a04d"
+    />
+    <path
+      d="M20 90
+         C36 84 50 88 64 90
+         C78 92 92 86 108 90"
+      fill="none"
+      stroke="#00e5a0"
+      stroke-width="1.6"
+      opacity="0.7"
+    />
+
+    <!-- American football, half in the liquid -->
+    <path
+      d="M36 78
+         C42 64 52 60 64 60
+         C76 60 86 64 92 78
+         C86 92 76 96 64 96
+         C52 96 42 92 36 78 Z"
+      fill="#f97316"
+    />
+    <path
+      d="M46 78 C56 74 72 74 82 78"
+      fill="none"
+      stroke="#0a0e14"
+      stroke-width="1.8"
+      stroke-linecap="round"
+    />
+    <g fill="none" stroke="#0a0e14" stroke-width="1.5" stroke-linecap="round">
+      <path d="M52 73.5 L52 82.5" />
+      <path d="M58 72.5 L58 83.5" />
+      <path d="M64 72 L64 84" />
+      <path d="M70 72.5 L70 83.5" />
+      <path d="M76 73.5 L76 82.5" />
+    </g>
+
+    <!-- bubbles in the liquid -->
+    <g fill="none" stroke="#00e5a0">
+      <circle cx="40" cy="106" r="3.2" stroke-width="1.5" />
+      <circle cx="50" cy="112" r="2.1" stroke-width="1.3" />
+      <circle cx="86" cy="108" r="2.6" stroke-width="1.4" />
+    </g>
+  </g>
+
+  <!-- flask glass -->
+  <g
     fill="none"
     stroke="#00e5a0"
-    stroke-width="2"
-    stroke-linecap="round"
-    opacity="0.85"
-  />
-  <path
-    d="M60 24 C64 16 58 10 62 4"
-    fill="none"
-    stroke="#00e5a0"
-    stroke-width="2"
-    stroke-linecap="round"
-    opacity="0.7"
-  />
-  <path
-    d="M68 26 C66 20 70 14 68 8"
-    fill="none"
-    stroke="#00e5a0"
-    stroke-width="1.5"
-    stroke-linecap="round"
-    opacity="0.45"
-  />
-  <!-- flask -->
-  <path
-    d="M44 32 L44 42 L26 86 Q24 92 30 94 L90 94 Q96 92 94 86 L76 42 L76 32 Z"
-    fill="none"
-    stroke="#00e5a0"
-    stroke-width="2.5"
     stroke-linejoin="round"
-  />
-  <path d="M42 32 L78 32" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" />
-  <!-- liquid -->
-  <path
-    d="M32 84 L30 88 Q28 94 34 96 L86 96 Q92 94 90 88 L88 84 Q74 80 60 84 Q46 88 32 84 Z"
-    fill="#00e5a029"
-    stroke="#00e5a0"
-    stroke-width="1.5"
-  />
-  <!-- bubbles -->
-  <circle cx="40" cy="90" r="2" fill="none" stroke="#00e5a0" stroke-width="1.3" />
-  <circle cx="52" cy="92" r="1.5" fill="none" stroke="#00e5a0" stroke-width="1.2" />
-  <circle cx="78" cy="88" r="1.8" fill="none" stroke="#00e5a0" stroke-width="1.3" />
-  <!-- football (half submerged) -->
-  <ellipse cx="60" cy="70" rx="26" ry="16" fill="#f97316" />
-  <path d="M42 70 Q60 64 78 70" fill="none" stroke="#0a0e14" stroke-width="2" stroke-linecap="round" />
-  <path
-    d="M50 66 L50 74 M54 65.5 L54 74.5 M58 65 L58 75 M62 65 L62 75 M66 65.5 L66 74.5 M70 66 L70 74"
-    fill="none"
-    stroke="#0a0e14"
-    stroke-width="1.5"
     stroke-linecap="round"
-  />
+    filter="url(#mint-glow)"
+  >
+    <path
+      d="M53 34 L53 48
+         C53 52 30 90 27 102
+         C24 114 38 118 64 118
+         C90 118 104 114 101 102
+         C98 90 75 52 75 48
+         L75 34 Z"
+      stroke-width="3.2"
+    />
+    <path d="M50 34 L78 34" stroke-width="3.2" />
+  </g>
 </svg>

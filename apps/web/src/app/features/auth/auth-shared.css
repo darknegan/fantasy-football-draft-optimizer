@@ -27,14 +27,10 @@
 }
 
 .mark {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 8px;
-  background: var(--dl-accent);
-  color: var(--dl-text-inverse, #0a0e14);
-  font-weight: 700;
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
 }
 
 .name {
