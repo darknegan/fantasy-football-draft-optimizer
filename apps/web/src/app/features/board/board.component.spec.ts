@@ -152,84 +152,61 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.tier-break')).toBeNull();
   });
 
-  it('renders one flat list ordered by proj, ignoring survival bands', async () => {
-    const earlyLow = makeRow('early-low', 'RB', 90, {
-      projectedPoints: 200,
+  it('renders one flat list ordered by VOR, ignoring survival bands', async () => {
+    const tinyRoster = { ...ROSTER, rb: 1, wr: 1, te: 1, flex: 0 };
+    const allen = makeRow('allen', 'QB', 90, {
+      projectedPoints: 400,
       evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 10,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
         value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 },
       },
     });
-    const lateHigh = makeRow('late-high', 'WR', 60, {
-      projectedPoints: 380,
+    const baker = makeRow('baker', 'QB', 70, { projectedPoints: 300 });
+    const gibbs = makeRow('gibbs', 'RB', 80, {
+      projectedPoints: 350,
       evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 40,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
         value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 },
       },
     });
+    const cuff = makeRow('cuff', 'RB', 50, { projectedPoints: 200 });
     const fixture = await createBoard(
-      [earlyLow, lateHigh],
-      makeLeague({ draftSlot: 1 }),
+      [allen, baker, gibbs, cuff],
+      makeLeague({ draftSlot: 1, teamCount: 2, roster: tinyRoster }),
       makeDraft({ currentPick: 13, picksUntilUser: 11 }),
     );
     const el: HTMLElement = fixture.nativeElement;
     const names = [...el.querySelectorAll('.row .name')].map((n) => n.textContent?.trim());
 
     expect(el.querySelector('.tier-break')).toBeNull();
-    expect(names).toEqual(['late-high', 'early-low']);
+    expect(names).toEqual(['gibbs', 'allen', 'baker', 'cuff']);
   });
 
-  it('defaults to proj sort, not ceiling', async () => {
-    const highCeilLowProj = makeRow('high-ceil', 'RB', 95, {
-      projectedPoints: 300,
-      evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 50,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
-      },
-    });
-    const lowCeilHighProj = makeRow('high-proj', 'WR', 70, {
-      projectedPoints: 400,
-      evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 10,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
-      },
-    });
-    const fixture = await createBoard([highCeilLowProj, lowCeilHighProj], null, null);
+  it('defaults to VOR so a higher-proj QB ranks below a higher-VOR RB', async () => {
+    const tinyRoster = { ...ROSTER, rb: 1, wr: 1, te: 1, flex: 0 };
+    const allen = makeRow('allen', 'QB', 90, { projectedPoints: 400 });
+    const baker = makeRow('baker', 'QB', 70, { projectedPoints: 300 });
+    const gibbs = makeRow('gibbs', 'RB', 80, { projectedPoints: 350 });
+    const cuff = makeRow('cuff', 'RB', 50, { projectedPoints: 200 });
+    const fixture = await createBoard(
+      [allen, baker, gibbs, cuff],
+      makeLeague({ teamCount: 2, roster: tinyRoster }),
+    );
     const component = fixture.componentInstance;
 
-    expect(component.sortKey()).toBe('proj');
+    expect(component.sortKey()).toBe('vor');
     expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
-      'high-proj',
-      'high-ceil',
+      'gibbs',
+      'allen',
+      'baker',
+      'cuff',
     ]);
 
-    component.sortKey.set('ceiling');
+    component.sortKey.set('proj');
     fixture.detectChanges();
     expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
-      'high-ceil',
-      'high-proj',
+      'allen',
+      'gibbs',
+      'baker',
+      'cuff',
     ]);
   });
 
@@ -322,7 +299,7 @@ describe('BoardComponent', () => {
     const component = fixture.componentInstance;
     const el: HTMLElement = fixture.nativeElement;
 
-    expect(component.sortKey()).toBe('proj');
+    expect(component.sortKey()).toBe('vor');
     expect(component.cliffAfterIds().size).toBeGreaterThan(0);
     expect(el.querySelectorAll('.cliff-marker').length).toBeGreaterThan(0);
 

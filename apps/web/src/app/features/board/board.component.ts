@@ -8,9 +8,16 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { adpOverall, qualityBand, detectCliffs, replacementBand, type QualityBand } from '@draftlab/tiers';
+import {
+  adpOverall,
+  qualityBand,
+  detectCliffs,
+  replacementBand,
+  computeVor,
+  type QualityBand,
+} from '@draftlab/tiers';
 import { ApiService } from '../../core/api.service';
-import type { BoardPlayer, DraftState, FactorGrade, League, Position } from '../../core/api.types';
+import type { BoardPlayer, DraftState, FactorGrade, League, Position, RosterShape } from '../../core/api.types';
 import {
   BOARD_HEADER_PURPOSE,
   buildArchetypeTooltip,
@@ -22,12 +29,13 @@ import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-displ
 import { scoreLabel } from './score-label';
 
 type PosFilter = Position | 'ALL';
-type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
+type SortKey = 'vor' | 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
 type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: 'vor', label: 'VOR' },
   { value: 'proj', label: 'Proj' },
   { value: 'ceiling', label: 'Ceiling' },
   { value: 'draft', label: 'Draft score' },
@@ -35,6 +43,17 @@ const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'value', label: 'Value' },
   { value: 'risk', label: 'Risk' },
 ];
+
+const DEFAULT_ROSTER: RosterShape = {
+  qb: 1,
+  rb: 2,
+  wr: 2,
+  te: 1,
+  flex: 1,
+  superflex: 0,
+  bench: 6,
+  totalStarters: 7,
+};
 
 const RISK_MAX = 100;
 
@@ -126,6 +145,7 @@ const RISK_MAX = 100;
         <span class="c-arch" [title]="headerPurpose['ARCHETYPE']">ARCHETYPE</span>
         <span class="c-risk" [title]="headerPurpose['RISK']">RISK</span>
         <span class="c-value" [title]="headerPurpose['VALUE']">VALUE</span>
+        <span class="c-vor" [title]="headerPurpose['VOR']">VOR</span>
         <span class="c-proj" [title]="headerPurpose['PROJ']">PROJ</span>
         <span class="c-factors" [title]="headerPurpose['FACTORS']">FACTORS</span>
         <span class="c-flag" [title]="headerPurpose['FLAG']"></span>
@@ -241,6 +261,8 @@ const RISK_MAX = 100;
                 }}</span>
               </span>
 
+              <span class="c-vor mono">{{ formatVor(vorOf(row)) }}</span>
+
               <span class="c-proj mono">{{ formatProj(row.projectedPoints) }}</span>
 
               <span class="c-factors" aria-label="Factor grades">
@@ -300,7 +322,7 @@ export class BoardComponent implements OnInit {
   readonly riskFilter = signal<RiskFilter>('any');
   readonly valueFilter = signal<ValueFilter>('any');
   readonly hideDrafted = signal(true);
-  readonly sortKey = signal<SortKey>('proj');
+  readonly sortKey = signal<SortKey>('vor');
   readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly archetypes = computed(() => {
@@ -331,7 +353,24 @@ export class BoardComponent implements OnInit {
 
     const key = this.sortKey();
     const teamCount = this.league()?.teamCount ?? 12;
-    return [...list].sort((a, b) => compareRows(a, b, key, teamCount));
+    return [...list].sort((a, b) => compareRows(a, b, key, teamCount, this.vorById()));
+  });
+
+  /**
+   * VOR over the FULL board, not the filtered view — baselines must not
+   * jump when the user filters to one position or hides drafted rows.
+   */
+  readonly vorById = computed(() => {
+    const league = this.league();
+    return computeVor(
+      this.rows().map((r) => ({
+        id: r.player.id,
+        position: r.player.position,
+        projectedPoints: r.projectedPoints,
+      })),
+      league?.roster ?? DEFAULT_ROSTER,
+      league?.teamCount ?? 12,
+    );
   });
 
   /**
@@ -359,15 +398,15 @@ export class BoardComponent implements OnInit {
   /** True when the current sort orders rows by a score, making adjacency meaningful. */
   private readonly cliffsApply = computed(() => {
     const key = this.sortKey();
-    return key === 'proj' || key === 'ceiling' || key === 'draft';
+    return key === 'vor' || key === 'proj' || key === 'ceiling' || key === 'draft';
   });
 
   /**
    * Row ids after which a cliff falls. Computed on the same axis the list is
-   * sorted by (projectedPoints under Proj, raw ceilingScore under Ceiling,
-   * contextualScore ?? draftScore under Draft score), so the marker always
-   * sits between the two rows it describes. Hidden entirely under any other
-   * sort, since adjacency is not score-ordered there.
+   * sorted by (VOR under VOR, projectedPoints under Proj, raw ceilingScore
+   * under Ceiling, contextualScore ?? draftScore under Draft score), so the
+   * marker always sits between the two rows it describes. Hidden entirely
+   * under any other sort, since adjacency is not score-ordered there.
    */
   readonly cliffAfterIds = computed((): ReadonlyMap<string, { gap: number; multiple: number }> => {
     const out = new Map<string, { gap: number; multiple: number }>();
@@ -375,7 +414,7 @@ export class BoardComponent implements OnInit {
     const key = this.sortKey();
     const rows = this.filteredSorted();
     const measured = rows.filter((r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted);
-    const scores = measured.map((r) => scoreForSort(r, key));
+    const scores = measured.map((r) => scoreForSort(r, key, this.vorById()));
     for (const cliff of detectCliffs(scores)) {
       const row = measured[cliff.afterIndex];
       const nextRow = measured[cliff.afterIndex + 1];
@@ -531,6 +570,16 @@ export class BoardComponent implements OnInit {
     return p.toFixed(1);
   }
 
+  vorOf(row: BoardPlayer): number | null {
+    return this.vorById().get(row.player.id) ?? null;
+  }
+
+  formatVor(v: number | null | undefined): string {
+    if (v == null || Number.isNaN(v)) return '—';
+    const rounded = v.toFixed(1);
+    return v > 0 ? `+${rounded}` : rounded;
+  }
+
   factorGrades(row: BoardPlayer): FactorGrade[] {
     const slots = configuredFactorCount(row);
     const factors = row.evaluation.ceiling.factors ?? [];
@@ -554,14 +603,30 @@ function riskBucket(risk: number): RiskFilter {
 }
 
 /** Numeric axis for score-based sorts. Missing values sort last via -1. */
-function scoreForSort(row: BoardPlayer, key: SortKey): number {
+function scoreForSort(
+  row: BoardPlayer,
+  key: SortKey,
+  vorById: ReadonlyMap<string, number | null> = new Map(),
+): number {
+  if (key === 'vor') return vorById.get(row.player.id) ?? -1;
   if (key === 'proj') return row.projectedPoints ?? -1;
   if (key === 'ceiling') return row.evaluation.ceiling.ceilingScore ?? -1;
   return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
 }
 
-function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number): number {
+function compareRows(
+  a: BoardPlayer,
+  b: BoardPlayer,
+  key: SortKey,
+  teamCount: number,
+  vorById: ReadonlyMap<string, number | null> = new Map(),
+): number {
   switch (key) {
+    case 'vor': {
+      const byVor = scoreForSort(b, 'vor', vorById) - scoreForSort(a, 'vor', vorById);
+      if (byVor !== 0) return byVor;
+      return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
+    }
     case 'ceiling': {
       const byCeil = scoreForSort(b, 'ceiling') - scoreForSort(a, 'ceiling');
       if (byCeil !== 0) return byCeil;

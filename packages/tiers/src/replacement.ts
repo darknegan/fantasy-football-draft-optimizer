@@ -58,3 +58,66 @@ export function replacementBand(
 
   return { id: 'BENCH', label: 'BENCH' };
 }
+
+/**
+ * How many players at this position can start in THIS league (dedicated
+ * slots + flex for RB/WR/TE, dedicated + superflex for QB).
+ *
+ * This is the VOR replacement rank: the last startable player, 1-indexed.
+ */
+export function startableCapacity(
+  position: Position,
+  roster: RosterShape,
+  teamCount: number,
+): number {
+  const starters = starterSlotsPerTeam(position, roster) * teamCount;
+  if (FLEX_ELIGIBLE.includes(position)) {
+    return starters + roster.flex * teamCount;
+  }
+  return starters;
+}
+
+export interface VorPlayer {
+  id: string;
+  position: Position;
+  projectedPoints: number | null | undefined;
+}
+
+/**
+ * Projected points above the last startable player at the same position.
+ *
+ * Baseline is the Nth-highest proj at that position, where N is
+ * `startableCapacity`. When the pool is thinner than N, the last available
+ * player is the baseline (so the worst measured player at a thin position
+ * scores 0, not a fabricated replacement). Missing proj → null.
+ */
+export function computeVor(
+  players: readonly VorPlayer[],
+  roster: RosterShape,
+  teamCount: number,
+): ReadonlyMap<string, number | null> {
+  const byPos = new Map<Position, VorPlayer[]>();
+  for (const player of players) {
+    const list = byPos.get(player.position) ?? [];
+    list.push(player);
+    byPos.set(player.position, list);
+  }
+
+  const out = new Map<string, number | null>();
+  for (const [position, list] of byPos) {
+    const ranked = list
+      .filter((p) => p.projectedPoints != null && Number.isFinite(p.projectedPoints))
+      .sort((a, b) => (b.projectedPoints ?? 0) - (a.projectedPoints ?? 0));
+    const cap = startableCapacity(position, roster, teamCount);
+    const replIndex = Math.min(cap, ranked.length) - 1;
+    const baseline = replIndex >= 0 ? ranked[replIndex]!.projectedPoints! : 0;
+    for (const player of list) {
+      if (player.projectedPoints == null || !Number.isFinite(player.projectedPoints)) {
+        out.set(player.id, null);
+      } else {
+        out.set(player.id, Math.round((player.projectedPoints - baseline) * 10) / 10);
+      }
+    }
+  }
+  return out;
+}
