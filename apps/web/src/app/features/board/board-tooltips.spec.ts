@@ -183,6 +183,7 @@ describe('BOARD_HEADER_PURPOSE', () => {
       'ARCHETYPE',
       'RISK',
       'VALUE',
+      'VOR',
       'PROJ',
       'FACTORS',
     ];

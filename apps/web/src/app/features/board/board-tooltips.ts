@@ -200,6 +200,7 @@ export const BOARD_HEADER_PURPOSE: Record<string, string> = {
   ARCHETYPE: 'Career-stage bucket from finish history (and age/year gates).',
   RISK: 'Injury / availability risk profile (higher = more games expected missed).',
   VALUE: 'Market mispricing vs blended rank (positive = undervalued).',
+  VOR: 'Projected points above the last startable player at this position, using format-weighted flex (PPR leans WR).',
   PROJ: 'Season-long projected fantasy points when available.',
   FACTORS: 'Per-factor grade strip that feeds Ceiling (length = position catalog).',
   FLAG: 'Pin as a draft target',

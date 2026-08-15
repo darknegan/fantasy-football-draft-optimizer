@@ -10,16 +10,15 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   adpOverall,
-  survivalBands,
   qualityBand,
   detectCliffs,
   replacementBand,
-  projectUserPickProgress,
-  type SurvivalBandId,
+  computeVor,
+  resolveVorScoringFormat,
   type QualityBand,
 } from '@draftlab/tiers';
 import { ApiService } from '../../core/api.service';
-import type { BoardPlayer, DraftState, FactorGrade, League, Position } from '../../core/api.types';
+import type { BoardPlayer, DraftState, FactorGrade, League, Position, RosterShape } from '../../core/api.types';
 import {
   BOARD_HEADER_PURPOSE,
   buildArchetypeTooltip,
@@ -31,34 +30,31 @@ import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-displ
 import { scoreLabel } from './score-label';
 
 type PosFilter = Position | 'ALL';
-type SortKey = 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
+type SortKey = 'vor' | 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
 type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
-/**
- * 'unbanded' is not produced by `survivalBands()` — it's a board-local fallback
- * id used only when there is no next-pick projection to band against at all
- * (the planning window is exhausted), so the board can still show every row in
- * one ungrouped section instead of rendering nothing. See `sections` below.
- */
-type BoardSectionId = SurvivalBandId | 'unbanded';
-
-interface BoardSection {
-  id: BoardSectionId;
-  label: string;
-  note: string;
-  rows: BoardPlayer[];
-}
-
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: 'draft', label: 'Draft score' },
+  { value: 'vor', label: 'VOR' },
+  { value: 'proj', label: 'Proj' },
   { value: 'ceiling', label: 'Ceiling' },
+  { value: 'draft', label: 'Draft score' },
   { value: 'adp', label: 'ADP' },
   { value: 'value', label: 'Value' },
   { value: 'risk', label: 'Risk' },
-  { value: 'proj', label: 'Proj' },
 ];
+
+const DEFAULT_ROSTER: RosterShape = {
+  qb: 1,
+  rb: 2,
+  wr: 2,
+  te: 1,
+  flex: 1,
+  superflex: 0,
+  bench: 6,
+  totalStarters: 7,
+};
 
 const RISK_MAX = 100;
 
@@ -150,20 +146,14 @@ const RISK_MAX = 100;
         <span class="c-arch" [title]="headerPurpose['ARCHETYPE']">ARCHETYPE</span>
         <span class="c-risk" [title]="headerPurpose['RISK']">RISK</span>
         <span class="c-value" [title]="headerPurpose['VALUE']">VALUE</span>
+        <span class="c-vor" [title]="headerPurpose['VOR']">VOR</span>
         <span class="c-proj" [title]="headerPurpose['PROJ']">PROJ</span>
         <span class="c-factors" [title]="headerPurpose['FACTORS']">FACTORS</span>
         <span class="c-flag" [title]="headerPurpose['FLAG']"></span>
       </div>
 
       <div class="list" role="list">
-        @for (section of sections(); track section.id) {
-          <div class="tier-break">
-            <span class="tier-tag">{{ section.label }}</span>
-            <span class="tier-note">{{ section.note }}</span>
-            <span class="tier-rule" aria-hidden="true"></span>
-          </div>
-
-          @for (row of section.rows; track row.player.id) {
+        @for (row of filteredSorted(); track row.player.id) {
             <div
               class="row"
               role="listitem"
@@ -272,6 +262,8 @@ const RISK_MAX = 100;
                 }}</span>
               </span>
 
+              <span class="c-vor mono">{{ formatVor(vorOf(row)) }}</span>
+
               <span class="c-proj mono">{{ formatProj(row.projectedPoints) }}</span>
 
               <span class="c-factors" aria-label="Factor grades">
@@ -299,7 +291,6 @@ const RISK_MAX = 100;
                 >
               </div>
             }
-          }
         } @empty {
           <p class="empty">No players match these filters.</p>
         }
@@ -332,7 +323,7 @@ export class BoardComponent implements OnInit {
   readonly riskFilter = signal<RiskFilter>('any');
   readonly valueFilter = signal<ValueFilter>('any');
   readonly hideDrafted = signal(true);
-  readonly sortKey = signal<SortKey>('draft');
+  readonly sortKey = signal<SortKey>('vor');
   readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly archetypes = computed(() => {
@@ -363,45 +354,28 @@ export class BoardComponent implements OnInit {
 
     const key = this.sortKey();
     const teamCount = this.league()?.teamCount ?? 12;
-    return [...list].sort((a, b) => compareRows(a, b, key, teamCount));
+    return [...list].sort((a, b) => compareRows(a, b, key, teamCount, this.vorById()));
   });
 
-  readonly sections = computed((): BoardSection[] => {
-    const rows = this.filteredSorted();
-    // Only reachable via the template's @empty branch ("No players match
-    // these filters"). That message must never appear while rows exist —
-    // see the fallback below for the other way `sections` can end up short.
-    if (!rows.length) return [];
+  /**
+   * VOR over the FULL board, not the filtered view — baselines must not
+   * jump when the user filters to one position or hides drafted rows.
+   */
+  readonly vorById = computed(() => {
     const league = this.league();
-    const draft = this.draft();
-    // Recomputed on every pick: uses the same draft clock as recommendations
-    // (`draft.currentPick` / `picksUntilUser`), not a derived drafted count.
-    const next =
-      league && draft
-        ? projectUserPickProgress(
-            league.draftSlot ?? 1,
-            league.teamCount ?? 12,
-            draft.currentPick,
-            draft.picksUntilUser,
-          )
-        : null;
-    if (!next) {
-      // No next-pick projection to band against — either the league hasn't
-      // loaded yet, or (far more commonly) the draft has run past
-      // PLANNING_ROUNDS. rows.length > 0 here, so returning [] would render
-      // the "No players match these filters" empty state, which is simply
-      // false: the board has players, there's just no survival estimate to
-      // group them by. Show everything, ungrouped, instead of nothing.
-      return [
-        {
-          id: 'unbanded',
-          label: 'All remaining players',
-          note: 'Past the planning window — showing every player, unsorted by survival odds.',
-          rows,
-        },
-      ];
-    }
-    return buildSections(rows, next, league?.teamCount ?? 12);
+    return computeVor(
+      this.rows().map((r) => ({
+        id: r.player.id,
+        position: r.player.position,
+        projectedPoints: r.projectedPoints,
+      })),
+      league?.roster ?? DEFAULT_ROSTER,
+      league?.teamCount ?? 12,
+      resolveVorScoringFormat({
+        reception: league?.scoring?.reception,
+        variant: league?.scoring?.variant ?? league?.scoringSummary?.variant,
+      }),
+    );
   });
 
   /**
@@ -427,36 +401,36 @@ export class BoardComponent implements OnInit {
   });
 
   /** True when the current sort orders rows by a score, making adjacency meaningful. */
-  private readonly cliffsApply = computed(() => this.sortKey() === 'draft');
+  private readonly cliffsApply = computed(() => {
+    const key = this.sortKey();
+    return key === 'vor' || key === 'proj' || key === 'ceiling' || key === 'draft';
+  });
 
   /**
-   * Row ids after which a cliff falls, per section. Computed on the same axis the
-   * list is sorted by (contextualScore ?? draftScore), so the marker always sits
-   * between the two rows it describes. Hidden entirely under any other sort,
-   * since adjacency is not score-ordered there.
+   * Row ids after which a cliff falls. Computed on the same axis the list is
+   * sorted by (VOR under VOR, projectedPoints under Proj, raw ceilingScore
+   * under Ceiling, contextualScore ?? draftScore under Draft score), so the
+   * marker always sits between the two rows it describes. Hidden entirely
+   * under any other sort, since adjacency is not score-ordered there.
    */
   readonly cliffAfterIds = computed((): ReadonlyMap<string, { gap: number; multiple: number }> => {
     const out = new Map<string, { gap: number; multiple: number }>();
     if (!this.cliffsApply()) return out;
-    for (const section of this.sections()) {
-      const measured = section.rows.filter(
-        (r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted,
-      );
-      const scores = measured.map(
-        (r) => r.recommendation?.contextualScore ?? r.evaluation.draftScore,
-      );
-      for (const cliff of detectCliffs(scores)) {
-        const row = measured[cliff.afterIndex];
-        const nextRow = measured[cliff.afterIndex + 1];
-        if (!row || !nextRow) continue;
-        // Only mark a cliff when the two measured rows are adjacent in the
-        // rendered list. With "Show drafted" on, drafted rows sit between
-        // measured neighbors and would otherwise get a misleading marker.
-        const idxA = section.rows.findIndex((r) => r.player.id === row.player.id);
-        const idxB = section.rows.findIndex((r) => r.player.id === nextRow.player.id);
-        if (idxB !== idxA + 1) continue;
-        out.set(row.player.id, { gap: cliff.gap, multiple: cliff.multiple });
-      }
+    const key = this.sortKey();
+    const rows = this.filteredSorted();
+    const measured = rows.filter((r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted);
+    const scores = measured.map((r) => scoreForSort(r, key, this.vorById()));
+    for (const cliff of detectCliffs(scores)) {
+      const row = measured[cliff.afterIndex];
+      const nextRow = measured[cliff.afterIndex + 1];
+      if (!row || !nextRow) continue;
+      // Only mark a cliff when the two measured rows are adjacent in the
+      // rendered list. With "Show drafted" on, drafted rows sit between
+      // measured neighbors and would otherwise get a misleading marker.
+      const idxA = rows.findIndex((r) => r.player.id === row.player.id);
+      const idxB = rows.findIndex((r) => r.player.id === nextRow.player.id);
+      if (idxB !== idxA + 1) continue;
+      out.set(row.player.id, { gap: cliff.gap, multiple: cliff.multiple });
     }
     return out;
   });
@@ -601,6 +575,16 @@ export class BoardComponent implements OnInit {
     return p.toFixed(1);
   }
 
+  vorOf(row: BoardPlayer): number | null {
+    return this.vorById().get(row.player.id) ?? null;
+  }
+
+  formatVor(v: number | null | undefined): string {
+    if (v == null || Number.isNaN(v)) return '—';
+    const rounded = v.toFixed(1);
+    return v > 0 ? `+${rounded}` : rounded;
+  }
+
   factorGrades(row: BoardPlayer): FactorGrade[] {
     const slots = configuredFactorCount(row);
     const factors = row.evaluation.ceiling.factors ?? [];
@@ -623,10 +607,36 @@ function riskBucket(risk: number): RiskFilter {
   return 'high';
 }
 
-function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number): number {
+/** Numeric axis for score-based sorts. Missing values sort last via -1. */
+function scoreForSort(
+  row: BoardPlayer,
+  key: SortKey,
+  vorById: ReadonlyMap<string, number | null> = new Map(),
+): number {
+  if (key === 'vor') return vorById.get(row.player.id) ?? -1;
+  if (key === 'proj') return row.projectedPoints ?? -1;
+  if (key === 'ceiling') return row.evaluation.ceiling.ceilingScore ?? -1;
+  return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
+}
+
+function compareRows(
+  a: BoardPlayer,
+  b: BoardPlayer,
+  key: SortKey,
+  teamCount: number,
+  vorById: ReadonlyMap<string, number | null> = new Map(),
+): number {
   switch (key) {
-    case 'ceiling':
-      return (b.evaluation.ceiling.ceilingScore ?? -1) - (a.evaluation.ceiling.ceilingScore ?? -1);
+    case 'vor': {
+      const byVor = scoreForSort(b, 'vor', vorById) - scoreForSort(a, 'vor', vorById);
+      if (byVor !== 0) return byVor;
+      return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
+    }
+    case 'ceiling': {
+      const byCeil = scoreForSort(b, 'ceiling') - scoreForSort(a, 'ceiling');
+      if (byCeil !== 0) return byCeil;
+      return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
+    }
     case 'adp': {
       // Package adpOverall returns null for unparseable ADP. Sort those last rather
       // than letting a sentinel rank them as very early or very late.
@@ -642,63 +652,10 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: nu
     case 'risk':
       return a.evaluation.risk.riskProfile - b.evaluation.risk.riskProfile;
     case 'proj':
-      return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
+      return scoreForSort(b, 'proj') - scoreForSort(a, 'proj');
     case 'draft':
-    default: {
-      const as = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
-      const bs = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
-      return bs - as;
-    }
+    default:
+      return scoreForSort(b, 'draft') - scoreForSort(a, 'draft');
   }
 }
 
-function buildSections(
-  rows: BoardPlayer[],
-  next: { nextOverall: number; picksUntilNext: number },
-  teamCount: number,
-): BoardSection[] {
-  const tierRows = rows.map((row) => ({
-    id: row.player.id,
-    position: row.player.position,
-    draftScore: row.evaluation.draftScore,
-    ceilingKnownFactors: row.evaluation.ceiling.knownFactors,
-    adpRoundPick: row.evaluation.value.adpRoundPick,
-    row,
-  }));
-
-  return survivalBands(tierRows, next.nextOverall, next.picksUntilNext, teamCount).map((band) => {
-    const bandRows = band.rows.map((r) => r.row);
-    return {
-      id: band.id,
-      label: band.label,
-      note: survivalNote(band.id, bandRows, next.nextOverall, teamCount),
-      rows: bandRows,
-    };
-  });
-}
-
-function survivalNote(
-  bandId: SurvivalBandId,
-  rows: BoardPlayer[],
-  nextOverall: number,
-  teamCount: number,
-): string {
-  const left = rows.filter((r) => !r.drafted).length;
-  const pickLabel = formatOverallPick(nextOverall, teamCount);
-  switch (bandId) {
-    case 'gone':
-      return `${left} players · unlikely to reach ${pickLabel}`;
-    case 'coin-flip':
-      return `${left} players · roughly even odds at ${pickLabel}`;
-    case 'available':
-      return `${left} players · should still be there at ${pickLabel}`;
-    case 'adp-unknown':
-      return `${left} players · no ADP on file, no survival estimate`;
-  }
-}
-
-function formatOverallPick(overall: number, teamCount: number): string {
-  const round = Math.floor((overall - 1) / teamCount) + 1;
-  const slot = ((overall - 1) % teamCount) + 1;
-  return `${round}.${String(slot).padStart(2, '0')}`;
-}

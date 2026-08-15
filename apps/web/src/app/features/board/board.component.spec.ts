@@ -148,63 +148,66 @@ describe('BoardComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
 
     expect(el.querySelector('.empty')).toBeNull();
-    expect(fixture.componentInstance.sections()).toHaveLength(1);
-    expect(fixture.componentInstance.sections()[0]!.id).toBe('unbanded');
     expect(el.querySelectorAll('.row')).toHaveLength(2);
-    expect(el.querySelector('.tier-tag')?.textContent).toContain('All remaining players');
+    expect(el.querySelector('.tier-break')).toBeNull();
   });
 
-  it('defaults a missing draftSlot to a real survival partition instead of blanking the board', () => {
-    const league = makeLeague({ draftSlot: undefined });
-    const rows = [
-      makeRow('a', 'RB', 70, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 } },
-      }),
-      makeRow('b', 'WR', 60, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 } },
-      }),
-    ];
-    return createBoard(rows, league).then((fixture) => {
-      const el: HTMLElement = fixture.nativeElement;
-      const sections = fixture.componentInstance.sections();
-
-      expect(el.querySelector('.empty')).toBeNull();
-      expect(sections.length).toBeGreaterThan(0);
-      expect(sections.some((s) => s.id === 'unbanded')).toBe(false);
-      expect(el.querySelectorAll('.row')).toHaveLength(2);
+  it('renders one flat list ordered by VOR, ignoring survival bands', async () => {
+    const tinyRoster = { ...ROSTER, rb: 1, wr: 1, te: 1, flex: 0 };
+    const allen = makeRow('allen', 'QB', 90, {
+      projectedPoints: 400,
+      evaluationOverrides: {
+        value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 },
+      },
     });
+    const baker = makeRow('baker', 'QB', 70, { projectedPoints: 300 });
+    const gibbs = makeRow('gibbs', 'RB', 80, {
+      projectedPoints: 350,
+      evaluationOverrides: {
+        value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 },
+      },
+    });
+    const cuff = makeRow('cuff', 'RB', 50, { projectedPoints: 200 });
+    const fixture = await createBoard(
+      [allen, baker, gibbs, cuff],
+      makeLeague({ draftSlot: 1, teamCount: 2, roster: tinyRoster }),
+      makeDraft({ currentPick: 13, picksUntilUser: 11 }),
+    );
+    const el: HTMLElement = fixture.nativeElement;
+    const names = [...el.querySelectorAll('.row .name')].map((n) => n.textContent?.trim());
+
+    expect(el.querySelector('.tier-break')).toBeNull();
+    expect(names).toEqual(['gibbs', 'allen', 'baker', 'cuff']);
   });
 
-  it('partitions survival bands from draft.currentPick, not drafted row count', async () => {
-    const league = makeLeague({ draftSlot: 1 });
-    const draft = makeDraft({ currentPick: 13, picksUntilUser: 11 });
-    const rows = [
-      makeRow('early', 'RB', 70, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '1.01', blendedRank: 1 } },
-      }),
-      makeRow('late', 'WR', 60, {
-        evaluationOverrides: { value: { valueScore: 0, adpRoundPick: '9.05', blendedRank: 90 } },
-      }),
-    ];
+  it('defaults to VOR so a higher-proj QB ranks below a higher-VOR RB', async () => {
+    const tinyRoster = { ...ROSTER, rb: 1, wr: 1, te: 1, flex: 0 };
+    const allen = makeRow('allen', 'QB', 90, { projectedPoints: 400 });
+    const baker = makeRow('baker', 'QB', 70, { projectedPoints: 300 });
+    const gibbs = makeRow('gibbs', 'RB', 80, { projectedPoints: 350 });
+    const cuff = makeRow('cuff', 'RB', 50, { projectedPoints: 200 });
+    const fixture = await createBoard(
+      [allen, baker, gibbs, cuff],
+      makeLeague({ teamCount: 2, roster: tinyRoster }),
+    );
+    const component = fixture.componentInstance;
 
-    const fixture = await createBoard(rows, league, draft);
-    const goneIds =
-      fixture.componentInstance.sections().find((s) => s.id === 'gone')?.rows.map((r) => r.player.id) ??
-      [];
+    expect(component.sortKey()).toBe('vor');
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
+      'gibbs',
+      'allen',
+      'baker',
+      'cuff',
+    ]);
 
-    expect(fixture.componentInstance.sections().some((s) => s.id === 'unbanded')).toBe(false);
-    expect(goneIds).toContain('early');
-
-    // The retired picksMade=0 heuristic would have used next pick 1 instead of 24,
-    // so 'early' would not land in the gone band at the start of the draft.
-    fixture.componentInstance.draft.set(makeDraft({ currentPick: 1, picksUntilUser: 0 }));
+    component.sortKey.set('proj');
     fixture.detectChanges();
-    const earlyGoneAtPickOne =
-      fixture.componentInstance
-        .sections()
-        .find((s) => s.id === 'gone')
-        ?.rows.some((r) => r.player.id === 'early') ?? false;
-    expect(earlyGoneAtPickOne).toBe(false);
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
+      'allen',
+      'gibbs',
+      'baker',
+      'cuff',
+    ]);
   });
 
   it('renders quality and replacement chips independent of which position is filtered', async () => {
@@ -243,16 +246,60 @@ describe('BoardComponent', () => {
 
   it('shows cliff markers only under a score-based sort', async () => {
     const rows = [
-      makeRow('p1', 'RB', 90),
-      makeRow('p2', 'RB', 85),
-      makeRow('p3', 'RB', 25),
-      makeRow('p4', 'RB', 20),
+      makeRow('p1', 'RB', 90, {
+        projectedPoints: 400,
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 50,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p2', 'RB', 85, {
+        projectedPoints: 390,
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 48,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p3', 'RB', 25, {
+        projectedPoints: 200,
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 10,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p4', 'RB', 20, {
+        projectedPoints: 190,
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 8,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
     ];
     const fixture = await createBoard(rows, makeLeague());
     const component = fixture.componentInstance;
     const el: HTMLElement = fixture.nativeElement;
 
-    expect(component.sortKey()).toBe('draft');
+    expect(component.sortKey()).toBe('vor');
     expect(component.cliffAfterIds().size).toBeGreaterThan(0);
     expect(el.querySelectorAll('.cliff-marker').length).toBeGreaterThan(0);
 
@@ -261,6 +308,10 @@ describe('BoardComponent', () => {
 
     expect(component.cliffAfterIds().size).toBe(0);
     expect(el.querySelectorAll('.cliff-marker')).toHaveLength(0);
+
+    component.sortKey.set('draft');
+    fixture.detectChanges();
+    expect(component.cliffAfterIds().size).toBeGreaterThan(0);
   });
 
   it('suppresses cliff markers when drafted rows sit between measured neighbors', async () => {
