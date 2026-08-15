@@ -28,12 +28,12 @@ type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: 'proj', label: 'Proj' },
   { value: 'ceiling', label: 'Ceiling' },
   { value: 'draft', label: 'Draft score' },
   { value: 'adp', label: 'ADP' },
   { value: 'value', label: 'Value' },
   { value: 'risk', label: 'Risk' },
-  { value: 'proj', label: 'Proj' },
 ];
 
 const RISK_MAX = 100;
@@ -300,7 +300,7 @@ export class BoardComponent implements OnInit {
   readonly riskFilter = signal<RiskFilter>('any');
   readonly valueFilter = signal<ValueFilter>('any');
   readonly hideDrafted = signal(true);
-  readonly sortKey = signal<SortKey>('ceiling');
+  readonly sortKey = signal<SortKey>('proj');
   readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly archetypes = computed(() => {
@@ -359,15 +359,15 @@ export class BoardComponent implements OnInit {
   /** True when the current sort orders rows by a score, making adjacency meaningful. */
   private readonly cliffsApply = computed(() => {
     const key = this.sortKey();
-    return key === 'ceiling' || key === 'draft';
+    return key === 'proj' || key === 'ceiling' || key === 'draft';
   });
 
   /**
    * Row ids after which a cliff falls. Computed on the same axis the list is
-   * sorted by (raw ceilingScore under Ceiling, contextualScore ?? draftScore
-   * under Draft score), so the marker always sits between the two rows it
-   * describes. Hidden entirely under any other sort, since adjacency is not
-   * score-ordered there.
+   * sorted by (projectedPoints under Proj, raw ceilingScore under Ceiling,
+   * contextualScore ?? draftScore under Draft score), so the marker always
+   * sits between the two rows it describes. Hidden entirely under any other
+   * sort, since adjacency is not score-ordered there.
    */
   readonly cliffAfterIds = computed((): ReadonlyMap<string, { gap: number; multiple: number }> => {
     const out = new Map<string, { gap: number; multiple: number }>();
@@ -553,8 +553,9 @@ function riskBucket(risk: number): RiskFilter {
   return 'high';
 }
 
-/** Numeric axis for score-based sorts. Missing ceiling sorts last via -1. */
+/** Numeric axis for score-based sorts. Missing values sort last via -1. */
 function scoreForSort(row: BoardPlayer, key: SortKey): number {
+  if (key === 'proj') return row.projectedPoints ?? -1;
   if (key === 'ceiling') return row.evaluation.ceiling.ceilingScore ?? -1;
   return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
 }
@@ -581,7 +582,7 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: nu
     case 'risk':
       return a.evaluation.risk.riskProfile - b.evaluation.risk.riskProfile;
     case 'proj':
-      return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
+      return scoreForSort(b, 'proj') - scoreForSort(a, 'proj');
     case 'draft':
     default:
       return scoreForSort(b, 'draft') - scoreForSort(a, 'draft');

@@ -152,7 +152,7 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.tier-break')).toBeNull();
   });
 
-  it('renders one flat list ordered by ceiling then proj, ignoring survival bands', async () => {
+  it('renders one flat list ordered by proj, ignoring survival bands', async () => {
     const earlyLow = makeRow('early-low', 'RB', 90, {
       projectedPoints: 200,
       evaluationOverrides: {
@@ -191,12 +191,12 @@ describe('BoardComponent', () => {
     expect(names).toEqual(['late-high', 'early-low']);
   });
 
-  it('breaks ceiling ties using projected points, highest first', async () => {
-    const lowProj = makeRow('low-proj', 'RB', 70, {
-      projectedPoints: 376.3,
+  it('defaults to proj sort, not ceiling', async () => {
+    const highCeilLowProj = makeRow('high-ceil', 'RB', 95, {
+      projectedPoints: 300,
       evaluationOverrides: {
         ceiling: {
-          ceilingScore: 20,
+          ceilingScore: 50,
           factors: [],
           knownFactors: 5,
           confidenceScore: 0.8,
@@ -204,11 +204,11 @@ describe('BoardComponent', () => {
         },
       },
     });
-    const highProj = makeRow('high-proj', 'WR', 70, {
-      projectedPoints: 386.1,
+    const lowCeilHighProj = makeRow('high-proj', 'WR', 70, {
+      projectedPoints: 400,
       evaluationOverrides: {
         ceiling: {
-          ceilingScore: 20,
+          ceilingScore: 10,
           factors: [],
           knownFactors: 5,
           confidenceScore: 0.8,
@@ -216,11 +216,20 @@ describe('BoardComponent', () => {
         },
       },
     });
-    const fixture = await createBoard([lowProj, highProj], null, null);
+    const fixture = await createBoard([highCeilLowProj, lowCeilHighProj], null, null);
+    const component = fixture.componentInstance;
 
-    expect(fixture.componentInstance.filteredSorted().map((r) => r.player.id)).toEqual([
+    expect(component.sortKey()).toBe('proj');
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
       'high-proj',
-      'low-proj',
+      'high-ceil',
+    ]);
+
+    component.sortKey.set('ceiling');
+    fixture.detectChanges();
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
+      'high-ceil',
+      'high-proj',
     ]);
   });
 
@@ -258,49 +267,10 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.band-S')).toBeNull();
   });
 
-  it('defaults to ceiling sort so the factor composite, not draft score, orders rows', async () => {
-    const highDraftLowCeil = makeRow('high-draft', 'RB', 95, {
-      evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 12,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
-      },
-    });
-    const lowDraftHighCeil = makeRow('high-ceil', 'WR', 70, {
-      evaluationOverrides: {
-        ceiling: {
-          ceilingScore: 40,
-          factors: [],
-          knownFactors: 5,
-          confidenceScore: 0.8,
-          provisional: false,
-        },
-      },
-    });
-    const fixture = await createBoard([highDraftLowCeil, lowDraftHighCeil], null, null);
-    const component = fixture.componentInstance;
-
-    expect(component.sortKey()).toBe('ceiling');
-    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
-      'high-ceil',
-      'high-draft',
-    ]);
-
-    component.sortKey.set('draft');
-    fixture.detectChanges();
-    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
-      'high-draft',
-      'high-ceil',
-    ]);
-  });
-
   it('shows cliff markers only under a score-based sort', async () => {
     const rows = [
       makeRow('p1', 'RB', 90, {
+        projectedPoints: 400,
         evaluationOverrides: {
           ceiling: {
             ceilingScore: 50,
@@ -312,6 +282,7 @@ describe('BoardComponent', () => {
         },
       }),
       makeRow('p2', 'RB', 85, {
+        projectedPoints: 390,
         evaluationOverrides: {
           ceiling: {
             ceilingScore: 48,
@@ -323,6 +294,7 @@ describe('BoardComponent', () => {
         },
       }),
       makeRow('p3', 'RB', 25, {
+        projectedPoints: 200,
         evaluationOverrides: {
           ceiling: {
             ceilingScore: 10,
@@ -334,6 +306,7 @@ describe('BoardComponent', () => {
         },
       }),
       makeRow('p4', 'RB', 20, {
+        projectedPoints: 190,
         evaluationOverrides: {
           ceiling: {
             ceilingScore: 8,
@@ -349,7 +322,7 @@ describe('BoardComponent', () => {
     const component = fixture.componentInstance;
     const el: HTMLElement = fixture.nativeElement;
 
-    expect(component.sortKey()).toBe('ceiling');
+    expect(component.sortKey()).toBe('proj');
     expect(component.cliffAfterIds().size).toBeGreaterThan(0);
     expect(el.querySelectorAll('.cliff-marker').length).toBeGreaterThan(0);
 
