@@ -410,6 +410,9 @@ export class ShellComponent implements OnInit {
     if (/\/leagues\/connect$/.test(path)) {
       return 'Import your real leagues so every projection is denominated in your own scoring';
     }
+    if (/\/leagues\/manual-setup$/.test(path)) {
+      return 'ESPN and any platform without an API · confirm scoring before you draft';
+    }
     if (/\/scoring$/.test(path)) {
       const league = this.active.selected();
       if (!league) return 'Every projection on your board uses these rules';

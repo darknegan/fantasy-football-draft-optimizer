@@ -1,0 +1,372 @@
+<div class="setup">
+  @if (!reviewing()) {
+    <header class="intro">
+      <div class="intro-copy">
+        <span class="mark" aria-hidden="true">M</span>
+        <p class="kicker">
+          Configure the league, then confirm scoring in plain language before the board opens.
+        </p>
+      </div>
+      <ol class="steps" aria-label="Setup progress">
+        <li class="current">
+          <span class="step-num" aria-hidden="true">1</span>
+          <span class="step-label">Configure</span>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">2</span>
+          <span class="step-label">Review scoring</span>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">3</span>
+          <span class="step-label">Open board</span>
+        </li>
+      </ol>
+    </header>
+  }
+
+  @if (summary(); as s) {
+    <aside class="validation" [class.warn]="s.warnings.length > 0" role="status">
+      <span class="check-mark" aria-hidden="true">{{ s.warnings.length ? '!' : '✓' }}</span>
+      <div class="validation-copy">
+        <strong>{{ s.warnings.length ? 'Scoring needs a closer look' : 'Confirm scoring' }}</strong>
+        <p>
+          {{
+            s.warnings.length
+              ? s.warnings[0]
+              : 'Read the plain-language summary, then open the board. You can still edit the form and review again.'
+          }}
+        </p>
+      </div>
+      <button type="button" class="btn primary" [disabled]="loading()" (click)="create(true)">
+        Confirm &amp; create league
+      </button>
+    </aside>
+  }
+
+  <div class="layout">
+    <div class="form-col">
+      <section class="card" aria-labelledby="league-title">
+        <div class="section-head">
+          <span class="section-num" aria-hidden="true">1</span>
+          <div>
+            <h2 id="league-title">League</h2>
+            <p class="section-hint">Name the league and set the table size.</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="cap">League name</span>
+          <input
+            class="input"
+            type="text"
+            name="leagueName"
+            autocomplete="off"
+            [ngModel]="name()"
+            (ngModelChange)="setName($event)"
+          />
+        </label>
+
+        <div class="trio">
+          <label class="field">
+            <span class="cap">Teams</span>
+            <input
+              class="input"
+              type="number"
+              name="teamCount"
+              min="2"
+              max="20"
+              inputmode="numeric"
+              [ngModel]="teamCount()"
+              (ngModelChange)="setTeamCount($event)"
+            />
+          </label>
+          <label class="field">
+            <span class="cap">Season</span>
+            <input
+              class="input"
+              type="number"
+              name="season"
+              min="2010"
+              max="2100"
+              inputmode="numeric"
+              [ngModel]="season()"
+              (ngModelChange)="setSeason($event)"
+            />
+          </label>
+          <div class="field">
+            <span class="cap" id="slot-label">Draft slot</span>
+            <p class="slot-meta dl-mono">Pick {{ draftSlot() }} of {{ teamCount() }}</p>
+          </div>
+        </div>
+
+        <div class="slot-picker" role="group" aria-labelledby="slot-label">
+          @for (n of slotMarks(); track n) {
+            <button
+              type="button"
+              class="slot"
+              [class.on]="draftSlot() === n"
+              [attr.aria-pressed]="draftSlot() === n"
+              [attr.aria-label]="'Draft slot ' + n"
+              (click)="setDraftSlot(n)"
+            >
+              {{ n }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="format-title">
+        <div class="section-head">
+          <span class="section-num" aria-hidden="true">2</span>
+          <div>
+            <h2 id="format-title">Format &amp; scoring</h2>
+            <p class="section-hint">{{ presetHint() }}</p>
+          </div>
+        </div>
+
+        <div class="choice-block">
+          <span class="cap" id="format-label">Format</span>
+          <div class="seg" role="group" aria-labelledby="format-label">
+            @for (opt of typeOptions; track opt.value) {
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="type() === opt.value"
+                [attr.aria-pressed]="type() === opt.value"
+                (click)="setType(opt.value)"
+              >
+                <strong>{{ opt.label }}</strong>
+                <span>{{ opt.hint }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="choice-block">
+          <span class="cap" id="draft-label">Draft type</span>
+          <div class="seg" role="group" aria-labelledby="draft-label">
+            @for (opt of draftOptions; track opt.value) {
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="draftType() === opt.value"
+                [attr.aria-pressed]="draftType() === opt.value"
+                (click)="setDraftType(opt.value)"
+              >
+                <strong>{{ opt.label }}</strong>
+                <span>{{ opt.hint }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="choice-block">
+          <span class="cap" id="preset-label">Scoring preset</span>
+          <div class="presets" role="group" aria-labelledby="preset-label">
+            @for (p of presets(); track p.id) {
+              <button
+                type="button"
+                class="preset"
+                [class.on]="scoringPresetId() === p.id"
+                [attr.aria-pressed]="scoringPresetId() === p.id"
+                (click)="setPreset(p.id)"
+              >
+                <strong>{{ p.name }}</strong>
+                @if (p.tePremiumBonus) {
+                  <span class="chip te">TE premium</span>
+                }
+                @if (p.id === 'preset-sf-ppr') {
+                  <span class="chip sf">Superflex</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="roster-title">
+        <div class="section-head">
+          <span class="section-num" aria-hidden="true">3</span>
+          <div>
+            <h2 id="roster-title">Starting lineup</h2>
+            <p class="section-hint">
+              {{ starterCount() }} starters · {{ roster().bench }} bench · {{ rosterSize() }} roster
+              spots
+            </p>
+          </div>
+        </div>
+
+        <div class="roster-grid">
+          @for (slot of rosterSlots; track slot.key) {
+            <div class="pos-card" [attr.data-pos]="slot.pos">
+              <span class="pos-pill" [attr.data-pos]="slot.pos">{{ slot.label }}</span>
+              <span class="pos-name">{{ slot.name }}</span>
+              <div class="stepper">
+                <button
+                  type="button"
+                  class="step-btn"
+                  [disabled]="rosterCount(slot.key) <= 0"
+                  [attr.aria-label]="'Decrease ' + slot.name"
+                  (click)="adjust(slot.key, -1)"
+                >
+                  −
+                </button>
+                <input
+                  class="step-val"
+                  type="number"
+                  min="0"
+                  max="8"
+                  inputmode="numeric"
+                  [name]="'roster-' + slot.key"
+                  [attr.aria-label]="slot.name + ' starters'"
+                  [ngModel]="rosterCount(slot.key)"
+                  (ngModelChange)="setRosterCount(slot.key, $event)"
+                />
+                <button
+                  type="button"
+                  class="step-btn"
+                  [disabled]="rosterCount(slot.key) >= 8"
+                  [attr.aria-label]="'Increase ' + slot.name"
+                  (click)="adjust(slot.key, 1)"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="bench-row">
+          <div class="pos-card bench" data-pos="bench">
+            <span class="pos-pill" data-pos="bench">BN</span>
+            <span class="pos-name">Bench</span>
+            <div class="stepper">
+              <button
+                type="button"
+                class="step-btn"
+                [disabled]="roster().bench <= 0"
+                aria-label="Decrease bench"
+                (click)="adjust('bench', -1)"
+              >
+                −
+              </button>
+              <input
+                class="step-val"
+                type="number"
+                name="roster-bench"
+                min="0"
+                max="20"
+                inputmode="numeric"
+                aria-label="Bench spots"
+                [ngModel]="roster().bench"
+                (ngModelChange)="setRosterCount('bench', $event)"
+              />
+              <button
+                type="button"
+                class="step-btn"
+                [disabled]="roster().bench >= 20"
+                aria-label="Increase bench"
+                (click)="adjust('bench', 1)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div class="lineup" aria-label="Starting lineup shape">
+            <span class="cap">Lineup shape</span>
+            <div class="pills">
+              @for (pill of lineupPills(); track $index) {
+                <span class="pos-pill" [attr.data-pos]="pill.pos">{{ pill.label }}</span>
+              }
+              @if (!lineupPills().length) {
+                <span class="empty-lineup">Add at least one starter.</span>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="actions">
+        @if (!reviewing()) {
+          <button type="button" class="btn primary" [disabled]="loading()" (click)="create(false)">
+            {{ loading() ? 'Reviewing…' : 'Review scoring summary' }}
+          </button>
+        } @else {
+          <button type="button" class="btn primary" [disabled]="loading()" (click)="create(true)">
+            Confirm &amp; create league
+          </button>
+          <button type="button" class="btn ghost" [disabled]="loading()" (click)="create(false)">
+            {{ loading() ? 'Reviewing…' : 'Re-run scoring review' }}
+          </button>
+        }
+        <a class="btn ghost" routerLink="/leagues/connect">Back to Connect</a>
+      </div>
+      @if (error()) {
+        <p class="err" role="alert">{{ error() }}</p>
+      }
+    </div>
+
+    <aside class="preview" aria-labelledby="preview-title">
+      <div class="preview-card">
+        <div class="preview-top">
+          <span class="chip platform">Manual</span>
+          <span class="chip format">{{ formatLabel() }}</span>
+          <span class="chip scoring">{{ preset().name }}</span>
+        </div>
+        <h2 id="preview-title" class="preview-name">{{ name().trim() || 'My League' }}</h2>
+        <p class="preview-meta">
+          {{ teamCount() }}-team {{ draftLabel().toLowerCase() }} · {{ season() }} · pick
+          {{ draftSlot() }}
+        </p>
+        <div class="divider" aria-hidden="true"></div>
+        <div class="stats">
+          <div>
+            <p class="stat-label">Starters</p>
+            <p class="stat-value dl-mono">{{ starterCount() }}</p>
+          </div>
+          <div>
+            <p class="stat-label">Bench</p>
+            <p class="stat-value dl-mono">{{ roster().bench }}</p>
+          </div>
+          <div>
+            <p class="stat-label">Roster</p>
+            <p class="stat-value dl-mono">{{ rosterSize() }}</p>
+          </div>
+        </div>
+        <div class="preview-lineup">
+          <span class="cap">Starting lineup</span>
+          <div class="pills">
+            @for (pill of lineupPills(); track $index) {
+              <span class="pos-pill" [attr.data-pos]="pill.pos">{{ pill.label }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (summary(); as s) {
+        <section class="confirm-card" aria-labelledby="confirm-title">
+          <h2 id="confirm-title">Scoring in plain language</h2>
+          <ul>
+            @for (line of s.plainLanguage; track line) {
+              <li>{{ line }}</li>
+            }
+          </ul>
+          @for (w of s.warnings; track w) {
+            <p class="warn">{{ w }}</p>
+          }
+        </section>
+      } @else {
+        <aside class="espn-note">
+          <span class="info-mark" aria-hidden="true">i</span>
+          <div>
+            <strong>Why ESPN is not listed on Connect</strong>
+            <p>
+              ESPN has no official API, so private leagues are set up here instead. You lose
+              auto-sync and nothing else — tap picks in as they come off the board.
+            </p>
+          </div>
+        </aside>
+      }
+    </aside>
+  </div>
+</div>
