@@ -52,8 +52,8 @@ interface BoardSection {
 
 const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: 'draft', label: 'Draft score' },
   { value: 'ceiling', label: 'Ceiling' },
+  { value: 'draft', label: 'Draft score' },
   { value: 'adp', label: 'ADP' },
   { value: 'value', label: 'Value' },
   { value: 'risk', label: 'Risk' },
@@ -332,7 +332,7 @@ export class BoardComponent implements OnInit {
   readonly riskFilter = signal<RiskFilter>('any');
   readonly valueFilter = signal<ValueFilter>('any');
   readonly hideDrafted = signal(true);
-  readonly sortKey = signal<SortKey>('draft');
+  readonly sortKey = signal<SortKey>('ceiling');
   readonly brokenHeadshots = signal<ReadonlySet<string>>(new Set());
 
   readonly archetypes = computed(() => {
@@ -427,24 +427,27 @@ export class BoardComponent implements OnInit {
   });
 
   /** True when the current sort orders rows by a score, making adjacency meaningful. */
-  private readonly cliffsApply = computed(() => this.sortKey() === 'draft');
+  private readonly cliffsApply = computed(() => {
+    const key = this.sortKey();
+    return key === 'ceiling' || key === 'draft';
+  });
 
   /**
    * Row ids after which a cliff falls, per section. Computed on the same axis the
-   * list is sorted by (contextualScore ?? draftScore), so the marker always sits
-   * between the two rows it describes. Hidden entirely under any other sort,
-   * since adjacency is not score-ordered there.
+   * list is sorted by (raw ceilingScore under Ceiling, contextualScore ??
+   * draftScore under Draft score), so the marker always sits between the two
+   * rows it describes. Hidden entirely under any other sort, since adjacency
+   * is not score-ordered there.
    */
   readonly cliffAfterIds = computed((): ReadonlyMap<string, { gap: number; multiple: number }> => {
     const out = new Map<string, { gap: number; multiple: number }>();
     if (!this.cliffsApply()) return out;
+    const key = this.sortKey();
     for (const section of this.sections()) {
       const measured = section.rows.filter(
         (r) => r.evaluation.ceiling.knownFactors > 0 && !r.drafted,
       );
-      const scores = measured.map(
-        (r) => r.recommendation?.contextualScore ?? r.evaluation.draftScore,
-      );
+      const scores = measured.map((r) => scoreForSort(r, key));
       for (const cliff of detectCliffs(scores)) {
         const row = measured[cliff.afterIndex];
         const nextRow = measured[cliff.afterIndex + 1];
@@ -623,10 +626,16 @@ function riskBucket(risk: number): RiskFilter {
   return 'high';
 }
 
+/** Numeric axis for score-based sorts. Missing ceiling sorts last via -1. */
+function scoreForSort(row: BoardPlayer, key: SortKey): number {
+  if (key === 'ceiling') return row.evaluation.ceiling.ceilingScore ?? -1;
+  return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
+}
+
 function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: number): number {
   switch (key) {
     case 'ceiling':
-      return (b.evaluation.ceiling.ceilingScore ?? -1) - (a.evaluation.ceiling.ceilingScore ?? -1);
+      return scoreForSort(b, 'ceiling') - scoreForSort(a, 'ceiling');
     case 'adp': {
       // Package adpOverall returns null for unparseable ADP. Sort those last rather
       // than letting a sentinel rank them as very early or very late.
@@ -644,11 +653,8 @@ function compareRows(a: BoardPlayer, b: BoardPlayer, key: SortKey, teamCount: nu
     case 'proj':
       return (b.projectedPoints ?? -1) - (a.projectedPoints ?? -1);
     case 'draft':
-    default: {
-      const as = a.recommendation?.contextualScore ?? a.evaluation.draftScore;
-      const bs = b.recommendation?.contextualScore ?? b.evaluation.draftScore;
-      return bs - as;
-    }
+    default:
+      return scoreForSort(b, 'draft') - scoreForSort(a, 'draft');
   }
 }
 

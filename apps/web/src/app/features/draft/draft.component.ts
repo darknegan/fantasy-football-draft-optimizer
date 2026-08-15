@@ -815,7 +815,7 @@ function adpRank(row: BoardPlayer, teamCount: number): number {
   return (Number(m[1]) - 1) * teamCount + Number(m[2]);
 }
 
-/** Same ordering as the player board's default "Draft score" sort. */
+/** Blended draft score (contextual when present). Board default sort is Ceiling. */
 function draftScoreOf(row: BoardPlayer): number {
   return row.recommendation?.contextualScore ?? row.evaluation.draftScore;
 }

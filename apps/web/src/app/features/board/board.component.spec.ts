@@ -241,18 +241,98 @@ describe('BoardComponent', () => {
     expect(el.querySelector('.band-S')).toBeNull();
   });
 
+  it('defaults to ceiling sort so the factor composite, not draft score, orders rows', async () => {
+    const highDraftLowCeil = makeRow('high-draft', 'RB', 95, {
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 12,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+      },
+    });
+    const lowDraftHighCeil = makeRow('high-ceil', 'WR', 70, {
+      evaluationOverrides: {
+        ceiling: {
+          ceilingScore: 40,
+          factors: [],
+          knownFactors: 5,
+          confidenceScore: 0.8,
+          provisional: false,
+        },
+      },
+    });
+    const fixture = await createBoard([highDraftLowCeil, lowDraftHighCeil], null, null);
+    const component = fixture.componentInstance;
+
+    expect(component.sortKey()).toBe('ceiling');
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
+      'high-ceil',
+      'high-draft',
+    ]);
+
+    component.sortKey.set('draft');
+    fixture.detectChanges();
+    expect(component.filteredSorted().map((r) => r.player.id)).toEqual([
+      'high-draft',
+      'high-ceil',
+    ]);
+  });
+
   it('shows cliff markers only under a score-based sort', async () => {
     const rows = [
-      makeRow('p1', 'RB', 90),
-      makeRow('p2', 'RB', 85),
-      makeRow('p3', 'RB', 25),
-      makeRow('p4', 'RB', 20),
+      makeRow('p1', 'RB', 90, {
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 50,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p2', 'RB', 85, {
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 48,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p3', 'RB', 25, {
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 10,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
+      makeRow('p4', 'RB', 20, {
+        evaluationOverrides: {
+          ceiling: {
+            ceilingScore: 8,
+            factors: [],
+            knownFactors: 5,
+            confidenceScore: 0.8,
+            provisional: false,
+          },
+        },
+      }),
     ];
     const fixture = await createBoard(rows, makeLeague());
     const component = fixture.componentInstance;
     const el: HTMLElement = fixture.nativeElement;
 
-    expect(component.sortKey()).toBe('draft');
+    expect(component.sortKey()).toBe('ceiling');
     expect(component.cliffAfterIds().size).toBeGreaterThan(0);
     expect(el.querySelectorAll('.cliff-marker').length).toBeGreaterThan(0);
 
@@ -261,6 +341,10 @@ describe('BoardComponent', () => {
 
     expect(component.cliffAfterIds().size).toBe(0);
     expect(el.querySelectorAll('.cliff-marker')).toHaveLength(0);
+
+    component.sortKey.set('draft');
+    fixture.detectChanges();
+    expect(component.cliffAfterIds().size).toBeGreaterThan(0);
   });
 
   it('suppresses cliff markers when drafted rows sit between measured neighbors', async () => {
