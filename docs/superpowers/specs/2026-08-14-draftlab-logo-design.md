@@ -31,9 +31,10 @@ fantasy football draft optimization.
 
 ## Integration
 
-- Replace sidebar `.mark` “D” with `logo-mark.svg`.
+- Replace sidebar and auth `.mark` “D” with `logo-mark.svg`.
 - Add favicon link in `index.html` pointing at `logo-mark.svg`.
-- `.mark` CSS: sized for 26×26 display box (existing sidebar dimensions).
+- Sidebar mark is 40×40; auth mark is 44×44 so flask, football, and vapor stay readable.
+- Mark is a proper Erlenmeyer (rounded body, clipped liquid/football, mint glow) matching approved A2 — not the first geometric sketch.
 
 ## Color tokens
 
