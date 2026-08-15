@@ -10,7 +10,7 @@ import { AuthService } from '../../core/auth.service';
     <div class="auth-page dl-dark">
       <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
         <div class="brand">
-          <img class="mark" src="/brand/logo-mark.svg" width="44" height="44" alt="" aria-hidden="true" />
+          <img class="mark" src="/brand/logo-mark.png" width="44" height="44" alt="" aria-hidden="true" />
           <div class="name">DraftLab</div>
         </div>
         <h1>Sign in to your draft room</h1>
