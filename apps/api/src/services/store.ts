@@ -52,7 +52,7 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { buildCheatSheet, projectUserPickProgress } from '@draftlab/tiers';
+import { buildCheatSheet, computeVor, projectUserPickProgress, resolveVorScoringFormat } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
@@ -896,6 +896,19 @@ export class AppStore {
     // Dollar curve may omit edge cases; fall back to $1 stubs so the auction
     // room never shows a truncated board vs the player board page.
     const valueById = new Map(pool.values.map((v) => [v.playerId, v]));
+    const vorById = computeVor(
+      this.seeds.map((s) => ({
+        id: s.player.id,
+        position: s.player.position,
+        projectedPoints: s.market.projectedPoints,
+      })),
+      pool.league.roster,
+      pool.league.teamCount,
+      resolveVorScoringFormat({
+        reception: pool.league.scoring.reception,
+        variant: pool.league.scoring.variant,
+      }),
+    );
     const valueRows = this.seeds
       .filter((s) => !pool.purchased.has(s.player.id))
       .map((s) => {
@@ -905,6 +918,7 @@ export class AppStore {
           playerId: s.player.id,
           fairValue: priced?.fairValue ?? 1,
           inflatedValue: priced?.inflatedValue ?? 1,
+          ceilingValue: priced?.ceilingValue ?? null,
           vorpShare: priced?.vorpShare ?? 0,
           name: s.player.name,
           position: s.player.position,
@@ -912,9 +926,11 @@ export class AppStore {
           draftScore: evaluation.draftScore,
           archetype: evaluation.archetype.archetype,
           overallRank: pool.rankByPlayerId.get(s.player.id) ?? null,
+          vor: vorById.get(s.player.id) ?? null,
+          projectedPoints: s.market.projectedPoints ?? null,
         };
       })
-      .sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
+      .sort((a, b) => compareAuctionVor(b.vor, a.vor) || b.fairValue - a.fairValue);
 
     const toSigned = (b: (typeof pool.bids)[number]): {
       playerId: string;
@@ -1010,6 +1026,16 @@ export class AppStore {
     const budgets = this.formats.auctionBudgets.get(leagueId)!;
     const user = budgets.find((b) => b.rosterId === pool.draft.userRosterId)!;
     const slotsLeft = Math.max(1, user.rosterSlotsTotal - user.rosterSlotsFilled);
+    const priced = pool.values.find((v) => v.playerId === playerId);
+    if (priced?.ceilingValue != null) {
+      return {
+        playerId,
+        maxBid: priced.ceilingValue,
+        remainingBudget: user.remaining,
+        slotsLeft,
+        reserveForRest: 0,
+      };
+    }
     return computeMaxBid({
       playerId,
       remainingBudget: user.remaining,
@@ -1133,6 +1159,13 @@ export class AppStore {
     }
     return out;
   }
+}
+
+/** Descending VOR; missing values sort last (same idea as the player board). */
+function compareAuctionVor(b: number | null | undefined, a: number | null | undefined): number {
+  const av = a == null || Number.isNaN(a) ? Number.NEGATIVE_INFINITY : a;
+  const bv = b == null || Number.isNaN(b) ? Number.NEGATIVE_INFINITY : b;
+  return bv - av;
 }
 
 /** Keep Monte Carlo runs inside Worker CPU budgets while still supporting Figma-scale controls. */

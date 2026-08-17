@@ -20,7 +20,7 @@
       <div class="stat green">
         <div class="cap">MAX BID</div>
         <div class="stat-val dl-mono">${{ maxBidAmount() }}</div>
-        <div class="stat-sub">for this lot</div>
+        <div class="stat-sub">market ceiling</div>
       </div>
 
       <div class="stat warn">
@@ -137,7 +137,7 @@
           <section class="avail-block" role="tabpanel" aria-label="Available players">
             <div class="avail-head">
               <h2>Available players</h2>
-              <span class="chip">Ranked by draft score</span>
+              <span class="chip">Ranked by VOR</span>
               <span class="spacer"></span>
               <span class="list-count dl-mono">{{ availablePlayers().length }} remaining</span>
             </div>
@@ -176,7 +176,7 @@
               <span class="c-arch">ARCHETYPE</span>
               <span class="c-fair">FAIR</span>
               <span class="c-inf">INFL</span>
-              <span class="c-score">SCORE</span>
+              <span class="c-score">VOR</span>
             </div>
 
             <div class="avail-list" role="listbox" aria-label="Available auction players">
@@ -207,7 +207,7 @@
                   }}</span>
                   <span class="c-fair dl-mono">${{ row.fairValue }}</span>
                   <span class="c-inf dl-mono warn">${{ row.inflatedValue }}</span>
-                  <span class="c-score dl-mono">{{ Math.round(row.draftScore) }}</span>
+                  <span class="c-score dl-mono">{{ formatVor(row.vor) }}</span>
                 </article>
               } @empty {
                 <div class="empty-recs">

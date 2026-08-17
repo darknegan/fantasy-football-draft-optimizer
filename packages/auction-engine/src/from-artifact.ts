@@ -113,7 +113,7 @@ export function dollarValuesFromAuctionBoard(
     slots: opts.rosterSlots,
   };
 
-  const matched: Array<{ playerId: string; fair: number; market: number }> = [];
+  const matched: Array<{ playerId: string; fair: number; ceiling: number; market: number }> = [];
   let totalMarket = 0;
   for (const row of board.players) {
     const sleeperId = row.sleeper_id != null ? String(row.sleeper_id) : '';
@@ -121,9 +121,12 @@ export function dollarValuesFromAuctionBoard(
     const playerId = opts.sleeperIdToPlayerId.get(sleeperId);
     if (!playerId) continue;
     const market = Number(row.market_value) || 0;
+    const fair = rescaleAuctionFair(Number(row.fair) || 1, from, to);
+    const ceiling = Math.max(fair, rescaleAuctionFair(Number(row.max) || fair, from, to));
     matched.push({
       playerId,
-      fair: rescaleAuctionFair(Number(row.fair) || 1, from, to),
+      fair,
+      ceiling,
       market,
     });
     totalMarket += Math.max(0, market);
@@ -136,6 +139,7 @@ export function dollarValuesFromAuctionBoard(
         playerId: p.playerId,
         fairValue: p.fair,
         inflatedValue: p.fair,
+        ceilingValue: p.ceiling,
         vorpShare,
       };
     })

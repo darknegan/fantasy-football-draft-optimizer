@@ -38,6 +38,50 @@ describe('auction room values from sleeperMCP boards', () => {
     const row = state?.values.find((v) => v.playerId === 'josh-allen');
     expect(row?.fairValue).toBe(42);
     expect(row?.inflatedValue).toBe(42);
+    expect(row?.ceilingValue).toBe(47);
     expect(row?.overallRank).toBe(8);
+  });
+
+  it('uses the artifact max as max bid instead of leftover budget', () => {
+    const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen');
+    expect(allen).toBeTruthy();
+    const store = new AppStore([allen!], { auctionBoards: [board] });
+    const { auction } = store.seedDemoLeagues('demo-user');
+    const state = store.auctionState(auction.id);
+    const max = store.auctionMaxBid(auction.id, 'josh-allen');
+    expect(state?.userBudget.remaining).toBe(200);
+    expect(max?.maxBid).toBe(47);
+    expect(max?.reserveForRest).toBe(0);
+  });
+
+  it('orders available players by VOR, not draft score', () => {
+    const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen')!;
+    const star = {
+      ...allen,
+      player: {
+        ...allen.player,
+        id: 'star-rb',
+        name: 'Star RB',
+        position: 'RB' as const,
+        externalIds: { sleeper: '1' },
+      },
+      market: { ...allen.market, projectedPoints: 350 },
+    };
+    const cuff = {
+      ...allen,
+      player: {
+        ...allen.player,
+        id: 'cuff-rb',
+        name: 'Cuff RB',
+        position: 'RB' as const,
+        externalIds: { sleeper: '2' },
+      },
+      market: { ...allen.market, projectedPoints: 200 },
+    };
+    const store = new AppStore([star, cuff], { auctionBoards: [board] });
+    const { auction } = store.seedDemoLeagues('demo-user');
+    const state = store.auctionState(auction.id);
+    expect(state?.values.map((v) => v.playerId)).toEqual(['star-rb', 'cuff-rb']);
+    expect(state?.values[0]!.vor).toBeGreaterThan(state?.values[1]!.vor ?? 0);
   });
 });

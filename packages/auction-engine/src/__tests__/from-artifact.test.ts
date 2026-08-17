@@ -146,8 +146,10 @@ describe('dollarValuesFromAuctionBoard', () => {
     expect(values.map((v) => v.playerId)).toEqual(['jahmyr-gibbs', 'josh-allen']);
     expect(values[0]!.fairValue).toBe(61);
     expect(values[0]!.inflatedValue).toBe(61);
+    expect(values[0]!.ceilingValue).toBe(68);
     expect(values[0]!.vorpShare).toBe(0.7143);
     expect(values[1]!.fairValue).toBe(25);
+    expect(values[1]!.ceilingValue).toBe(28);
     expect(values[1]!.vorpShare).toBe(0.2857);
   });
 });
