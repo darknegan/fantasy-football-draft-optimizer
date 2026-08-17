@@ -17,9 +17,12 @@ import {
   computeInflationRate,
   computeMaxBid,
   DEFAULT_CONTRACT_RULES,
+  dollarValuesFromAuctionBoard,
+  selectAuctionBoard,
   suggestNominations,
   valueContract,
   vorpFromEvaluation,
+  type AuctionValuesArtifact,
 } from '@draftlab/auction-engine';
 import { buildRecVsActual, proposeCalibration, recordOutcome } from '@draftlab/calibration-engine';
 import {
@@ -61,6 +64,7 @@ type CompareCacheEntry = {
 
 export class AppStore {
   private readonly seeds: SeedPlayer[];
+  private readonly auctionBoards: AuctionValuesArtifact[];
   /** Global catalog evaluations (public /api/players). */
   private readonly evaluations = new Map<string, PlayerEvaluation>();
   /** Per-league evaluation caches — recalculate/calibration must not clobber other leagues. */
@@ -73,8 +77,12 @@ export class AppStore {
   private readonly compareCache = new Map<string, CompareCacheEntry>();
   readonly formats = new FormatState();
 
-  constructor(seeds: SeedPlayer[], opts?: { seedDemoUserId?: string }) {
+  constructor(
+    seeds: SeedPlayer[],
+    opts?: { seedDemoUserId?: string; auctionBoards?: AuctionValuesArtifact[] },
+  ) {
     this.seeds = seeds;
+    this.auctionBoards = opts?.auctionBoards ?? [];
     for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
         player: seed.player,
@@ -810,22 +818,57 @@ export class AppStore {
 
     const bids = this.formats.auctionBids.get(leagueId) ?? [];
     const purchased = new Set(bids.map((b) => b.playerId));
-    const baseValues = computeDollarValues(
-      this.seeds.map((s) => ({
-        playerId: s.player.id,
-        position: s.player.position,
-        draftScore: this.getLeagueEvaluation(leagueId, s.player.id)!.draftScore,
-        vorp: vorpFromEvaluation(this.getLeagueEvaluation(leagueId, s.player.id)!),
-      })),
-      {
-        teamCount: league.teamCount,
-        budgetPerTeam: budget,
-        rosterSlots: slots,
-      },
-    );
+    const board = selectAuctionBoard(this.auctionBoards, {
+      scoring: league.scoring,
+      roster: league.roster,
+    });
+    const sleeperIdToPlayerId = new Map<string, string>();
+    for (const seed of this.seeds) {
+      const sleeperId = seed.player.externalIds.sleeper;
+      if (sleeperId) sleeperIdToPlayerId.set(String(sleeperId), seed.player.id);
+    }
+    const baseValues = board
+      ? dollarValuesFromAuctionBoard(board, {
+          sleeperIdToPlayerId,
+          teamCount: league.teamCount,
+          budgetPerTeam: budget,
+          rosterSlots: slots,
+        })
+      : computeDollarValues(
+          this.seeds.map((s) => ({
+            playerId: s.player.id,
+            position: s.player.position,
+            draftScore: this.getLeagueEvaluation(leagueId, s.player.id)!.draftScore,
+            vorp: vorpFromEvaluation(this.getLeagueEvaluation(leagueId, s.player.id)!),
+          })),
+          {
+            teamCount: league.teamCount,
+            budgetPerTeam: budget,
+            rosterSlots: slots,
+          },
+        );
     const inflationRate = computeInflationRate(bids, baseValues);
     const values = applyInflation(baseValues, inflationRate, purchased);
-    return { league, draft, budget, slots, bids, purchased, values, inflationRate };
+    const rankByPlayerId = new Map<string, number>();
+    if (board) {
+      for (const row of board.players) {
+        if (row.sleeper_id == null || row.overall_rank == null) continue;
+        const playerId = sleeperIdToPlayerId.get(String(row.sleeper_id));
+        if (playerId) rankByPlayerId.set(playerId, row.overall_rank);
+      }
+    }
+    return {
+      league,
+      draft,
+      budget,
+      slots,
+      bids,
+      purchased,
+      values,
+      inflationRate,
+      valueBoard: board ? { id: board.id, label: board.label } : null,
+      rankByPlayerId,
+    };
   }
 
   auctionState(leagueId: string) {
@@ -868,6 +911,7 @@ export class AppStore {
           age: s.player.age,
           draftScore: evaluation.draftScore,
           archetype: evaluation.archetype.archetype,
+          overallRank: pool.rankByPlayerId.get(s.player.id) ?? null,
         };
       })
       .sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
@@ -916,6 +960,7 @@ export class AppStore {
       lotNumber: pool.bids.length + 1,
       lotTotal: budgets.reduce((n, b) => n + b.rosterSlotsTotal, 0),
       cap: user.startingBudget,
+      valueBoard: pool.valueBoard,
     };
   }
 

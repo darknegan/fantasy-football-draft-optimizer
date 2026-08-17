@@ -239,7 +239,9 @@ export class AuctionComponent implements OnInit {
     const years = s.contractRules.maxLength;
     const lot = s.lotNumber ?? s.bids.length + 1;
     const total = s.lotTotal ?? teams * s.userBudget.rosterSlotsTotal;
-    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}`;
+    const board = this.state()?.valueBoard?.label;
+    const boardBit = board ? ` · ${board}` : '';
+    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}${boardBit}`;
   }
 
   cap(): number {
@@ -268,9 +270,13 @@ export class AuctionComponent implements OnInit {
   }
 
   playerMeta(player: ValueRow): string {
-    const vorp = Math.round(player.vorpShare * 1000) / 10;
+    const rank = player.overallRank != null ? ` · #${player.overallRank} market` : '';
     const arch = player.archetype ? ` · ${this.formatArchetype(player.archetype)}` : '';
-    return `Age ${player.age} · DraftScore ${Math.round(player.draftScore)}${arch} · ${vorp}% VORP`;
+    return `Age ${player.age} · DraftScore ${Math.round(player.draftScore)}${arch}${rank}`;
+  }
+
+  valueSourceLabel(): string {
+    return this.state()?.valueBoard?.label ?? 'Market fair';
   }
 
   ceilingCopy(): string {

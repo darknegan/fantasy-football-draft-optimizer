@@ -2,6 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  AUCTION_BOARD_IDS,
+  type AuctionBoardId,
+  type AuctionValuesArtifact,
+} from '@draftlab/auction-engine';
+import {
   activateBenchmarkArtifact,
   type BenchmarksArtifact,
 } from '@draftlab/evaluation-engine';
@@ -10,6 +15,10 @@ import {
   type ArtifactsHealthMeta,
 } from './data/artifact-meta.js';
 import { loadArtifacts } from './data/artifact-provider.js';
+import {
+  AUCTION_BOARD_KEYS,
+  loadAuctionBoards,
+} from './data/auction-artifact-provider.js';
 import { createFsArtifactCache } from './data/fs-artifact-cache.js';
 import {
   seedPlayersFromArtifact,
@@ -26,6 +35,22 @@ export function getArtifactMeta(): ArtifactsHealthMeta | null {
 
 function readJsonFile<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf-8')) as T;
+}
+
+function readBootstrapAuctionBoards(
+  dataDir: string,
+): Partial<Record<AuctionBoardId, AuctionValuesArtifact>> {
+  const bootstrap: Partial<Record<AuctionBoardId, AuctionValuesArtifact>> = {};
+  for (const id of AUCTION_BOARD_IDS) {
+    const path = resolve(dataDir, AUCTION_BOARD_KEYS[id]);
+    if (!existsSync(path)) continue;
+    try {
+      bootstrap[id] = readJsonFile<AuctionValuesArtifact>(path);
+    } catch {
+      console.warn(`[store] failed to parse bundled auction board ${id}`);
+    }
+  }
+  return bootstrap;
 }
 
 /**
@@ -61,7 +86,12 @@ export async function createAppStore(): Promise<AppStore> {
       );
     }
     console.log(`[store] loaded ${players.length} players from SLEEPER_MCP_ARTIFACT_PATH`);
-    return new AppStore(players);
+    const dataDir = resolve(moduleDir, '../data');
+    return new AppStore(players, {
+      auctionBoards: Object.values(readBootstrapAuctionBoards(dataDir)).filter(
+        (b): b is AuctionValuesArtifact => b != null,
+      ),
+    });
   }
 
   if (!bootstrapFactors || !bootstrapBenchmarks) {
@@ -75,11 +105,14 @@ export async function createAppStore(): Promise<AppStore> {
     process.env['DRAFTLAB_ARTIFACT_CACHE_DIR'] ??
     resolve(moduleDir, '../.cache/artifacts');
 
+  const cache = createFsArtifactCache(cacheDir);
   const loaded = await loadArtifacts({
-    cache: createFsArtifactCache(cacheDir),
+    cache,
     bootstrapFactors,
     bootstrapBenchmarks,
   });
+  const auctionBootstrap = readBootstrapAuctionBoards(resolve(moduleDir, '../data'));
+  const auctionLoaded = await loadAuctionBoards({ cache, bootstrap: auctionBootstrap });
 
   lastArtifactMeta = artifactMetaFromLoaded(loaded);
   activateBenchmarkArtifact(loaded.benchmarks);
@@ -95,7 +128,8 @@ export async function createAppStore(): Promise<AppStore> {
   }
   console.log(
     `[store] loaded ${players.length} players ` +
-      `(factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource})`,
+      `(factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource}, ` +
+      `auctionBoards=${auctionLoaded.boards.length})`,
   );
-  return new AppStore(players);
+  return new AppStore(players, { auctionBoards: auctionLoaded.boards });
 }

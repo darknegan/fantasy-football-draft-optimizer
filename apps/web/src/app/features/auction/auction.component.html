@@ -88,7 +88,7 @@
                 <div class="bid-stat">
                   <div class="cap">OUR VALUE</div>
                   <div class="bid-stat-val dl-mono accent">${{ player.fairValue }}</div>
-                  <div class="stat-sub">VORP-derived</div>
+                  <div class="stat-sub">{{ valueSourceLabel() }}</div>
                 </div>
                 <div class="bid-stat">
                   <div class="cap">WITH INFLATION</div>
@@ -197,7 +197,10 @@
                   </span>
                   <div class="c-player">
                     <strong>{{ row.name }}</strong>
-                    <div class="meta">Age {{ row.age }} · {{ Math.round(row.vorpShare * 1000) / 10 }}% VORP</div>
+                    <div class="meta">
+                      Age {{ row.age
+                      }}{{ row.overallRank != null ? ' · #' + row.overallRank + ' market' : '' }}
+                    </div>
                   </div>
                   <span class="c-arch">{{
                     row.archetype ? formatArchetype(row.archetype) : '—'
