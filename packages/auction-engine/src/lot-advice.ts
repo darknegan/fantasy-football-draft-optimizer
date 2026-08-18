@@ -16,7 +16,7 @@ export interface AuctionLotAdviceInput {
   fairValue: number;
   inflatedValue: number;
   ceilingValue: number;
-  signed: Array<{ position: Position }>;
+  signed: Array<{ position: Position; amount?: number }>;
   remainingBudget: number;
   slotsLeft: number;
   roster: {
@@ -46,7 +46,17 @@ const STRATEGY_IDS: readonly StrategyId[] = [
 ];
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
-const REPLACEMENT_FLOOR = 5;
+/** Typical startable cost, not the cheapest remaining waiver. */
+const QUALITY_FLOOR: Record<Position | 'FLEX', number> = {
+  QB: 8,
+  RB: 16,
+  WR: 16,
+  TE: 10,
+  FLEX: 14,
+};
+const MIN_PER_STARTER_HOLE = 16;
+const EXPENSIVE_PIECE = 30;
+const MAX_EXPENSIVE_PIECES = 2;
 
 function asStrategyId(id: string | undefined): StrategyId {
   return STRATEGY_IDS.includes(id as StrategyId) ? (id as StrategyId) : 'balanced';
@@ -113,37 +123,23 @@ function remainingStarterHoles(
   return holes;
 }
 
-function cheapestFair(
-  available: Array<{ position: Position; fairValue: number }>,
-  position: Position,
-  used: boolean[],
-): number | null {
-  let best = -1;
-  for (let i = 0; i < available.length; i++) {
-    if (used[i]) continue;
-    const row = available[i]!;
-    if (row.position !== position) continue;
-    if (best < 0 || row.fairValue < available[best]!.fairValue) best = i;
-  }
-  if (best < 0) return null;
-  used[best] = true;
-  return Math.max(REPLACEMENT_FLOOR, available[best]!.fairValue);
-}
-
-function cheapestFlex(
+function qualityPick(
   available: Array<{ position: Position; fairValue: number }>,
   used: boolean[],
-): number | null {
-  let best = -1;
+  match: (row: { position: Position; fairValue: number }) => boolean,
+  floor: number,
+): number {
+  const idxs: number[] = [];
   for (let i = 0; i < available.length; i++) {
     if (used[i]) continue;
-    const row = available[i]!;
-    if (row.position === 'QB') continue;
-    if (best < 0 || row.fairValue < available[best]!.fairValue) best = i;
+    if (!match(available[i]!)) continue;
+    idxs.push(i);
   }
-  if (best < 0) return null;
-  used[best] = true;
-  return Math.max(REPLACEMENT_FLOOR, available[best]!.fairValue);
+  if (!idxs.length) return floor;
+  idxs.sort((a, b) => available[a]!.fairValue - available[b]!.fairValue);
+  const pick = idxs[Math.floor(idxs.length / 2)]!;
+  used[pick] = true;
+  return Math.max(floor, available[pick]!.fairValue);
 }
 
 function replacementReserve(
@@ -152,29 +148,38 @@ function replacementReserve(
   leftoverSlots: number,
 ): { dollars: number; labels: string[] } {
   const used = available.map(() => false);
-  let dollars = 0;
+  let quality = 0;
   const labels: string[] = [];
   let starterSlots = 0;
   for (const hole of holes) {
     starterSlots += hole.count;
     for (let n = 0; n < hole.count; n++) {
-      const cost =
+      quality +=
         hole.position === 'FLEX'
-          ? cheapestFlex(available, used)
-          : cheapestFair(available, hole.position, used);
-      dollars += cost ?? REPLACEMENT_FLOOR;
+          ? qualityPick(available, used, (row) => row.position !== 'QB', QUALITY_FLOOR.FLEX)
+          : qualityPick(
+              available,
+              used,
+              (row) => row.position === hole.position,
+              QUALITY_FLOOR[hole.position],
+            );
     }
     if (hole.position !== 'FLEX') labels.push(hole.position);
     else labels.push('flex');
   }
   const bench = Math.max(0, leftoverSlots - starterSlots);
-  dollars += bench;
-  return { dollars, labels };
+  const spread = starterSlots * MIN_PER_STARTER_HOLE;
+  return { dollars: Math.max(quality, spread) + bench, labels };
+}
+
+function expensiveCount(signed: AuctionLotAdviceInput['signed']): number {
+  return signed.filter((p) => (p.amount ?? 0) >= EXPENSIVE_PIECE).length;
 }
 
 /**
- * Take / pass for the nominated player. Leftover budget and remaining
- * starter holes decide first; strategy fit is only a modifier.
+ * Take / pass for the nominated player. Leftover budget, quality
+ * starter reserves, and a two-star spend cap decide first; strategy
+ * fit is only a modifier. Bargains skip the conservative caps.
  */
 export function recommendAuctionLot(input: AuctionLotAdviceInput): AuctionLotAdvice {
   const strategyId = asStrategyId(input.strategyId);
@@ -199,6 +204,9 @@ export function recommendAuctionLot(input: AuctionLotAdviceInput): AuctionLotAdv
   const cannotBuy = price > input.remainingBudget;
   const cannotStub = leftover < stubNeed;
   const cannotReserve = leftover < reserve.dollars;
+  const starsAlready = expensiveCount(input.signed);
+  const tooManyStars =
+    price >= EXPENSIVE_PIECE && starsAlready >= MAX_EXPENSIVE_PIECES;
   const fillsStarter = need.starterOpen > 0;
 
   let verdict: AuctionLotVerdict = 'take';
@@ -206,6 +214,7 @@ export function recommendAuctionLot(input: AuctionLotAdviceInput): AuctionLotAdv
     | 'cannot_buy'
     | 'stubs'
     | 'reserve'
+    | 'stars'
     | 'avoid'
     | 'no_need'
     | 'wait'
@@ -217,9 +226,12 @@ export function recommendAuctionLot(input: AuctionLotAdviceInput): AuctionLotAdv
   } else if (cannotStub) {
     verdict = 'pass';
     passKind = 'stubs';
-  } else if (cannotReserve) {
+  } else if (!bargain && cannotReserve) {
     verdict = 'pass';
     passKind = 'reserve';
+  } else if (!bargain && tooManyStars) {
+    verdict = 'pass';
+    passKind = 'stars';
   } else if (fit === 'avoid' && !bargain) {
     verdict = 'pass';
     passKind = 'avoid';
@@ -251,7 +263,11 @@ export function recommendAuctionLot(input: AuctionLotAdviceInput): AuctionLotAdv
     } else if (passKind === 'reserve') {
       const needBit = holeLabels.length ? holeLabels.join('/') : 'remaining starters';
       bits.push(
-        `taking him at $${price} leaves $${Math.max(0, leftover)}, not enough to fill remaining ${needBit}`,
+        `taking him at $${price} leaves $${Math.max(0, leftover)}, not enough to round out remaining ${needBit} starters`,
+      );
+    } else if (passKind === 'stars') {
+      bits.push(
+        `you already bought ${starsAlready} expensive players; taking him at $${price} wouldn't leave enough to round out the roster`,
       );
     } else if (passKind === 'avoid') {
       bits.push(`${strategy.name} fades ${input.position} this early (${target.note.replace(/\.$/, '')})`);

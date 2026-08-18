@@ -149,7 +149,10 @@ export class AuctionComponent implements OnInit {
       fairValue: player.fairValue,
       inflatedValue: player.inflatedValue,
       ceilingValue: this.maxBidAmount(),
-      signed: s.signedRoster ?? [],
+      signed: (s.signedRoster ?? []).map((p) => ({
+        position: p.position,
+        amount: p.amount,
+      })),
       remainingBudget: s.userBudget.remaining,
       slotsLeft: this.spotsLeft(),
       roster: shape,

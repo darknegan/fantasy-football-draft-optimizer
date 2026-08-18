@@ -182,4 +182,57 @@ describe('recommendAuctionLot', () => {
     expect(advice.verdict).toBe('take');
     expect(advice.reason).toMatch(/\$8/);
   });
+
+  it('still takes a second expensive WR after one expensive Hero RB', () => {
+    const advice = recommendAuctionLot(
+      base({
+        position: 'WR',
+        playerName: 'Amon-Ra St. Brown',
+        fairValue: 44,
+        inflatedValue: 44,
+        ceilingValue: 52,
+        remainingBudget: 152,
+        slotsLeft: 12,
+        signed: [{ position: 'RB', amount: 48 }],
+      }),
+    );
+    expect(advice.verdict).toBe('take');
+    expect(advice.reason).toMatch(/WR/i);
+  });
+
+  it('passes a third expensive starter even when cheap replacements remain', () => {
+    const advice = recommendAuctionLot(
+      base({
+        position: 'WR',
+        playerName: 'Puka Nacua',
+        fairValue: 50,
+        inflatedValue: 50,
+        ceilingValue: 56,
+        remainingBudget: 110,
+        slotsLeft: 11,
+        signed: [
+          { position: 'RB', amount: 48 },
+          { position: 'WR', amount: 42 },
+        ],
+      }),
+    );
+    expect(advice.verdict).toBe('pass');
+    expect(advice.reason).toMatch(/round out|expensive|starters|budget/i);
+  });
+
+  it('passes a third expensive starter when prior spend amounts are unknown', () => {
+    const advice = recommendAuctionLot(
+      base({
+        position: 'WR',
+        playerName: 'Ja\'Marr Chase',
+        fairValue: 52,
+        inflatedValue: 52,
+        ceilingValue: 58,
+        remainingBudget: 110,
+        slotsLeft: 11,
+        signed: [{ position: 'RB' }, { position: 'WR' }],
+      }),
+    );
+    expect(advice.verdict).toBe('pass');
+  });
 });
