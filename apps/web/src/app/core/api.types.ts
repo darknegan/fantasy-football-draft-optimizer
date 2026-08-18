@@ -381,6 +381,12 @@ export interface AuctionState {
     inflatedValue: number;
     vorpShare: number;
     archetype?: string;
+    overallRank?: number | null;
+    /** Format-weighted VOR over the full board (same formula as the player board). */
+    vor?: number | null;
+    projectedPoints?: number | null;
+    /** Scaled sleeperMCP auction `max` — pay-up-to for this scoring board. */
+    ceilingValue?: number | null;
   }>;
   nominations: Array<{
     playerId: string;
@@ -400,6 +406,8 @@ export interface AuctionState {
   lotNumber?: number;
   lotTotal?: number;
   cap?: number;
+  /** sleeperMCP auction board selected for this league's scoring. */
+  valueBoard?: { id: string; label: string } | null;
 }
 
 export interface MaxBidResult {

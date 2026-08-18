@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import type { AuctionValuesArtifact } from '@draftlab/auction-engine';
 import type { DraftType, LeagueType, RosterShape, StrategyId } from '@draftlab/domain';
 import {
   activateBenchmarkArtifact,
@@ -24,6 +25,9 @@ import {
 import { getDraftSlotInfo } from '@draftlab/strategy-engine';
 import playerFactors from '../../api/data/player_factors.json' with { type: 'json' };
 import benchmarksBootstrap from '../../api/data/benchmarks.json' with { type: 'json' };
+import auction1qbFullPpr from '../../api/data/auction/1qb-full-ppr.json' with { type: 'json' };
+import auction1qbHalfPpr from '../../api/data/auction/1qb-half-ppr.json' with { type: 'json' };
+import auctionSuperflexFullPpr from '../../api/data/auction/superflex-full-ppr.json' with { type: 'json' };
 import { createR2ArtifactCache } from '../../api/src/data/artifact-cache.js';
 import {
   artifactMetaFromLoaded,
@@ -31,6 +35,7 @@ import {
   type ArtifactsHealthMeta,
 } from '../../api/src/data/artifact-meta.js';
 import { loadArtifacts } from '../../api/src/data/artifact-provider.js';
+import { loadAuctionBoards } from '../../api/src/data/auction-artifact-provider.js';
 import {
   seedPlayersFromArtifact,
   type PlayerFactorsArtifact,
@@ -42,7 +47,17 @@ import { updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
 import { loadUserLeagues, ownedLeague, withDb } from './leagues.js';
 import { authRoutes } from './routes/auth.js';
 
-function storeFromFactors(factors: PlayerFactorsArtifact, label: string): AppStore {
+const auctionBootstrap = {
+  '1qb-full-ppr': auction1qbFullPpr as unknown as AuctionValuesArtifact,
+  '1qb-half-ppr': auction1qbHalfPpr as unknown as AuctionValuesArtifact,
+  'superflex-full-ppr': auctionSuperflexFullPpr as unknown as AuctionValuesArtifact,
+};
+
+function storeFromFactors(
+  factors: PlayerFactorsArtifact,
+  label: string,
+  auctionBoards: AuctionValuesArtifact[] = Object.values(auctionBootstrap),
+): AppStore {
   const { players, skipped } = seedPlayersFromArtifact(factors);
   if (players.length === 0) {
     throw new Error(`[worker] loaded 0 players from ${label}`);
@@ -51,7 +66,7 @@ function storeFromFactors(factors: PlayerFactorsArtifact, label: string): AppSto
     console.warn(`[worker] ${skipped.length} artifact player(s) skipped (incomplete bio)`);
   }
   console.log(`[worker] loaded ${players.length} players from ${label}`);
-  return new AppStore(players);
+  return new AppStore(players, { auctionBoards });
 }
 
 // Sync bootstrap so the isolate always has a draftable board before R2 loads.
@@ -65,15 +80,21 @@ let artifactMeta: ArtifactsHealthMeta = bootstrapArtifactMeta(
 let storeInit: Promise<void> | null = null;
 
 async function refreshStoreFromArtifacts(env: Env): Promise<void> {
+  const cache = createR2ArtifactCache(env.ARTIFACTS);
   const loaded = await loadArtifacts({
-    cache: createR2ArtifactCache(env.ARTIFACTS),
+    cache,
     bootstrapFactors: playerFactors as unknown as PlayerFactorsArtifact,
     bootstrapBenchmarks: benchmarksBootstrap as unknown as BenchmarksArtifact,
+  });
+  const auctionLoaded = await loadAuctionBoards({
+    cache,
+    bootstrap: auctionBootstrap,
   });
   activateBenchmarkArtifact(loaded.benchmarks);
   store = storeFromFactors(
     loaded.factors,
-    `provider (factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource})`,
+    `provider (factors=${loaded.factorsSource}, benchmarks=${loaded.benchmarksSource}, auction=${auctionLoaded.boards.length})`,
+    auctionLoaded.boards,
   );
   artifactMeta = artifactMetaFromLoaded(loaded);
 }

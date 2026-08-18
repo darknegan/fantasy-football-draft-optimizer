@@ -444,6 +444,8 @@ export interface AuctionPlayerValue {
   fairValue: number;
   inflatedValue: number;
   vorpShare: number;
+  /** Scaled pay-up-to from the sleeperMCP auction board (`max`). */
+  ceilingValue?: number;
 }
 
 export interface AuctionBid {

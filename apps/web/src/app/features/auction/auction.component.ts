@@ -93,7 +93,9 @@ export class AuctionComponent implements OnInit {
     if (pos !== 'ALL') list = list.filter((v) => v.position === pos);
     const arch = this.archetypeFilter();
     if (arch !== 'all') list = list.filter((v) => (v.archetype ?? '') === arch);
-    return [...list].sort((a, b) => b.draftScore - a.draftScore || b.fairValue - a.fairValue);
+    return [...list].sort(
+      (a, b) => compareAuctionVor(b.vor, a.vor) || b.fairValue - a.fairValue || b.draftScore - a.draftScore,
+    );
   });
 
   readonly archetypes = computed(() => {
@@ -127,12 +129,11 @@ export class AuctionComponent implements OnInit {
   });
 
   readonly maxBidAmount = computed(() => {
+    const player = this.onBlock();
     const m = this.maxBid();
-    if (m && m.playerId === this.onBlock()?.playerId) return m.maxBid;
-    const u = this.state()?.userBudget;
-    if (!u) return 1;
-    const slots = Math.max(1, u.rosterSlotsTotal - u.rosterSlotsFilled);
-    return Math.max(1, u.remaining - Math.max(0, slots - 1));
+    if (m && m.playerId === player?.playerId) return m.maxBid;
+    if (player?.ceilingValue != null) return player.ceilingValue;
+    return player?.inflatedValue ?? player?.fairValue ?? 1;
   });
 
   readonly currentBid = computed(() => {
@@ -239,7 +240,9 @@ export class AuctionComponent implements OnInit {
     const years = s.contractRules.maxLength;
     const lot = s.lotNumber ?? s.bids.length + 1;
     const total = s.lotTotal ?? teams * s.userBudget.rosterSlotsTotal;
-    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}`;
+    const board = this.state()?.valueBoard?.label;
+    const boardBit = board ? ` · ${board}` : '';
+    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}${boardBit}`;
   }
 
   cap(): number {
@@ -268,20 +271,30 @@ export class AuctionComponent implements OnInit {
   }
 
   playerMeta(player: ValueRow): string {
-    const vorp = Math.round(player.vorpShare * 1000) / 10;
+    const rank = player.overallRank != null ? ` · #${player.overallRank} market` : '';
+    const vor = formatAuctionVor(player.vor);
+    const vorBit = vor !== '—' ? ` · VOR ${vor}` : '';
     const arch = player.archetype ? ` · ${this.formatArchetype(player.archetype)}` : '';
-    return `Age ${player.age} · DraftScore ${Math.round(player.draftScore)}${arch} · ${vorp}% VORP`;
+    return `Age ${player.age}${vorBit}${arch}${rank}`;
+  }
+
+  valueSourceLabel(): string {
+    return this.state()?.valueBoard?.label ?? 'Market fair';
+  }
+
+  formatVor(v: number | null | undefined): string {
+    return formatAuctionVor(v);
   }
 
   ceilingCopy(): string {
-    const u = this.state()?.userBudget;
+    const player = this.onBlock();
     const max = this.maxBidAmount();
-    const m = this.maxBid();
-    if (!u) return '';
-    const spots = this.spotsLeft();
-    const reserve = m?.reserveForRest ?? Math.max(0, spots - 1);
-    const share = u.startingBudget > 0 ? Math.round((max / u.startingBudget) * 100) : 0;
-    return `You hold $${u.remaining} with ${spots} roster spots left. Reserving $${reserve} ($1 stubs for the rest of the roster) leaves $${max} as the most you can bid without stranding empty slots — about ${share}% of the starting cap on this nomination.`;
+    const board = this.valueSourceLabel();
+    const fair = player?.fairValue ?? max;
+    const remaining = this.state()?.userBudget.remaining;
+    const remainBit =
+      remaining != null ? ` You still have $${remaining} left on the cap.` : '';
+    return `$${max} is the published pay-up-to on the ${board} board (fair $${fair}), not leftover budget.${remainBit}`;
   }
 
   onArchetype(ev: Event): void {
@@ -341,7 +354,8 @@ export class AuctionComponent implements OnInit {
   placeBid(amount: number): void {
     const player = this.onBlock();
     if (!player || this.bidding()) return;
-    const bid = Math.min(this.maxBidAmount(), Math.max(1, amount));
+    const remaining = this.state()?.userBudget.remaining ?? amount;
+    const bid = Math.min(this.maxBidAmount(), remaining, Math.max(1, amount));
     this.bidding.set(true);
     this.error.set(null);
     this.api
@@ -495,4 +509,16 @@ function buildTeamNeeds(
           : `${filled}/${req} starters`;
     return { position, filled, required: req, open, urgency, label, detail };
   });
+}
+
+function compareAuctionVor(b: number | null | undefined, a: number | null | undefined): number {
+  const av = a == null || Number.isNaN(a) ? Number.NEGATIVE_INFINITY : a;
+  const bv = b == null || Number.isNaN(b) ? Number.NEGATIVE_INFINITY : b;
+  return bv - av;
+}
+
+function formatAuctionVor(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—';
+  const rounded = v.toFixed(1);
+  return v > 0 ? `+${rounded}` : rounded;
 }
