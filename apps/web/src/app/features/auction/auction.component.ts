@@ -93,9 +93,7 @@ export class AuctionComponent implements OnInit {
     if (pos !== 'ALL') list = list.filter((v) => v.position === pos);
     const arch = this.archetypeFilter();
     if (arch !== 'all') list = list.filter((v) => (v.archetype ?? '') === arch);
-    return [...list].sort(
-      (a, b) => compareAuctionVor(b.vor, a.vor) || b.fairValue - a.fairValue || b.draftScore - a.draftScore,
-    );
+    return [...list].sort((a, b) => b.fairValue - a.fairValue || b.draftScore - a.draftScore);
   });
 
   readonly archetypes = computed(() => {
@@ -509,12 +507,6 @@ function buildTeamNeeds(
           : `${filled}/${req} starters`;
     return { position, filled, required: req, open, urgency, label, detail };
   });
-}
-
-function compareAuctionVor(b: number | null | undefined, a: number | null | undefined): number {
-  const av = a == null || Number.isNaN(a) ? Number.NEGATIVE_INFINITY : a;
-  const bv = b == null || Number.isNaN(b) ? Number.NEGATIVE_INFINITY : b;
-  return bv - av;
 }
 
 function formatAuctionVor(v: number | null | undefined): string {
