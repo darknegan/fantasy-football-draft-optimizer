@@ -54,34 +54,58 @@ describe('auction room values from sleeperMCP boards', () => {
     expect(max?.reserveForRest).toBe(0);
   });
 
-  it('orders available players by VOR, not draft score', () => {
+  it('orders available players by fair price, not VOR', () => {
     const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen')!;
-    const star = {
+    const cheap = {
       ...allen,
       player: {
         ...allen.player,
-        id: 'star-rb',
-        name: 'Star RB',
+        id: 'cheap-rb',
+        name: 'Cheap RB',
         position: 'RB' as const,
         externalIds: { sleeper: '1' },
       },
       market: { ...allen.market, projectedPoints: 350 },
     };
-    const cuff = {
+    const pricey = {
       ...allen,
       player: {
         ...allen.player,
-        id: 'cuff-rb',
-        name: 'Cuff RB',
+        id: 'pricey-rb',
+        name: 'Pricey RB',
         position: 'RB' as const,
         externalIds: { sleeper: '2' },
       },
       market: { ...allen.market, projectedPoints: 200 },
     };
-    const store = new AppStore([star, cuff], { auctionBoards: [board] });
+    const pricedBoard: AuctionValuesArtifact = {
+      ...board,
+      players: [
+        {
+          name: 'Cheap RB',
+          position: 'RB',
+          team: 'BUF',
+          sleeper_id: '1',
+          market_value: 1000,
+          fair: 10,
+          max: 12,
+        },
+        {
+          name: 'Pricey RB',
+          position: 'RB',
+          team: 'BUF',
+          sleeper_id: '2',
+          market_value: 4000,
+          fair: 50,
+          max: 55,
+        },
+      ],
+    };
+    const store = new AppStore([cheap, pricey], { auctionBoards: [pricedBoard] });
     const { auction } = store.seedDemoLeagues('demo-user');
     const state = store.auctionState(auction.id);
-    expect(state?.values.map((v) => v.playerId)).toEqual(['star-rb', 'cuff-rb']);
-    expect(state?.values[0]!.vor).toBeGreaterThan(state?.values[1]!.vor ?? 0);
+    expect(state?.values.map((v) => v.playerId)).toEqual(['pricey-rb', 'cheap-rb']);
+    expect(state?.values[0]!.fairValue).toBeGreaterThan(state?.values[1]!.fairValue);
+    expect(state?.values[0]!.vor).toBeLessThan(state?.values[1]!.vor ?? 0);
   });
 });

@@ -930,7 +930,7 @@ export class AppStore {
           projectedPoints: s.market.projectedPoints ?? null,
         };
       })
-      .sort((a, b) => compareAuctionVor(b.vor, a.vor) || b.fairValue - a.fairValue);
+      .sort((a, b) => b.fairValue - a.fairValue || b.draftScore - a.draftScore);
 
     const toSigned = (b: (typeof pool.bids)[number]): {
       playerId: string;
@@ -1159,13 +1159,6 @@ export class AppStore {
     }
     return out;
   }
-}
-
-/** Descending VOR; missing values sort last (same idea as the player board). */
-function compareAuctionVor(b: number | null | undefined, a: number | null | undefined): number {
-  const av = a == null || Number.isNaN(a) ? Number.NEGATIVE_INFINITY : a;
-  const bv = b == null || Number.isNaN(b) ? Number.NEGATIVE_INFINITY : b;
-  return bv - av;
 }
 
 /** Keep Monte Carlo runs inside Worker CPU budgets while still supporting Figma-scale controls. */
