@@ -6,3 +6,4 @@ export * from './nominations.js';
 export * from './contracts.js';
 export * from './budgets.js';
 export * from './lot-advice.js';
+export * from './next-targets.js';

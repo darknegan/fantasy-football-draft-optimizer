@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { recommendAuctionLot } from '@draftlab/auction-engine';
+import { recommendAuctionLot, suggestNextTargets } from '@draftlab/auction-engine';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
@@ -211,33 +211,27 @@ export class AuctionComponent implements OnInit {
           ? `${spotsLeft} flex/bench spot${spotsLeft === 1 ? '' : 's'} left`
           : 'Roster complete';
 
-      const targets: TeamTargetView[] = [];
-      const used = new Set<string>();
-      for (const need of [...needs].sort((a, c) => urgencyRank(c.urgency) - urgencyRank(a.urgency))) {
-        if (need.open <= 0 || targets.length >= 3) continue;
-        const affordable = available
-          .filter(
-            (v) =>
-              v.position === need.position &&
-              !used.has(v.playerId) &&
-              v.inflatedValue <= Math.max(1, Math.min(b.remaining, Math.max(perSlot * 2, perSlot))),
-          )
-          .sort((a, c) => c.draftScore - a.draftScore)[0];
-        const pick =
-          affordable ??
-          available
-            .filter((v) => v.position === need.position && !used.has(v.playerId))
-            .sort((a, c) => a.inflatedValue - c.inflatedValue)[0];
-        if (!pick) continue;
-        used.add(pick.playerId);
-        targets.push({
-          playerId: pick.playerId,
-          name: pick.name,
-          position: pick.position,
-          inflatedValue: pick.inflatedValue,
-          draftScore: pick.draftScore,
-        });
-      }
+      const targets = suggestNextTargets({
+        strategyId: league?.strategyId,
+        signed: players.map((p) => ({
+          playerId: p.playerId,
+          position: p.position,
+          amount: p.amount,
+        })),
+        remainingBudget: b.remaining,
+        slotsLeft: spotsLeft,
+        roster: shape,
+        available: available.map((v) => ({
+          playerId: v.playerId,
+          name: v.name,
+          position: v.position,
+          fairValue: v.fairValue,
+          inflatedValue: v.inflatedValue,
+          draftScore: v.draftScore,
+          ceilingValue: v.ceilingValue,
+        })),
+        limit: 3,
+      });
 
       return {
         rosterId: b.rosterId,
@@ -459,14 +453,6 @@ export class AuctionComponent implements OnInit {
         error: () => this.contract.set(null),
       });
   }
-}
-
-function urgencyRank(u: NeedUrgency): number {
-  if (u === 'critical') return 4;
-  if (u === 'high') return 3;
-  if (u === 'moderate') return 2;
-  if (u === 'low') return 1;
-  return 0;
 }
 
 function buildTeamNeeds(

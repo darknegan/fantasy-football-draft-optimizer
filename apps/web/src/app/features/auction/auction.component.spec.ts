@@ -219,4 +219,65 @@ describe('AuctionComponent on-the-block', () => {
     expect(signed?.textContent).toContain('Breece Hall');
     expect(signed?.textContent).toContain('$33');
   });
+
+  it('recommends mid-tier next players after two expensive signings', async () => {
+    const brokeYou = { ...you, remaining: 110, spent: 90, rosterSlotsFilled: 2 };
+    const values = [
+      { playerId: 'cmc', name: 'Christian McCaffrey', position: 'RB' as const, age: 28, draftScore: 99, fairValue: 58, inflatedValue: 58, vorpShare: 0.2 },
+      { playerId: 'chase', name: "Ja'Marr Chase", position: 'WR' as const, age: 25, draftScore: 97, fairValue: 54, inflatedValue: 54, vorpShare: 0.18 },
+      { playerId: 'jefferson', name: 'Justin Jefferson', position: 'WR' as const, age: 26, draftScore: 95, fairValue: 50, inflatedValue: 50, vorpShare: 0.16 },
+      { ...hall, playerId: 'breece-hall', name: 'Breece Hall', draftScore: 88, fairValue: 42, inflatedValue: 42 },
+      { playerId: 'olave', name: 'Chris Olave', position: 'WR' as const, age: 25, draftScore: 60, fairValue: 15, inflatedValue: 15, vorpShare: 0.04 },
+      { playerId: 'conner', name: 'James Conner', position: 'RB' as const, age: 30, draftScore: 62, fairValue: 16, inflatedValue: 16, vorpShare: 0.04 },
+      { playerId: 'baker', name: 'Baker Mayfield', position: 'QB' as const, age: 30, draftScore: 55, fairValue: 12, inflatedValue: 12, vorpShare: 0.02 },
+      { playerId: 'ferguson', name: 'Jake Ferguson', position: 'TE' as const, age: 26, draftScore: 48, fairValue: 10, inflatedValue: 10, vorpShare: 0.02 },
+      { playerId: 'shaheed', name: 'Rashid Shaheed', position: 'WR' as const, age: 27, draftScore: 30, fairValue: 5, inflatedValue: 5, vorpShare: 0.01 },
+      { playerId: 'rb-a', name: 'Depth RB', position: 'RB' as const, age: 24, draftScore: 24, fairValue: 6, inflatedValue: 6, vorpShare: 0.01 },
+      { playerId: 'wr-a', name: 'Depth WR', position: 'WR' as const, age: 24, draftScore: 16, fairValue: 4, inflatedValue: 4, vorpShare: 0.01 },
+      { playerId: 'qb-a', name: 'Depth QB', position: 'QB' as const, age: 24, draftScore: 14, fairValue: 4, inflatedValue: 4, vorpShare: 0.01 },
+      { playerId: 'te-a', name: 'Depth TE', position: 'TE' as const, age: 24, draftScore: 14, fairValue: 4, inflatedValue: 4, vorpShare: 0.01 },
+    ];
+    const { fixture } = await createAuction(
+      makeState({
+        values,
+        userBudget: brokeYou,
+        budgets: [brokeYou, rival],
+        signedRoster: [
+          { playerId: 'rb1', name: 'Star RB', position: 'RB', amount: 48, contractYears: 1, team: 'SF' },
+          { playerId: 'wr1', name: 'Star WR', position: 'WR', amount: 42, contractYears: 1, team: 'CIN' },
+        ],
+        teamRosters: [
+          {
+            rosterId: you.rosterId,
+            name: you.name,
+            players: [
+              { playerId: 'rb1', name: 'Star RB', position: 'RB', amount: 48, contractYears: 1, team: 'SF' },
+              { playerId: 'wr1', name: 'Star WR', position: 'WR', amount: 42, contractYears: 1, team: 'CIN' },
+            ],
+          },
+          { rosterId: rival.rosterId, name: rival.name, players: [] },
+        ],
+      }),
+    );
+    const root: HTMLElement = fixture.nativeElement;
+    const roomTab = Array.from(root.querySelectorAll('.panel-tab')).find((el) =>
+      el.textContent?.includes('Budgets'),
+    ) as HTMLButtonElement;
+    roomTab.click();
+    fixture.detectChanges();
+
+    const youCard = Array.from(root.querySelectorAll('.team-room')).find((node) =>
+      node.classList.contains('you'),
+    );
+    const rec = youCard?.querySelector('.team-targets')?.textContent ?? '';
+    expect(rec).toMatch(/Recommended next/i);
+    expect(rec).not.toContain('Christian McCaffrey');
+    expect(rec).not.toContain("Ja'Marr Chase");
+    expect(rec).not.toContain('Justin Jefferson');
+    const prices = Array.from(youCard?.querySelectorAll('.team-targets .dl-mono') ?? []).map((el) =>
+      Number((el.textContent ?? '').replace('$', '')),
+    );
+    expect(prices.length).toBeGreaterThan(0);
+    expect(prices.every((n) => n < 30)).toBe(true);
+  });
 });
