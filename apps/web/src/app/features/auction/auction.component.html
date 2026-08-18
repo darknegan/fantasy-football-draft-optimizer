@@ -103,10 +103,8 @@
                 <button type="submit" class="bid-primary" [disabled]="bidding() || !canConfirmWinner()">
                   Confirm
                 </button>
-                @if (winnerTeam(); as team) {
-                  @if (winnerAmount() > team.remaining) {
-                    <p class="pass-note">{{ team.name }} only has ${{ team.remaining }} left</p>
-                  }
+                @if (winnerBudgetNote(); as note) {
+                  <p class="pass-note">{{ note }}</p>
                 }
               </form>
             </div>

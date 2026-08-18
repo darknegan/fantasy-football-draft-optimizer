@@ -148,6 +148,26 @@ describe('AuctionComponent on-the-block', () => {
     expect(advice!.textContent).toMatch(/Hero RB/i);
   });
 
+  it('passes when leftover budget cannot cover the nominated price', async () => {
+    const brokeYou = { ...you, remaining: 10, spent: 190, rosterSlotsFilled: 5 };
+    const { fixture } = await createAuction(
+      makeState({
+        values: [{ ...hall, position: 'WR', name: 'Puka Nacua', playerId: 'puka-nacua', fairValue: 50, inflatedValue: 49, ceilingValue: 56 }],
+        userBudget: brokeYou,
+        budgets: [brokeYou, rival],
+        signedRoster: [
+          { playerId: 'rb1', name: 'RB1', position: 'RB', amount: 40, contractYears: 1, team: 'BUF' },
+          { playerId: 'rb2', name: 'RB2', position: 'RB', amount: 30, contractYears: 1, team: 'KC' },
+        ],
+      }),
+    );
+    const advice = fixture.nativeElement.querySelector('.lot-advice') as HTMLElement | null;
+    expect(advice?.textContent).toMatch(/Pass/i);
+    expect(advice?.textContent).toMatch(/\$10/);
+    const amount = fixture.nativeElement.querySelector('.winner-form input') as HTMLInputElement;
+    expect(Number(amount.value)).toBeLessThanOrEqual(10);
+  });
+
   it('records the winning team and price, then removes the player from the board', async () => {
     const after = makeState({
       values: [],

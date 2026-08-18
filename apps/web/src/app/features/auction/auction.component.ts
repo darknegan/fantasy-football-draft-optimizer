@@ -141,6 +141,7 @@ export class AuctionComponent implements OnInit {
     const s = this.state();
     if (!player || !s) return null;
     const shape = this.league()?.roster ?? DEFAULT_ROSTER;
+    const biddingForSelf = this.winnerRosterId() === s.userBudget.rosterId;
     return recommendAuctionLot({
       strategyId: this.league()?.strategyId,
       position: player.position,
@@ -152,6 +153,10 @@ export class AuctionComponent implements OnInit {
       remainingBudget: s.userBudget.remaining,
       slotsLeft: this.spotsLeft(),
       roster: shape,
+      available: s.values
+        .filter((v) => v.playerId !== player.playerId)
+        .map((v) => ({ position: v.position, fairValue: v.fairValue })),
+      contemplatedPrice: biddingForSelf ? this.winnerAmount() : undefined,
     });
   });
 
@@ -164,6 +169,15 @@ export class AuctionComponent implements OnInit {
     const team = this.winnerTeam();
     const amount = this.winnerAmount();
     return Boolean(this.onBlock() && team && amount >= 1 && amount <= team.remaining);
+  });
+
+  readonly winnerBudgetNote = computed(() => {
+    const team = this.winnerTeam();
+    if (!team || this.winnerAmount() <= team.remaining) return null;
+    const isYou = team.rosterId === this.state()?.userBudget.rosterId;
+    return isYou
+      ? `You only have $${team.remaining} left`
+      : `${team.name} only has $${team.remaining} left`;
   });
 
   readonly signedRoster = computed(
@@ -291,6 +305,7 @@ export class AuctionComponent implements OnInit {
 
   onWinnerTeam(ev: Event): void {
     this.winnerRosterId.set((ev.target as HTMLSelectElement).value);
+    this.clampWinnerAmount();
   }
 
   onWinnerAmount(ev: Event): void {
@@ -417,6 +432,7 @@ export class AuctionComponent implements OnInit {
   private refreshLot(playerId: string): void {
     const row = this.state()?.values.find((v) => v.playerId === playerId);
     this.winnerAmount.set(Math.max(1, row?.inflatedValue ?? 1));
+    this.clampWinnerAmount();
 
     this.api.auctionMaxBid(this.leagueId, playerId).subscribe({
       next: (m) => this.maxBid.set(m),
@@ -424,6 +440,12 @@ export class AuctionComponent implements OnInit {
     });
 
     if (row) this.loadContract(playerId, row.inflatedValue, this.contractYears());
+  }
+
+  private clampWinnerAmount(): void {
+    const cap = this.winnerTeam()?.remaining;
+    if (cap == null) return;
+    if (this.winnerAmount() > cap) this.winnerAmount.set(Math.max(1, cap));
   }
 
   private loadContract(playerId: string, annualSalary: number, years: number): void {
