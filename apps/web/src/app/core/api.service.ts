@@ -192,7 +192,7 @@ export class ApiService {
     return this.http.get<AuctionState>(`/api/leagues/${leagueId}/auction/values`);
   }
 
-  auctionBid(leagueId: string, body: { playerId: string; amount: number; contractYears?: number }) {
+  auctionBid(leagueId: string, body: { playerId: string; amount: number; rosterId?: string; contractYears?: number }) {
     return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/bid`, body);
   }
 

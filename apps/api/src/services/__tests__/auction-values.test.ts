@@ -108,4 +108,28 @@ describe('auction room values from sleeperMCP boards', () => {
     expect(state?.values[0]!.fairValue).toBeGreaterThan(state?.values[1]!.fairValue);
     expect(state?.values[0]!.vor).toBeLessThan(state?.values[1]!.vor ?? 0);
   });
+
+  it('assigns a purchased player to the winning roster, not always the user', () => {
+    const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen')!;
+    const store = new AppStore([allen], { auctionBoards: [board] });
+    const { auction } = store.seedDemoLeagues('demo-user');
+    const before = store.auctionState(auction.id)!;
+    const rival = before.budgets.find((b) => b.rosterId !== before.userBudget.rosterId)!;
+    const result = store.placeAuctionBid(auction.id, {
+      playerId: 'josh-allen',
+      amount: 33,
+      rosterId: rival.rosterId,
+    });
+    expect(result && 'error' in result).toBe(false);
+    const state = result as NonNullable<typeof before>;
+    expect(state.values.find((v) => v.playerId === 'josh-allen')).toBeUndefined();
+    const winner = state.teamRosters?.find((t) => t.rosterId === rival.rosterId);
+    expect(winner?.players.map((p) => p.playerId)).toEqual(['josh-allen']);
+    expect(winner?.players[0]?.amount).toBe(33);
+    expect(state.budgets.find((b) => b.rosterId === rival.rosterId)?.remaining).toBe(
+      rival.remaining - 33,
+    );
+    expect(state.userBudget.remaining).toBe(before.userBudget.remaining);
+    expect(state.signedRoster?.some((p) => p.playerId === 'josh-allen')).toBe(false);
+  });
 });
