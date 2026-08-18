@@ -39,7 +39,6 @@
                 <img class="live-dot" src="/auction/live-dot.svg" width="8" height="8" alt="" />
                 <span>ON THE BLOCK</span>
               </div>
-              <span class="timer dl-mono">Open lot</span>
             </div>
 
             <div class="on-block-body">
@@ -48,60 +47,69 @@
                   <span class="pos" [class]="player.position">{{ player.position }}</span>
                   <strong>{{ player.name }}</strong>
                 </div>
-                <p class="player-meta">{{ playerMeta(player) }}</p>
 
-                <div class="bid-actions">
-                  <button
-                    type="button"
-                    class="bid-primary"
-                    [disabled]="bidding()"
-                    (click)="placeBid(suggestedBid())"
-                  >
-                    Bid ${{ suggestedBid() }}
-                  </button>
-                  <button type="button" class="bid-chip" (click)="bumpBid(5)" [disabled]="bidding()">
-                    +$5
-                  </button>
-                  <button type="button" class="bid-chip" (click)="bumpBid(10)" [disabled]="bidding()">
-                    +$10
-                  </button>
-                  <button
-                    type="button"
-                    class="bid-chip"
-                    (click)="placeBid(maxBidAmount())"
-                    [disabled]="bidding() || maxBidAmount() < 1"
-                  >
-                    Bid max ${{ maxBidAmount() }}
-                  </button>
+                <div class="bid-stats">
+                  <div class="bid-stat">
+                    <div class="cap">MIN BID</div>
+                    <div class="bid-stat-val dl-mono">${{ minBid() }}</div>
+                    <div class="stat-sub">auction floor</div>
+                  </div>
+                  <div class="bid-stat">
+                    <div class="cap">MAX BID</div>
+                    <div class="bid-stat-val dl-mono">${{ maxBidAmount() }}</div>
+                    <div class="stat-sub">pay-up-to</div>
+                  </div>
+                  <div class="bid-stat">
+                    <div class="cap">OUR VALUE</div>
+                    <div class="bid-stat-val dl-mono accent">${{ player.fairValue }}</div>
+                    <div class="stat-sub">{{ valueSourceLabel() }}</div>
+                  </div>
+                  <div class="bid-stat">
+                    <div class="cap">WITH INFLATION</div>
+                    <div class="bid-stat-val dl-mono warn">${{ player.inflatedValue }}</div>
+                    <div class="stat-sub">fair price now</div>
+                  </div>
                 </div>
-                <p class="pass-note">
-                  Passing keeps ${{ state()!.userBudget.remaining }} for {{ spotsLeft() }} spots
-                </p>
+
+                @if (lotAdvice(); as advice) {
+                  <aside class="lot-advice" [class.take]="advice.verdict === 'take'" [class.pass]="advice.verdict === 'pass'">
+                    <strong>{{ advice.headline }}</strong>
+                    <p>{{ advice.reason }}</p>
+                  </aside>
+                }
               </div>
 
-              <div class="bid-stats">
-                <div class="bid-stat">
-                  <div class="cap">CURRENT BID</div>
-                  <div class="bid-stat-val dl-mono">${{ currentBid() }}</div>
-                  <div class="stat-sub">{{ highBidderLabel() }}</div>
-                </div>
-                <div class="bid-stat">
-                  <div class="cap">OUR VALUE</div>
-                  <div class="bid-stat-val dl-mono accent">${{ player.fairValue }}</div>
-                  <div class="stat-sub">{{ valueSourceLabel() }}</div>
-                </div>
-                <div class="bid-stat">
-                  <div class="cap">WITH INFLATION</div>
-                  <div class="bid-stat-val dl-mono warn">${{ player.inflatedValue }}</div>
-                  <div class="stat-sub">fair price now</div>
-                </div>
-              </div>
+              <form class="winner-form" (submit)="$event.preventDefault(); confirmWinner()">
+                <label>
+                  Who won the bid
+                  <select [value]="winnerRosterId() ?? ''" (change)="onWinnerTeam($event)">
+                    @for (team of teamRooms(); track team.rosterId) {
+                      <option [value]="team.rosterId">
+                        {{ team.label }} · ${{ team.remaining }} left
+                      </option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Amount spent
+                  <input
+                    type="number"
+                    min="1"
+                    inputmode="numeric"
+                    [value]="winnerAmount()"
+                    (input)="onWinnerAmount($event)"
+                  />
+                </label>
+                <button type="submit" class="bid-primary" [disabled]="bidding() || !canConfirmWinner()">
+                  Confirm
+                </button>
+                @if (winnerTeam(); as team) {
+                  @if (winnerAmount() > team.remaining) {
+                    <p class="pass-note">{{ team.name }} only has ${{ team.remaining }} left</p>
+                  }
+                }
+              </form>
             </div>
-
-            <aside class="ceiling-note">
-              <strong>Why ${{ maxBidAmount() }} is your ceiling</strong>
-              <p>{{ ceilingCopy() }}</p>
-            </aside>
           </section>
         } @else {
           <section class="on-block empty">
@@ -137,7 +145,7 @@
           <section class="avail-block" role="tabpanel" aria-label="Available players">
             <div class="avail-head">
               <h2>Available players</h2>
-              <span class="chip">Ranked by VOR</span>
+              <span class="chip">Ranked by fair price</span>
               <span class="spacer"></span>
               <span class="list-count dl-mono">{{ availablePlayers().length }} remaining</span>
             </div>
@@ -176,7 +184,6 @@
               <span class="c-arch">ARCHETYPE</span>
               <span class="c-fair">FAIR</span>
               <span class="c-inf">INFL</span>
-              <span class="c-score">VOR</span>
             </div>
 
             <div class="avail-list" role="listbox" aria-label="Available auction players">
@@ -207,7 +214,6 @@
                   }}</span>
                   <span class="c-fair dl-mono">${{ row.fairValue }}</span>
                   <span class="c-inf dl-mono warn">${{ row.inflatedValue }}</span>
-                  <span class="c-score dl-mono">{{ formatVor(row.vor) }}</span>
                 </article>
               } @empty {
                 <div class="empty-recs">

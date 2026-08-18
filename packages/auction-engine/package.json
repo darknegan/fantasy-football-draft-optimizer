@@ -16,7 +16,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@draftlab/domain": "*"
+    "@draftlab/domain": "*",
+    "@draftlab/strategy-engine": "*"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

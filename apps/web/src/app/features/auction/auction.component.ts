@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { recommendAuctionLot } from '@draftlab/auction-engine';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
@@ -69,7 +70,6 @@ export class AuctionComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly posTabs = POS_TABS;
-  readonly Math = Math;
 
   leagueId = '';
   readonly loading = signal(true);
@@ -81,11 +81,11 @@ export class AuctionComponent implements OnInit {
   readonly bidding = signal(false);
   readonly selectedId = signal<string | null>(null);
   readonly contractYears = signal(4);
-  /** Local bid ladder for the active nomination (starts just under inflated value). */
-  readonly ladderBid = signal(1);
   readonly posFilter = signal<PosFilter>('ALL');
   readonly archetypeFilter = signal('all');
   readonly mainTab = signal<MainTab>('available');
+  readonly winnerRosterId = signal<string | null>(null);
+  readonly winnerAmount = signal(1);
 
   readonly availablePlayers = computed((): ValueRow[] => {
     let list = this.state()?.values ?? [];
@@ -134,15 +134,36 @@ export class AuctionComponent implements OnInit {
     return player?.inflatedValue ?? player?.fairValue ?? 1;
   });
 
-  readonly currentBid = computed(() => {
+  readonly minBid = computed(() => 1);
+
+  readonly lotAdvice = computed(() => {
     const player = this.onBlock();
-    if (!player) return 1;
-    return Math.max(1, Math.min(this.ladderBid(), this.maxBidAmount()));
+    const s = this.state();
+    if (!player || !s) return null;
+    const shape = this.league()?.roster ?? DEFAULT_ROSTER;
+    return recommendAuctionLot({
+      strategyId: this.league()?.strategyId,
+      position: player.position,
+      playerName: player.name,
+      fairValue: player.fairValue,
+      inflatedValue: player.inflatedValue,
+      ceilingValue: this.maxBidAmount(),
+      signed: s.signedRoster ?? [],
+      remainingBudget: s.userBudget.remaining,
+      slotsLeft: this.spotsLeft(),
+      roster: shape,
+    });
   });
 
-  readonly suggestedBid = computed(() => {
-    const next = this.currentBid() + 1;
-    return Math.min(this.maxBidAmount(), Math.max(next, this.currentBid()));
+  readonly winnerTeam = computed(() => {
+    const id = this.winnerRosterId();
+    return this.state()?.budgets.find((b) => b.rosterId === id) ?? null;
+  });
+
+  readonly canConfirmWinner = computed(() => {
+    const team = this.winnerTeam();
+    const amount = this.winnerAmount();
+    return Boolean(this.onBlock() && team && amount >= 1 && amount <= team.remaining);
   });
 
   readonly signedRoster = computed(
@@ -264,35 +285,17 @@ export class AuctionComponent implements OnInit {
     return 'prices near fair value';
   }
 
-  highBidderLabel(): string {
-    return 'Floor bid';
-  }
-
-  playerMeta(player: ValueRow): string {
-    const rank = player.overallRank != null ? ` · #${player.overallRank} market` : '';
-    const vor = formatAuctionVor(player.vor);
-    const vorBit = vor !== '—' ? ` · VOR ${vor}` : '';
-    const arch = player.archetype ? ` · ${this.formatArchetype(player.archetype)}` : '';
-    return `Age ${player.age}${vorBit}${arch}${rank}`;
-  }
-
   valueSourceLabel(): string {
     return this.state()?.valueBoard?.label ?? 'Market fair';
   }
 
-  formatVor(v: number | null | undefined): string {
-    return formatAuctionVor(v);
+  onWinnerTeam(ev: Event): void {
+    this.winnerRosterId.set((ev.target as HTMLSelectElement).value);
   }
 
-  ceilingCopy(): string {
-    const player = this.onBlock();
-    const max = this.maxBidAmount();
-    const board = this.valueSourceLabel();
-    const fair = player?.fairValue ?? max;
-    const remaining = this.state()?.userBudget.remaining;
-    const remainBit =
-      remaining != null ? ` You still have $${remaining} left on the cap.` : '';
-    return `$${max} is the published pay-up-to on the ${board} board (fair $${fair}), not leftover budget.${remainBit}`;
+  onWinnerAmount(ev: Event): void {
+    const n = Number((ev.target as HTMLInputElement).value);
+    this.winnerAmount.set(Number.isFinite(n) ? Math.max(1, Math.round(n)) : 1);
   }
 
   onArchetype(ev: Event): void {
@@ -344,32 +347,30 @@ export class AuctionComponent implements OnInit {
     if (player) this.loadContract(player.playerId, player.inflatedValue, years);
   }
 
-  bumpBid(delta: number): void {
-    const next = Math.min(this.maxBidAmount(), this.currentBid() + delta);
-    this.ladderBid.set(next);
-  }
-
-  placeBid(amount: number): void {
+  confirmWinner(): void {
     const player = this.onBlock();
-    if (!player || this.bidding()) return;
-    const remaining = this.state()?.userBudget.remaining ?? amount;
-    const bid = Math.min(this.maxBidAmount(), remaining, Math.max(1, amount));
+    const rosterId = this.winnerRosterId();
+    const team = this.winnerTeam();
+    if (!player || !rosterId || !team || this.bidding() || !this.canConfirmWinner()) return;
+    const amount = Math.min(team.remaining, Math.max(1, this.winnerAmount()));
     this.bidding.set(true);
     this.error.set(null);
     this.api
       .auctionBid(this.leagueId, {
         playerId: player.playerId,
-        amount: bid,
+        amount,
+        rosterId,
         contractYears: this.contractYears(),
       })
       .subscribe({
         next: (s) => {
           this.applyState(s);
+          this.mainTab.set('room');
           this.bidding.set(false);
         },
         error: (err: { error?: { error?: string }; message?: string }) => {
           this.bidding.set(false);
-          this.error.set(err?.error?.error ?? err?.message ?? 'Bid failed');
+          this.error.set(err?.error?.error ?? err?.message ?? 'Could not record the winning bid.');
         },
       });
   }
@@ -398,6 +399,9 @@ export class AuctionComponent implements OnInit {
     const maxLen = s.contractRules.maxLength ?? 4;
     if (this.contractYears() > maxLen) this.contractYears.set(maxLen);
 
+    const stillValid = s.budgets.some((b) => b.rosterId === this.winnerRosterId());
+    if (!stillValid) this.winnerRosterId.set(s.userBudget.rosterId);
+
     const preferred =
       this.selectedId() && s.values.some((v) => v.playerId === this.selectedId())
         ? this.selectedId()!
@@ -412,14 +416,10 @@ export class AuctionComponent implements OnInit {
 
   private refreshLot(playerId: string): void {
     const row = this.state()?.values.find((v) => v.playerId === playerId);
-    const floor = Math.max(1, (row?.inflatedValue ?? 10) - 6);
-    this.ladderBid.set(floor);
+    this.winnerAmount.set(Math.max(1, row?.inflatedValue ?? 1));
 
     this.api.auctionMaxBid(this.leagueId, playerId).subscribe({
-      next: (m) => {
-        this.maxBid.set(m);
-        if (this.ladderBid() > m.maxBid) this.ladderBid.set(Math.max(1, m.maxBid - 1));
-      },
+      next: (m) => this.maxBid.set(m),
       error: () => this.maxBid.set(null),
     });
 
@@ -507,10 +507,4 @@ function buildTeamNeeds(
           : `${filled}/${req} starters`;
     return { position, filled, required: req, open, urgency, label, detail };
   });
-}
-
-function formatAuctionVor(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—';
-  const rounded = v.toFixed(1);
-  return v > 0 ? `+${rounded}` : rounded;
 }
