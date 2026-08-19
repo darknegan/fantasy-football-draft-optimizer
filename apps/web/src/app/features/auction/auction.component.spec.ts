@@ -85,8 +85,25 @@ function makeState(overrides: Partial<AuctionState> = {}): AuctionState {
 
 async function createAuction(
   state: AuctionState,
-  bid = vi.fn(() => of(state)),
+  extras: {
+    bid?: ReturnType<typeof vi.fn>;
+    renameAuctionTeam?: ReturnType<typeof vi.fn>;
+  } = {},
 ) {
+  const bid = extras.bid ?? vi.fn(() => of(state));
+  const renameAuctionTeam =
+    extras.renameAuctionTeam ??
+    vi.fn((_: string, rosterId: string, name: string) =>
+      of({
+        ...state,
+        budgets: state.budgets.map((b) => (b.rosterId === rosterId ? { ...b, name } : b)),
+        userBudget:
+          state.userBudget.rosterId === rosterId ? { ...state.userBudget, name } : state.userBudget,
+        teamRosters: (state.teamRosters ?? []).map((t) =>
+          t.rosterId === rosterId ? { ...t, name } : t,
+        ),
+      }),
+    );
   await TestBed.configureTestingModule({
     imports: [AuctionComponent],
     providers: [
@@ -97,6 +114,7 @@ async function createAuction(
           league: () => of(makeLeague()),
           auctionState: () => of(state),
           auctionBid: bid,
+          renameAuctionTeam,
           auctionMaxBid: () =>
             of({
               playerId: hall.playerId,
@@ -116,7 +134,7 @@ async function createAuction(
   }).compileComponents();
   const fixture = TestBed.createComponent(AuctionComponent);
   fixture.detectChanges();
-  return { fixture, bid };
+  return { fixture, bid, renameAuctionTeam };
 }
 
 describe('AuctionComponent on-the-block', () => {
@@ -192,7 +210,7 @@ describe('AuctionComponent on-the-block', () => {
       ],
     });
     const bid = vi.fn(() => of(after));
-    const { fixture } = await createAuction(makeState(), bid);
+    const { fixture } = await createAuction(makeState(), { bid });
     const root: HTMLElement = fixture.nativeElement;
 
     const select = root.querySelector('.winner-form select') as HTMLSelectElement;
@@ -213,8 +231,8 @@ describe('AuctionComponent on-the-block', () => {
       contractYears: 4,
     });
     expect(root.querySelector('.avail-list')).toBeNull();
-    const signed = Array.from(root.querySelectorAll('.team-room')).find((node) =>
-      node.textContent?.includes('Team 2'),
+    const signed = Array.from(root.querySelectorAll('.team-room')).find(
+      (node) => (node.querySelector('.team-name-input') as HTMLInputElement | null)?.value === 'Team 2',
     );
     expect(signed?.textContent).toContain('Breece Hall');
     expect(signed?.textContent).toContain('$33');
@@ -279,5 +297,37 @@ describe('AuctionComponent on-the-block', () => {
     );
     expect(prices.length).toBeGreaterThan(0);
     expect(prices.every((n) => n < 30)).toBe(true);
+  });
+
+  it('lists actual team names in the on-the-block winner dropdown', async () => {
+    const { fixture } = await createAuction(makeState());
+    const select = fixture.nativeElement.querySelector('.winner-form select') as HTMLSelectElement;
+    const labels = Array.from(select.options).map((opt) => opt.textContent?.replace(/\s+/g, ' ').trim());
+    expect(labels).toEqual(['You · $200 left', 'Team 2 · $200 left']);
+  });
+
+  it('lets you rename a team on the room tab and updates the winner dropdown', async () => {
+    const { fixture, renameAuctionTeam } = await createAuction(makeState());
+    const root: HTMLElement = fixture.nativeElement;
+    const roomTab = Array.from(root.querySelectorAll('.panel-tab')).find((el) =>
+      el.textContent?.includes('Budgets'),
+    ) as HTMLButtonElement;
+    roomTab.click();
+    fixture.detectChanges();
+
+    const input = root.querySelector('#team-name-roster-2') as HTMLInputElement;
+    expect(input).toBeTruthy();
+    input.dispatchEvent(new Event('focus'));
+    input.value = 'The Geckos';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    input.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    expect(renameAuctionTeam).toHaveBeenCalledWith('league-1', 'roster-2', 'The Geckos');
+    const select = root.querySelector('.winner-form select') as HTMLSelectElement;
+    const labels = Array.from(select.options).map((opt) => opt.textContent?.replace(/\s+/g, ' ').trim());
+    expect(labels).toContain('The Geckos · $200 left');
+    expect(labels).not.toContain('Team 2 · $200 left');
   });
 });

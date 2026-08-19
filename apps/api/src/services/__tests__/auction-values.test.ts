@@ -132,4 +132,26 @@ describe('auction room values from sleeperMCP boards', () => {
     expect(state.userBudget.remaining).toBe(before.userBudget.remaining);
     expect(state.signedRoster?.some((p) => p.playerId === 'josh-allen')).toBe(false);
   });
+
+  it('renames a team and returns the updated auction state', () => {
+    const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen')!;
+    const store = new AppStore([allen], { auctionBoards: [board] });
+    const { auction } = store.seedDemoLeagues('demo-user');
+    const before = store.auctionState(auction.id)!;
+    const rival = before.budgets.find((b) => b.rosterId !== before.userBudget.rosterId)!;
+    const result = store.renameAuctionTeam(auction.id, rival.rosterId, '  The Geckos  ');
+    expect(result && 'error' in result).toBe(false);
+    const state = result as NonNullable<typeof before>;
+    expect(state.budgets.find((b) => b.rosterId === rival.rosterId)?.name).toBe('The Geckos');
+    expect(state.teamRosters?.find((t) => t.rosterId === rival.rosterId)?.name).toBe('The Geckos');
+  });
+
+  it('rejects a blank team name', () => {
+    const allen = SEED_PLAYERS.find((s) => s.player.id === 'josh-allen')!;
+    const store = new AppStore([allen], { auctionBoards: [board] });
+    const { auction } = store.seedDemoLeagues('demo-user');
+    const before = store.auctionState(auction.id)!;
+    const result = store.renameAuctionTeam(auction.id, before.userBudget.rosterId, '   ');
+    expect(result).toEqual({ error: 'Team name is required' });
+  });
 });

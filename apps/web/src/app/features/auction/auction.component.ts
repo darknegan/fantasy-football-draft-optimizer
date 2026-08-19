@@ -44,7 +44,7 @@ interface TeamTargetView {
 
 interface TeamRoomView {
   rosterId: string;
-  label: string;
+  name: string;
   remaining: number;
   spent: number;
   spotsLeft: number;
@@ -86,6 +86,8 @@ export class AuctionComponent implements OnInit {
   readonly mainTab = signal<MainTab>('available');
   readonly winnerRosterId = signal<string | null>(null);
   readonly winnerAmount = signal(1);
+  /** Last committed name per roster, used to restore on cancel / blank blur. */
+  private readonly teamNameBackup = signal<Record<string, string>>({});
 
   readonly availablePlayers = computed((): ValueRow[] => {
     let list = this.state()?.values ?? [];
@@ -235,7 +237,7 @@ export class AuctionComponent implements OnInit {
 
       return {
         rosterId: b.rosterId,
-        label: b.rosterId === you ? 'YOU' : b.name,
+        name: b.name,
         remaining: b.remaining,
         spent: b.spent,
         spotsLeft,
@@ -303,6 +305,78 @@ export class AuctionComponent implements OnInit {
   onWinnerTeam(ev: Event): void {
     this.winnerRosterId.set((ev.target as HTMLSelectElement).value);
     this.clampWinnerAmount();
+  }
+
+  onTeamNameFocus(rosterId: string, currentName: string): void {
+    this.teamNameBackup.update((backup) => ({ ...backup, [rosterId]: currentName }));
+  }
+
+  onTeamNameInput(rosterId: string, ev: Event): void {
+    this.patchTeamName(rosterId, (ev.target as HTMLInputElement).value);
+  }
+
+  commitTeamName(rosterId: string, ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const fallback =
+      this.teamNameBackup()[rosterId] ??
+      this.state()?.budgets.find((b) => b.rosterId === rosterId)?.name ??
+      'Team';
+    const name = input.value.trim() || fallback;
+    input.value = name;
+    this.patchTeamName(rosterId, name);
+    if (name === fallback) return;
+    this.teamNameBackup.update((backup) => ({ ...backup, [rosterId]: name }));
+    this.api.renameAuctionTeam(this.leagueId, rosterId, name).subscribe({
+      next: (s) => this.mergeTeamNames(s),
+      error: (err: { error?: { error?: string }; message?: string }) => {
+        this.teamNameBackup.update((backup) => ({ ...backup, [rosterId]: fallback }));
+        this.patchTeamName(rosterId, fallback);
+        input.value = fallback;
+        this.error.set(err?.error?.error ?? err?.message ?? 'Could not rename team.');
+      },
+    });
+  }
+
+  blurTeamName(ev: Event): void {
+    (ev.target as HTMLInputElement).blur();
+  }
+
+  cancelTeamName(rosterId: string, ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const fallback = this.teamNameBackup()[rosterId] ?? input.value;
+    input.value = fallback;
+    this.patchTeamName(rosterId, fallback);
+    input.blur();
+  }
+
+  private patchTeamName(rosterId: string, name: string): void {
+    const s = this.state();
+    if (!s) return;
+    this.state.set({
+      ...s,
+      budgets: s.budgets.map((b) => (b.rosterId === rosterId ? { ...b, name } : b)),
+      userBudget: s.userBudget.rosterId === rosterId ? { ...s.userBudget, name } : s.userBudget,
+      teamRosters: (s.teamRosters ?? []).map((t) =>
+        t.rosterId === rosterId ? { ...t, name } : t,
+      ),
+    });
+  }
+
+  private mergeTeamNames(s: AuctionState): void {
+    const current = this.state();
+    if (!current) {
+      this.state.set(s);
+      return;
+    }
+    this.state.set({
+      ...current,
+      budgets: s.budgets,
+      userBudget: s.userBudget,
+      teamRosters: s.teamRosters,
+    });
+    const backup: Record<string, string> = {};
+    for (const b of s.budgets) backup[b.rosterId] = b.name;
+    this.teamNameBackup.set(backup);
   }
 
   onWinnerAmount(ev: Event): void {
@@ -408,6 +482,9 @@ export class AuctionComponent implements OnInit {
 
   private applyState(s: AuctionState): void {
     this.state.set(s);
+    const backup: Record<string, string> = {};
+    for (const b of s.budgets) backup[b.rosterId] = b.name;
+    this.teamNameBackup.set(backup);
     const maxLen = s.contractRules.maxLength ?? 4;
     if (this.contractYears() > maxLen) this.contractYears.set(maxLen);
 

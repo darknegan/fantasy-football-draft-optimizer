@@ -85,7 +85,7 @@
                   <select [value]="winnerRosterId() ?? ''" (change)="onWinnerTeam($event)">
                     @for (team of teamRooms(); track team.rosterId) {
                       <option [value]="team.rosterId">
-                        {{ team.label }} · ${{ team.remaining }} left
+                        {{ team.name }} · ${{ team.remaining }} left
                       </option>
                     }
                   </select>
@@ -224,7 +224,7 @@
           <div class="room-panels" role="tabpanel" aria-label="Budgets and roster">
             <div class="section-head">
               <h2>Budgets & rosters</h2>
-              <p>Remaining budget, signed contracts, and what each team still needs to finish the roster</p>
+              <p>Rename teams here — the on-the-block winner list uses the same names</p>
             </div>
 
             <div class="team-room-list">
@@ -232,7 +232,28 @@
                 <article class="team-room" [class.you]="team.isYou">
                   <header class="team-room-head">
                     <div>
-                      <h3>{{ team.label }}</h3>
+                      <div class="team-name-row">
+                        <label class="sr-only" [attr.for]="'team-name-' + team.rosterId"
+                          >Team name</label
+                        >
+                        <input
+                          class="team-name-input"
+                          [id]="'team-name-' + team.rosterId"
+                          type="text"
+                          maxlength="40"
+                          autocomplete="off"
+                          spellcheck="false"
+                          [value]="team.name"
+                          (focus)="onTeamNameFocus(team.rosterId, team.name)"
+                          (input)="onTeamNameInput(team.rosterId, $event)"
+                          (blur)="commitTeamName(team.rosterId, $event)"
+                          (keydown.enter)="$event.preventDefault(); blurTeamName($event)"
+                          (keydown.escape)="$event.preventDefault(); cancelTeamName(team.rosterId, $event)"
+                        />
+                        @if (team.isYou) {
+                          <span class="chip">You</span>
+                        }
+                      </div>
                       <p class="team-need-summary">{{ team.needSummary }}</p>
                     </div>
                     <div class="team-budget">
