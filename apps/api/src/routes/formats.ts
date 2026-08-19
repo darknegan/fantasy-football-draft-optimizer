@@ -48,6 +48,18 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
     return result;
   });
 
+  app.patch<{
+    Params: { id: string; rosterId: string };
+    Body: { name?: string };
+  }>('/api/leagues/:id/auction/teams/:rosterId', auth, async (req, reply) => {
+    if (!(await requireOwnedLeague(req, reply, store, pool))) return;
+    const name = typeof req.body?.name === 'string' ? req.body.name : '';
+    const result = store.renameAuctionTeam(req.params.id, req.params.rosterId, name);
+    if (!result) return reply.code(404).send({ error: 'League not found' });
+    if ('error' in result) return reply.code(400).send(result);
+    return result;
+  });
+
   app.get<{ Params: { id: string }; Querystring: { playerId?: string } }>(
     '/api/leagues/:id/auction/max-bid',
     auth,

@@ -196,6 +196,13 @@ export class ApiService {
     return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/bid`, body);
   }
 
+  renameAuctionTeam(leagueId: string, rosterId: string, name: string) {
+    return this.http.patch<AuctionState>(
+      `/api/leagues/${leagueId}/auction/teams/${encodeURIComponent(rosterId)}`,
+      { name },
+    );
+  }
+
   auctionMaxBid(leagueId: string, playerId: string) {
     return this.http.get<MaxBidResult>(`/api/leagues/${leagueId}/auction/max-bid`, {
       params: { playerId },

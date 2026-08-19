@@ -569,6 +569,24 @@ app.post('/api/leagues/:id/auction/bid', async (c) => {
   }
 });
 
+app.patch('/api/leagues/:id/auction/teams/:rosterId', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ name?: string }>();
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const result = store.renameAuctionTeam(league.id, c.req.param('rosterId'), body.name ?? '');
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    if ('error' in result) return c.json({ error: result.error }, 400);
+    return c.json(result);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return c.json({ error: 'Could not rename team', detail }, 500);
+  }
+});
+
 app.put('/api/leagues/:id/auction/contract-rules', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<Record<string, unknown>>();

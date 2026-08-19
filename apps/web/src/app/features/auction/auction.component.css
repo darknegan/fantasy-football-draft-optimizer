@@ -625,12 +625,40 @@
   margin-bottom: 0.75rem;
 }
 
-.team-room-head h3 {
-  margin: 0;
-  font-size: 1rem;
+.team-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
-.team-room.you .team-room-head h3 {
+.team-name-input {
+  min-width: 0;
+  width: min(100%, 16rem);
+  margin: -0.15rem -0.4rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.team-name-input:hover {
+  border-color: var(--dl-border-strong);
+  background: var(--dl-surface-overlay);
+}
+
+.team-name-input:focus {
+  outline: 2px solid var(--dl-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+  background: var(--dl-surface-overlay);
+}
+
+.team-room.you .team-name-input {
   color: var(--dl-accent);
 }
 

@@ -1020,6 +1020,26 @@ export class AppStore {
     return this.auctionState(leagueId);
   }
 
+  renameAuctionTeam(leagueId: string, rosterId: string, name: string) {
+    const pool = this.auctionPool(leagueId);
+    if (!pool) return null;
+
+    const trimmed = name.trim();
+    if (!trimmed) return { error: 'Team name is required' as const };
+    if (trimmed.length > 40) return { error: 'Team name must be 40 characters or fewer' as const };
+
+    const budgets = this.formats.auctionBudgets.get(leagueId);
+    if (!budgets) return null;
+    const team = budgets.find((b) => b.rosterId === rosterId);
+    if (!team) return { error: 'Unknown roster' as const };
+
+    this.formats.auctionBudgets.set(
+      leagueId,
+      budgets.map((b) => (b.rosterId === rosterId ? { ...b, name: trimmed } : b)),
+    );
+    return this.auctionState(leagueId);
+  }
+
   auctionMaxBid(leagueId: string, playerId: string) {
     const pool = this.auctionPool(leagueId);
     if (!pool) return null;
