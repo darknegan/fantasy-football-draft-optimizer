@@ -354,6 +354,9 @@
           @for (w of s.warnings; track w) {
             <p class="warn">{{ w }}</p>
           }
+          @for (n of s.formatNotes; track n) {
+            <p class="note">{{ n }}</p>
+          }
         </section>
       } @else {
         <aside class="espn-note">

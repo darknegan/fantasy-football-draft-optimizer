@@ -22,6 +22,16 @@
       </button>
     </aside>
 
+    @if (formatNotes().length) {
+      <aside class="validation format-note" role="note">
+        <span class="check-mark" aria-hidden="true">i</span>
+        <div class="validation-copy">
+          <strong>Format note — {{ summary()?.superflex ? 'Superflex' : 'League format' }}</strong>
+          <p>{{ formatNotes().join(' ') }}</p>
+        </div>
+      </aside>
+    }
+
     <div class="columns">
       <section class="card profile" aria-labelledby="profile-title">
         <div class="profile-head">

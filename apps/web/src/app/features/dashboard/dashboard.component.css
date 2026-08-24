@@ -220,10 +220,25 @@
 
 .card-foot {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.25rem;
+}
+
+.status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.format-note {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--dl-text-muted);
+  line-height: 1.35;
 }
 
 .status {

@@ -741,6 +741,12 @@ input[type='number']::-webkit-inner-spin-button {
   font-size: 0.8rem;
 }
 
+.note {
+  margin: 0;
+  color: var(--dl-text-secondary);
+  font-size: 0.8rem;
+}
+
 .espn-note {
   display: flex;
   gap: 0.625rem;

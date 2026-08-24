@@ -77,6 +77,13 @@ export class ConnectComponent implements OnInit {
     return `Connected · ${n} league${n === 1 ? '' : 's'} found for the ${this.season} season`;
   });
   readonly footerNote = computed(() => {
+    const note = this.rows().find((r) => r.league.scoringSummary?.formatNotes?.length);
+    if (note) {
+      return (
+        note.league.scoringSummary?.formatNotes?.[0] ??
+        'Superflex leagues use different QB round guidance than standard 1QB leagues.'
+      );
+    }
     const warn = this.rows().find((r) => r.statusTone === 'warn');
     if (!warn) {
       return 'Format and scoring are detected automatically from Sleeper. Manual leagues stay in sync when you tap picks.';
@@ -206,11 +213,15 @@ export class ConnectComponent implements OnInit {
   private toRow(league: LeagueRow, selected: boolean): DiscoveredRow {
     const summary = league.scoringSummary;
     const warnings = summary?.warnings ?? [];
+    const formatNotes = summary?.formatNotes ?? [];
     let statusTone: StatusTone = 'imported';
     let statusLabel = 'Imported';
     if (warnings.length) {
       statusTone = 'warn';
       statusLabel = this.shortWarn(warnings[0]!);
+    } else if (formatNotes.length) {
+      statusTone = 'ready';
+      statusLabel = summary?.superflex ? 'Superflex' : 'Imported';
     }
     return {
       league,

@@ -45,7 +45,10 @@ export async function leagueRoutes(
     const user = requireUser(req);
     const fromDb = await listLeaguesForUser(pool, user.sub);
     store.hydrateLeagues(fromDb);
-    return store.listLeagues(user.sub);
+    return store.listLeagues(user.sub).map((league) => ({
+      ...league,
+      scoringSummary: scoringConfirmation(league),
+    }));
   });
 
   app.get<{ Params: { id: string } }>(

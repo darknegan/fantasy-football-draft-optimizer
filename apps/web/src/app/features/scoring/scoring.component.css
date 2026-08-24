@@ -33,6 +33,16 @@
   background: color-mix(in srgb, var(--dl-warning) 14%, transparent);
 }
 
+.validation.format-note {
+  border-color: color-mix(in srgb, var(--dl-text-muted) 28%, transparent);
+  background: color-mix(in srgb, var(--dl-surface-raised) 88%, transparent);
+}
+
+.validation.format-note .check-mark {
+  background: var(--dl-text-muted);
+  color: var(--dl-surface);
+}
+
 .check-mark {
   display: inline-flex;
   align-items: center;

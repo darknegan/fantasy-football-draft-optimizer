@@ -36,6 +36,7 @@ interface LeagueCardVm {
   strategyTier: StrategyTier | null;
   statusLabel: string;
   statusTone: 'ok' | 'warn' | 'muted';
+  formatNote?: string;
   ctaLabel: string;
   ctaLink: string[];
   primary: boolean;
@@ -142,13 +143,18 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
                 </div>
               </div>
               <div class="card-foot">
-                <div
-                  class="status"
-                  [class.warn]="card.statusTone === 'warn'"
-                  [class.muted]="card.statusTone === 'muted'"
-                >
-                  <span class="dot" aria-hidden="true"></span>
-                  <span>{{ card.statusLabel }}</span>
+                <div class="status-stack">
+                  <div
+                    class="status"
+                    [class.warn]="card.statusTone === 'warn'"
+                    [class.muted]="card.statusTone === 'muted'"
+                  >
+                    <span class="dot" aria-hidden="true"></span>
+                    <span>{{ card.statusLabel }}</span>
+                  </div>
+                  @if (card.formatNote) {
+                    <p class="format-note">{{ card.formatNote }}</p>
+                  }
                 </div>
                 <a
                   class="btn"
@@ -290,8 +296,8 @@ export class DashboardComponent implements OnInit {
       : undefined;
     const slot = league?.draftSlot;
     const slotInfo = slot ? this.draftSlots().find((s) => s.slot === slot) : undefined;
-    const scoringOk = !!league?.scoringSummary && !league.scoringSummary.warnings?.length;
-    const hasScoring = !!league?.scoringSummary;
+    const hasScoring = leagueHasScoring(league);
+    const formatNote = leagueFormatNote(league);
 
     return [
       {
@@ -305,11 +311,11 @@ export class DashboardComponent implements OnInit {
       },
       {
         label: hasScoring
-          ? scoringOk
-            ? 'Scoring validated'
-            : 'Scoring needs review'
+          ? formatNote
+            ? `Scoring validated · ${formatNote}`
+            : 'Scoring validated'
           : 'Scoring validated against standings',
-        done: hasScoring && scoringOk,
+        done: hasScoring,
       },
       {
         label: strategy
@@ -368,15 +374,18 @@ function toLeagueCard(
     : undefined;
   const slotInfo =
     league.draftSlot != null ? slots.find((s) => s.slot === league.draftSlot) : undefined;
-  const hasScoring = !!league.scoringSummary;
-  const scoringWarn = !!league.scoringSummary?.warnings?.length;
+  const hasScoring = leagueHasScoring(league);
   const platformLabel = league.platform === 'sleeper' ? 'Sleeper' : 'Manual';
   const formatLabel = titleCase(league.type || league.draftType || 'League');
+  const variantLabel = league.scoringSummary?.variant ?? league.scoring?.variant;
   const scoringBits = [
     `${league.teamCount}-team`,
-    league.scoringSummary?.variant?.toUpperCase() || 'PPR',
-    league.scoringSummary?.tePremium ? 'TE premium' : null,
-    league.scoringSummary?.superflex ? 'Superflex' : null,
+    variantLabel?.toUpperCase() || 'PPR',
+    league.scoringSummary?.tePremium || (league.scoring?.tePremiumBonus ?? 0) > 0 ? 'TE premium' : null,
+    league.scoringSummary?.superflex ||
+    (league.roster && (league.roster.superflex > 0 || league.roster.qb >= 2))
+      ? 'Superflex'
+      : null,
   ].filter(Boolean);
 
   let statusLabel = 'Board ready';
@@ -384,8 +393,8 @@ function toLeagueCard(
   let ctaLabel = 'Open draft room';
   let ctaLink = ['/leagues', league.id, 'draft'];
 
-  if (!hasScoring || scoringWarn) {
-    statusLabel = scoringWarn ? 'Scoring needs review' : 'Scoring not confirmed';
+  if (!hasScoring) {
+    statusLabel = 'Scoring not confirmed';
     statusTone = 'warn';
     ctaLabel = 'Verify scoring';
     ctaLink = ['/leagues', league.id, 'scoring'];
@@ -418,10 +427,26 @@ function toLeagueCard(
     strategyTier: strategy?.tier ?? null,
     statusLabel,
     statusTone,
+    formatNote: leagueFormatNote(league) ?? undefined,
     ctaLabel,
     ctaLink,
     primary: primary && ctaLabel === 'Open draft room',
   };
+}
+
+function leagueHasScoring(league: League | null | undefined): boolean {
+  return !!league?.scoringSummary || !!league?.scoring;
+}
+
+function leagueFormatNote(league: League | null | undefined): string | null {
+  if (!league) return null;
+  const summary = league.scoringSummary;
+  const roster = league.roster;
+  const superflex =
+    summary?.superflex || (roster != null && (roster.superflex > 0 || roster.qb >= 2));
+  if (superflex) return 'Format note — Superflex';
+  if (summary?.formatNotes?.length) return 'Format note';
+  return null;
 }
 
 function formatSlot(slot: number, teamCount: number): string {
