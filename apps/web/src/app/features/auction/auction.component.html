@@ -245,7 +245,6 @@
                           spellcheck="false"
                           [value]="team.name"
                           (focus)="onTeamNameFocus(team.rosterId, team.name)"
-                          (input)="onTeamNameInput(team.rosterId, $event)"
                           (blur)="commitTeamName(team.rosterId, $event)"
                           (keydown.enter)="$event.preventDefault(); blurTeamName($event)"
                           (keydown.escape)="$event.preventDefault(); cancelTeamName(team.rosterId, $event)"

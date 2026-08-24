@@ -311,10 +311,6 @@ export class AuctionComponent implements OnInit {
     this.teamNameBackup.update((backup) => ({ ...backup, [rosterId]: currentName }));
   }
 
-  onTeamNameInput(rosterId: string, ev: Event): void {
-    this.patchTeamName(rosterId, (ev.target as HTMLInputElement).value);
-  }
-
   commitTeamName(rosterId: string, ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const fallback =
