@@ -33,9 +33,6 @@ export type LeagueType = 'redraft' | 'dynasty' | 'auction';
 
 export type DraftType = 'snake' | 'auction' | 'linear' | 'rookie';
 
-/** Which players are eligible in the draft room board. */
-export type DraftPlayerPool = 'all' | 'rookies';
-
 export type Platform = 'sleeper' | 'manual';
 
 export type PlayerStatus = 'active' | 'injured' | 'suspended' | 'inactive';
@@ -287,10 +284,6 @@ export interface League {
   externalId?: string;
   type: LeagueType;
   draftType: DraftType;
-  /** When `rookies`, the draft room only lists first-year / current-class players. */
-  draftPlayerPool?: DraftPlayerPool;
-  /** Total rounds for snake/linear draft rooms (from Sleeper draft settings when linked). */
-  draftRounds?: number;
   teamCount: number;
   season: number;
   scoring: ScoringProfile;

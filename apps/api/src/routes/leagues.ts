@@ -3,13 +3,11 @@ import type { Pool } from 'pg';
 import type { DraftType, LeagueType, RosterShape, StrategyId } from '@draftlab/domain';
 import {
   createManualLeague,
-  mapLeagueType,
   mapSleeperLeague,
   resolveDraftSlot,
   rosterPresetForScoring,
   scoringConfirmation,
   SCORING_PRESETS,
-  selectSleeperDraft,
   SleeperClient,
   sharedSleeperLimiter,
 } from '@draftlab/integrations';
@@ -138,11 +136,7 @@ export async function leagueRoutes(
           let draft = null;
           try {
             const drafts = await client.getLeagueDrafts(l.league_id);
-            draft = selectSleeperDraft(
-              drafts,
-              mapLeagueType(l.settings),
-              Number(l.season),
-            );
+            draft = drafts[0] ?? null;
           } catch {
             draft = null;
           }
@@ -323,11 +317,7 @@ export async function leagueRoutes(
         let draft = null;
         try {
           const drafts = await client.getLeagueDrafts(existing.externalId);
-          draft = selectSleeperDraft(
-            drafts,
-            mapLeagueType(sleeperLeague.settings),
-            Number(sleeperLeague.season),
-          );
+          draft = drafts[0] ?? null;
         } catch {
           draft = null;
         }

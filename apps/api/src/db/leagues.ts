@@ -20,8 +20,6 @@ function mapLeague(row: Record<string, unknown>): League {
     sleeperUserId: row['sleeper_user_id'] != null ? String(row['sleeper_user_id']) : undefined,
     dynastyMode: (row['dynasty_mode'] as League['dynastyMode']) ?? undefined,
     auctionBudget: row['auction_budget'] != null ? Number(row['auction_budget']) : undefined,
-    draftPlayerPool: (row['draft_player_pool'] as League['draftPlayerPool']) ?? undefined,
-    draftRounds: row['draft_rounds'] != null ? Number(row['draft_rounds']) : undefined,
   };
 }
 
@@ -60,8 +58,7 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
         `UPDATE leagues SET
            name = $2, type = $3, draft_type = $4, team_count = $5, season = $6,
            scoring = $7, roster = $8, draft_slot = $9, strategy_id = $10,
-           sleeper_draft_id = $11, sleeper_user_id = $12, dynasty_mode = $13, auction_budget = $14,
-           draft_player_pool = $15, draft_rounds = $16
+           sleeper_draft_id = $11, sleeper_user_id = $12, dynasty_mode = $13, auction_budget = $14
          WHERE id = $1
          RETURNING *`,
         [
@@ -79,8 +76,6 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
           league.sleeperUserId ?? null,
           league.dynastyMode ?? null,
           league.auctionBudget ?? null,
-          league.draftPlayerPool ?? 'all',
-          league.draftRounds ?? 16,
         ],
       );
       return mapLeague(result.rows[0]!);
@@ -91,10 +86,10 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
     `INSERT INTO leagues (
        id, user_id, name, platform, external_id, type, draft_type, team_count, season,
        scoring, roster, draft_slot, strategy_id, sleeper_draft_id, sleeper_user_id,
-       dynasty_mode, auction_budget, draft_player_pool, draft_rounds
+       dynasty_mode, auction_budget
      ) VALUES (
        COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9,
-       $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+       $10, $11, $12, $13, $14, $15, $16, $17
      )
      RETURNING *`,
     [
@@ -115,8 +110,6 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
       league.sleeperUserId ?? null,
       league.dynastyMode ?? null,
       league.auctionBudget ?? null,
-      league.draftPlayerPool ?? 'all',
-      league.draftRounds ?? 16,
     ],
   );
   return mapLeague(result.rows[0]!);

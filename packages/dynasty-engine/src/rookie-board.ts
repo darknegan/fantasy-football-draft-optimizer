@@ -13,18 +13,15 @@ export interface RookieBoardRow {
   note: string;
 }
 
-/** True when a player belongs on a dynasty rookie draft board. */
-export function isRookiePoolPlayer(player: Player, season: number): boolean {
-  return player.seasonsInLeague === 0 || player.draftYear === season;
-}
-
 /** Separate rookie board: players with seasonsInLeague === 0 (or draftYear === season). */
 export function buildRookieBoard(
   players: Array<{ player: Player; evaluation: PlayerEvaluation }>,
   season: number,
   mode: 'contend' | 'rebuild' | 'neutral' = 'rebuild',
 ): RookieBoardRow[] {
-  const rookies = players.filter((p) => isRookiePoolPlayer(p.player, season));
+  const rookies = players.filter(
+    (p) => p.player.seasonsInLeague === 0 || p.player.draftYear === season,
+  );
 
   return rookies
     .map(({ player, evaluation }) => {

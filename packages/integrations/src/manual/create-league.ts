@@ -1,6 +1,5 @@
 import type {
   ContractRules,
-  DraftPlayerPool,
   DraftType,
   DynastyMode,
   League,
@@ -16,8 +15,6 @@ export interface ManualLeagueInput {
   name: string;
   type?: LeagueType;
   draftType?: DraftType;
-  draftPlayerPool?: DraftPlayerPool;
-  draftRounds?: number;
   teamCount: number;
   season: number;
   scoring: ScoringProfile;
@@ -41,19 +38,13 @@ export function createManualLeague(input: ManualLeagueInput): League {
       input.roster.flex +
       input.roster.superflex,
   };
-  const draftType = input.draftType ?? 'snake';
-  const draftPlayerPool =
-    input.draftPlayerPool ?? (draftType === 'rookie' || input.type === 'dynasty' ? 'rookies' : 'all');
-  const draftRounds = input.draftRounds ?? (draftPlayerPool === 'rookies' ? 4 : 16);
   return {
     id,
     userId: input.userId ?? '',
     name: input.name,
     platform: 'manual',
     type: input.type ?? 'redraft',
-    draftType,
-    draftPlayerPool,
-    draftRounds,
+    draftType: input.draftType ?? 'snake',
     teamCount: input.teamCount,
     season: input.season,
     scoring: input.scoring,
