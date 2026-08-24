@@ -82,6 +82,70 @@
     </div>
 
     <div class="body">
+      <section class="league-rosters" aria-labelledby="league-rosters-title">
+        <div class="section-head">
+          <h2 id="league-rosters-title">League rosters</h2>
+          <p>
+            Every team, grouped by position
+            @if (isAuction()) {
+              · winning bid shown in dollars
+            }
+          </p>
+        </div>
+
+        <div class="team-grid">
+          @for (team of teamViews(); track team.rosterId) {
+            <article class="team-card" [class.you]="team.isUser">
+              <header class="team-card-head">
+                <div>
+                  <h3>
+                    {{ team.name }}
+                    @if (team.isUser) {
+                      <span class="chip">You</span>
+                    }
+                  </h3>
+                  <p class="team-meta">
+                    {{ team.playerCount }} player{{ team.playerCount === 1 ? '' : 's' }}
+                  </p>
+                </div>
+                @if (isAuction()) {
+                  <div class="team-spend">
+                    <div class="dl-mono team-spend-amt">${{ team.spent ?? 0 }}</div>
+                    <div class="team-meta">${{ team.remaining ?? 0 }} left</div>
+                  </div>
+                }
+              </header>
+
+              @for (group of team.groups; track group.position) {
+                <div class="pos-group">
+                  <h4>
+                    <span class="pos tiny" [class]="group.position">{{ group.position }}</span>
+                  </h4>
+                  <ul>
+                    @for (row of group.players; track row.playerId) {
+                      <li>
+                        <a
+                          class="pname"
+                          [routerLink]="['/leagues', leagueId, 'board', row.playerId]"
+                          >{{ row.name }}</a
+                        >
+                        @if (isAuction()) {
+                          <span class="dl-mono paid">{{ formatPaid(row.amount) }}</span>
+                        }
+                      </li>
+                    } @empty {
+                      <li class="empty">—</li>
+                    }
+                  </ul>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="empty">No teams match this search.</p>
+          }
+        </div>
+      </section>
+
       <section class="curves-panel">
         <div class="section-head">
           <h2>Roster value curves</h2>
@@ -96,6 +160,9 @@
                 <th>Age</th>
                 <th>Yr</th>
                 <th>Archetype</th>
+                @if (isAuction()) {
+                  <th>Paid</th>
+                }
                 <th>{{ summary().horizon.startSeason }}–{{ summary().horizon.endSeason }} value</th>
                 <th>Trend</th>
               </tr>
@@ -119,6 +186,9 @@
                       formatArchetype(row.archetype)
                     }}</span>
                   </td>
+                  @if (isAuction()) {
+                    <td class="dl-mono">{{ formatPaid(row.amount) }}</td>
+                  }
                   <td>
                     <div class="year-bars" aria-label="Multi-year value">
                       @for (pt of row.curve.points.slice(0, 4); track pt.yearOffset) {
@@ -141,7 +211,9 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="6" class="empty">No rostered players match this search.</td>
+                  <td [attr.colspan]="isAuction() ? 7 : 6" class="empty">
+                    No rostered players match this search.
+                  </td>
                 </tr>
               }
             </tbody>

@@ -165,6 +165,8 @@ export class DraftPoller {
 
   private mapPick(pick: SleeperPick): Omit<PickEvent, 'pickedAt'> & { pickedAt?: string } {
     // Prefer metadata name mapping later; store sleeper player id for now.
+    const rawAmount = pick.metadata?.['amount'] ?? pick.metadata?.['bid'];
+    const parsed = rawAmount != null && rawAmount !== '' ? Number(rawAmount) : NaN;
     return {
       pickNumber: pick.pick_no,
       round: pick.round,
@@ -172,6 +174,7 @@ export class DraftPoller {
       playerId: pick.player_id,
       rosterId: `roster-${pick.roster_id}`,
       source: 'sleeper',
+      amount: Number.isFinite(parsed) ? parsed : undefined,
     };
   }
 }

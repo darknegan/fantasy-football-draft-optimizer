@@ -189,6 +189,7 @@ export interface DraftState {
     playerId: string | null;
     rosterId: string;
     source: string;
+    amount?: number;
   }>;
   userRosterId: string;
   lastSyncedAt: string | null;
@@ -290,15 +291,31 @@ export interface DynastyBoardRow {
   trend?: DynastyTrend;
   peakYearOffset?: number;
   contendWindow?: { start: number; end: number } | null;
+  /** Winning auction bid for this player, when the league is an auction. */
+  amount?: number;
+  rosterId?: string;
   curve: {
     points: Array<{ yearOffset: number; season: number; value: number }>;
     npv: number;
   };
 }
 
+export interface DynastyTeamRoster {
+  rosterId: string;
+  name: string;
+  isUser: boolean;
+  spent?: number;
+  remaining?: number;
+  players: DynastyBoardRow[];
+}
+
 export interface DynastyOverview {
   leagueId: string;
   mode: DynastyMode;
+  isAuction?: boolean;
+  userRosterId?: string;
+  /** Every team in the league, with rostered players grouped for the UI. */
+  teamRosters?: DynastyTeamRoster[];
   ageCurve: {
     meanAge: number;
     medianAge: number;

@@ -308,6 +308,8 @@ export interface PickEvent {
   rosterId: string;
   pickedAt: string;
   source: 'sleeper' | 'manual';
+  /** Auction purchase price when the pick was a winning bid. */
+  amount?: number;
 }
 
 export type DraftSyncMode = 'polling' | 'manual' | 'hybrid' | 'degraded';

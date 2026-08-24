@@ -189,12 +189,112 @@
   padding: 0 1.5rem;
 }
 
+.league-rosters,
 .curves-panel,
 .rail-card {
   background: var(--dl-surface-raised);
   border: 1px solid var(--dl-border-subtle);
   border-radius: 12px;
   padding: 0.95rem;
+}
+
+.league-rosters {
+  grid-column: 1 / -1;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.team-card {
+  border: 1px solid var(--dl-border-subtle);
+  border-radius: 10px;
+  background: var(--dl-surface-sunken);
+  padding: 0.75rem;
+  min-width: 0;
+}
+
+.team-card.you {
+  border-color: var(--dl-accent);
+  background: color-mix(in srgb, var(--dl-accent) 8%, var(--dl-surface-sunken));
+}
+
+.team-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 0.55rem;
+}
+
+.team-card h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.team-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.7rem;
+  color: var(--dl-text-tertiary);
+}
+
+.team-spend {
+  text-align: right;
+}
+
+.team-spend-amt {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dl-accent);
+}
+
+.pos-group {
+  margin-top: 0.45rem;
+}
+
+.pos-group h4 {
+  margin: 0 0 0.2rem;
+}
+
+.pos-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.pos-group li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+
+.pos-group .pname {
+  color: inherit;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-group .pname:hover {
+  color: var(--dl-accent);
+}
+
+.paid {
+  flex: 0 0 auto;
+  color: var(--dl-accent);
+  font-size: 0.72rem;
 }
 
 .section-head h2,
