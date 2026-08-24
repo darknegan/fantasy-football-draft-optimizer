@@ -51,6 +51,16 @@
       </button>
     }
     <button type="button" class="manual-btn" (click)="manualMode()">Enter pick manually</button>
+    @if (canResetDraft()) {
+      <button
+        type="button"
+        class="manual-btn danger-btn"
+        (click)="resetDraft()"
+        [disabled]="picking()"
+      >
+        Reset practice draft
+      </button>
+    }
   </header>
 
   <div class="body">

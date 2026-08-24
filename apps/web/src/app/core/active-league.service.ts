@@ -31,6 +31,11 @@ export class ActiveLeagueService {
     if (userId) localStorage.setItem(`draftlab.activeLeague.${userId}`, leagueId);
   }
 
+  removeLeague(leagueId: string) {
+    const leagues = this.leaguesSignal().filter((l) => l.id !== leagueId);
+    this.setLeagues(leagues);
+  }
+
   clear() {
     this.leaguesSignal.set([]);
     this.selectedIdSignal.set(null);

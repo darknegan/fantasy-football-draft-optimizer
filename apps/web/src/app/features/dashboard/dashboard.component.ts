@@ -156,15 +156,50 @@ const RESEARCH_FINDINGS: ResearchFinding[] = [
                     <p class="format-note">{{ card.formatNote }}</p>
                   }
                 </div>
-                <a
-                  class="btn"
-                  [class.primary]="card.primary"
-                  [routerLink]="card.ctaLink"
-                  (click)="active.select(card.league.id)"
-                >
-                  {{ card.ctaLabel }}
-                </a>
+                <div class="card-ctas">
+                  <button
+                    type="button"
+                    class="btn ghost manage-btn"
+                    [class.active]="manageOpenId() === card.league.id"
+                    (click)="toggleManage(card.league.id)"
+                  >
+                    Manage
+                  </button>
+                  <a
+                    class="btn"
+                    [class.primary]="card.primary"
+                    [routerLink]="card.ctaLink"
+                    (click)="active.select(card.league.id)"
+                  >
+                    {{ card.ctaLabel }}
+                  </a>
+                </div>
               </div>
+              @if (manageOpenId() === card.league.id) {
+                <div class="manage-panel" role="menu">
+                  @if (card.league.platform === 'sleeper') {
+                    <button
+                      type="button"
+                      class="manage-item"
+                      [disabled]="managingId() === card.league.id"
+                      (click)="resyncLeague(card.league.id)"
+                    >
+                      Re-sync from Sleeper
+                    </button>
+                  }
+                  <a class="manage-item" routerLink="/leagues/connect" (click)="manageOpenId.set(null)">
+                    Connection settings
+                  </a>
+                  <button
+                    type="button"
+                    class="manage-item danger"
+                    [disabled]="managingId() === card.league.id"
+                    (click)="removeLeague(card.league.id)"
+                  >
+                    Remove league
+                  </button>
+                </div>
+              }
             </article>
           }
         </section>
@@ -259,6 +294,8 @@ export class DashboardComponent implements OnInit {
   readonly leagues = signal<League[]>([]);
   readonly strategies = signal<StrategyDefinition[]>([]);
   readonly draftSlots = signal<DraftSlotInfo[]>([]);
+  readonly manageOpenId = signal<string | null>(null);
+  readonly managingId = signal<string | null>(null);
 
   readonly sleeperLeagueCount = computed(
     () => this.leagues().filter((l) => l.platform === 'sleeper').length,
@@ -360,6 +397,49 @@ export class DashboardComponent implements OnInit {
 
   tierGlyph(tier: StrategyTier): string {
     return tierGlyph(tier);
+  }
+
+  toggleManage(leagueId: string) {
+    this.manageOpenId.update((id) => (id === leagueId ? null : leagueId));
+  }
+
+  resyncLeague(leagueId: string) {
+    this.managingId.set(leagueId);
+    this.api.resyncSleeperLeague(leagueId).subscribe({
+      next: () => {
+        this.managingId.set(null);
+        this.manageOpenId.set(null);
+        this.refreshLeagues();
+      },
+      error: () => {
+        this.managingId.set(null);
+      },
+    });
+  }
+
+  removeLeague(leagueId: string) {
+    const league = this.leagues().find((l) => l.id === leagueId);
+    if (!league) return;
+    if (!confirm(`Remove "${league.name}" from DraftLab? This cannot be undone.`)) return;
+    this.managingId.set(leagueId);
+    this.api.deleteLeague(leagueId).subscribe({
+      next: () => {
+        this.managingId.set(null);
+        this.manageOpenId.set(null);
+        this.active.removeLeague(leagueId);
+        this.refreshLeagues();
+      },
+      error: () => {
+        this.managingId.set(null);
+      },
+    });
+  }
+
+  private refreshLeagues() {
+    this.api.leagues().subscribe((leagues) => {
+      this.leagues.set(leagues);
+      this.active.setLeagues(leagues);
+    });
   }
 }
 

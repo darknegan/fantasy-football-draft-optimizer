@@ -12,7 +12,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { clearQueuedPick, listQueuedPicks, queuePick } from '../../core/offline-draft.store';
+import { clearQueuedPick, clearQueuedPicksForLeague, listQueuedPicks, queuePick } from '../../core/offline-draft.store';
 import type {
   AdherenceResult,
   BoardPlayer,
@@ -646,6 +646,35 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   manualMode() {
     this.api.setManualMode(this.leagueId).subscribe((d) => this.draft.set(d));
+  }
+
+  canResetDraft(): boolean {
+    const d = this.draft();
+    const l = this.league();
+    if (!d || !l || d.status === 'complete') return false;
+    if (d.picks.length === 0 && d.status === 'pre_draft') return false;
+    if (l.platform === 'sleeper' && d.syncMode === 'polling') return false;
+    return true;
+  }
+
+  resetDraft() {
+    if (!this.canResetDraft()) return;
+    if (!confirm('Clear all picks and start over? This cannot be undone.')) return;
+    const userId = this.auth.user()?.id;
+    this.picking.set(true);
+    this.api.resetDraft(this.leagueId).subscribe({
+      next: async (res) => {
+        this.draft.set(res.draft);
+        this.board.set(res.board);
+        this.adherence.set(res.adherence);
+        this.selectedPlayerId.set(null);
+        if (userId) await clearQueuedPicksForLeague(userId, this.leagueId);
+        this.picking.set(false);
+      },
+      error: () => {
+        this.picking.set(false);
+      },
+    });
   }
 
   async pick(row: BoardPlayer) {

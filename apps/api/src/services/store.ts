@@ -1139,6 +1139,29 @@ export class AppStore {
     return applied;
   }
 
+  resetDraft(leagueId: string) {
+    if (!this.leagues.has(leagueId)) return null;
+    const fresh = this.createEmptyDraft(leagueId);
+    this.drafts.set(leagueId, fresh);
+    this.formats.outcomes.delete(leagueId);
+    this.formats.calibration.delete(leagueId);
+    return fresh;
+  }
+
+  removeLeague(leagueId: string) {
+    if (!this.leagues.has(leagueId)) return false;
+    this.leagues.delete(leagueId);
+    this.drafts.delete(leagueId);
+    this.targets.delete(leagueId);
+    this.avoids.delete(leagueId);
+    this.leagueEvaluations.delete(leagueId);
+    this.formats.clearLeague(leagueId);
+    for (const key of [...this.compareCache.keys()]) {
+      if (key.startsWith(`${leagueId}:`)) this.compareCache.delete(key);
+    }
+    return true;
+  }
+
   private createEmptyDraft(leagueId: string): DraftState {
     return {
       leagueId,

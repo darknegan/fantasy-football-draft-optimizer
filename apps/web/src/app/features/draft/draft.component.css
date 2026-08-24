@@ -173,6 +173,11 @@
   color: var(--dl-accent);
 }
 
+.manual-btn.danger-btn {
+  border-color: color-mix(in srgb, var(--dl-danger, #e35) 35%, var(--dl-border-strong));
+  color: var(--dl-danger, #e35);
+}
+
 .body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;

@@ -144,3 +144,15 @@ export async function updateLeagueRow(
   const row = result.rows[0];
   return row ? mapLeague(row) : null;
 }
+
+export async function deleteLeagueRow(
+  pool: Pool,
+  userId: string,
+  leagueId: string,
+): Promise<boolean> {
+  const result = await pool.query(`DELETE FROM leagues WHERE id = $1 AND user_id = $2`, [
+    leagueId,
+    userId,
+  ]);
+  return (result.rowCount ?? 0) > 0;
+}

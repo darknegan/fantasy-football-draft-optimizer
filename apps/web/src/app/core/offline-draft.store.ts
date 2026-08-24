@@ -56,6 +56,24 @@ export async function listQueuedPicks(userId: string, leagueId: string): Promise
   });
 }
 
+export async function clearQueuedPicksForLeague(userId: string, leagueId: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const all = (req.result as QueuedPick[]) ?? [];
+      for (const pick of all) {
+        if (pick.userId === userId && pick.leagueId === leagueId) store.delete(pick.queuedAt);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function clearQueuedPick(queuedAt: string): Promise<void> {
   if (typeof indexedDB === 'undefined') return;
   const db = await openDb();
