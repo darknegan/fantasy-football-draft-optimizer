@@ -53,10 +53,29 @@ export function mapDraftType(type: string | undefined): DraftType {
   return 'snake';
 }
 
+/** Sleeper settings.type: 0 = redraft, 1 = keeper, 2 = dynasty (integer from API). */
 export function mapLeagueType(settings: Record<string, number | string> | undefined): LeagueType {
-  const type = String(settings?.['type'] ?? settings?.['league_type'] ?? '');
-  if (type.toLowerCase().includes('dynasty') || settings?.['disable_adds'] === 1) return 'dynasty';
-  if (type.toLowerCase().includes('auction')) return 'auction';
+  const raw = settings?.['type'] ?? settings?.['league_type'];
+  const code =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string' && /^\d+$/.test(raw.trim())
+        ? Number.parseInt(raw, 10)
+        : NaN;
+
+  switch (code) {
+    case 2:
+      return 'dynasty';
+    case 1:
+      // Keeper — no distinct LeagueType yet; treat as redraft for board guidance.
+      return 'redraft';
+    case 0:
+      return 'redraft';
+  }
+
+  const text = String(raw ?? '').toLowerCase();
+  if (text.includes('dynasty')) return 'dynasty';
+  if (text.includes('auction')) return 'auction';
   return 'redraft';
 }
 

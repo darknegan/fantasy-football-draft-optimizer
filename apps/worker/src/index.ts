@@ -274,7 +274,12 @@ app.get('/api/leagues', async (c) => {
     const leagues = await withDb(c.env, c.executionCtx, (db) =>
       loadUserLeagues(store, db, user.sub),
     );
-    return c.json(leagues);
+    return c.json(
+      leagues.map((league) => ({
+        ...league,
+        scoringSummary: scoringConfirmation(league),
+      })),
+    );
   } catch (err) {
     return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
   }

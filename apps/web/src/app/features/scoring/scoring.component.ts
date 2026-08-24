@@ -78,24 +78,26 @@ export class ScoringComponent implements OnInit {
     return 'Standard';
   });
 
-  readonly verified = computed(() => {
-    const warnings = this.summary()?.warnings ?? [];
-    return warnings.length === 0 && !!this.scoring();
-  });
+  readonly verified = computed(() => !!this.scoring());
 
   readonly validationTitle = computed(() =>
-    this.verified() ? 'Scoring verified' : 'Scoring needs a closer look',
+    this.verified() ? 'Scoring verified' : 'Scoring not loaded',
   );
 
   readonly validationBody = computed(() => {
     const league = this.league();
     const season = league ? league.season - 1 : 2025;
     const warnings = this.summary()?.warnings ?? [];
+    if (!this.scoring()) {
+      return 'We could not load scoring settings for this league.';
+    }
     if (warnings.length) {
       return warnings.join(' ');
     }
     return `We recomputed all 14 weeks of the ${season} season from these rules and reproduced every final standing exactly, so the projections on your board are denominated in your league’s real scoring rather than a generic PPR default.`;
   });
+
+  readonly formatNotes = computed(() => this.summary()?.formatNotes ?? []);
 
   readonly profileTitle = computed(() => {
     const platform = this.league()?.platform;

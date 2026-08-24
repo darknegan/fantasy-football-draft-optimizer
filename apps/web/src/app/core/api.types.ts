@@ -124,6 +124,7 @@ export interface ScoringSummary {
   variant: string;
   tePremium: boolean;
   superflex: boolean;
+  formatNotes: string[];
   warnings: string[];
 }
 

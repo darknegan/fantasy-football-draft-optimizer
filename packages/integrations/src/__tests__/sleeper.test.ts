@@ -3,7 +3,7 @@ import { nextPollIntervalMs } from '../sleeper/client.js';
 import { mapWeeklyGameLog } from '../sleeper/game-log.js';
 import { sleeperHeadshotThumbUrl, sleeperHeadshotUrl } from '../sleeper/headshot.js';
 import { SleeperRateLimiter } from '../sleeper/rate-limiter.js';
-import { mapRosterPositions, mapScoring, mapDraftType } from '../sleeper/map-league.js';
+import { mapRosterPositions, mapScoring, mapDraftType, mapLeagueType } from '../sleeper/map-league.js';
 import { summarizeScoring, isSuperflex } from '../sleeper/scoring-summary.js';
 
 describe('SleeperRateLimiter', () => {
@@ -58,6 +58,16 @@ describe('map helpers', () => {
     expect(mapDraftType('auction')).toBe('auction');
     expect(mapDraftType('snake')).toBe('snake');
   });
+
+  it('maps Sleeper league type codes', () => {
+    expect(mapLeagueType({ type: 0 })).toBe('redraft');
+    expect(mapLeagueType({ type: 1 })).toBe('redraft');
+    expect(mapLeagueType({ type: 2 })).toBe('dynasty');
+    expect(mapLeagueType({ type: '2' })).toBe('dynasty');
+    expect(mapLeagueType({ type: 'dynasty' })).toBe('dynasty');
+    expect(mapLeagueType({ type: 2, disable_adds: 1 })).toBe('dynasty');
+    expect(mapLeagueType({ disable_adds: 1 })).toBe('redraft');
+  });
 });
 
 describe('scoring summary', () => {
@@ -66,7 +76,8 @@ describe('scoring summary', () => {
     const roster = mapRosterPositions(['QB', 'RB', 'WR', 'TE', 'SUPER_FLEX']);
     const summary = summarizeScoring(scoring, roster);
     expect(summary.superflex).toBe(true);
-    expect(summary.warnings.some((w) => w.includes('Superflex'))).toBe(true);
+    expect(summary.formatNotes.some((n) => n.includes('Superflex'))).toBe(true);
+    expect(summary.warnings).toEqual([]);
     expect(summary.plainLanguage.join(' ')).toMatch(/PPR/i);
   });
 });
