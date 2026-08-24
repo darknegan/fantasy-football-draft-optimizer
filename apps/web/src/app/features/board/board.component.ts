@@ -15,6 +15,7 @@ import {
   replacementBand,
   computeVor,
   resolveVorScoringFormat,
+  startableCapacity,
   type QualityBand,
 } from '@draftlab/tiers';
 import { ApiService } from '../../core/api.service';
@@ -23,7 +24,10 @@ import {
   BOARD_HEADER_PURPOSE,
   buildArchetypeTooltip,
   buildCeilingTooltip,
+  buildProjTooltip,
+  buildRiskTooltip,
   buildScoreTooltip,
+  buildVorTooltip,
   explainBoardArchetype,
 } from './board-tooltips';
 import { configuredFactorCount, top5CeilingIdsByPosition } from './ceiling-display';
@@ -243,7 +247,7 @@ const RISK_MAX = 100;
                 <span class="tip" role="tooltip">{{ archetypeTooltip(row) }}</span>
               </span>
 
-              <span class="c-risk">
+              <span class="c-risk has-tip" tabindex="0">
                 <span class="risk-n mono" [class]="riskTone(row.evaluation.risk.riskProfile)">{{
                   Math.round(row.evaluation.risk.riskProfile)
                 }}</span>
@@ -254,6 +258,7 @@ const RISK_MAX = 100;
                     [style.width.%]="riskWidth(row.evaluation.risk.riskProfile)"
                   ></span>
                 </span>
+                <span class="tip" role="tooltip">{{ riskTooltip(row) }}</span>
               </span>
 
               <span class="c-value">
@@ -262,9 +267,15 @@ const RISK_MAX = 100;
                 }}</span>
               </span>
 
-              <span class="c-vor mono">{{ formatVor(vorOf(row)) }}</span>
+              <span class="c-vor mono has-tip" tabindex="0">
+                {{ formatVor(vorOf(row)) }}
+                <span class="tip" role="tooltip">{{ vorTooltip(row) }}</span>
+              </span>
 
-              <span class="c-proj mono">{{ formatProj(row.projectedPoints) }}</span>
+              <span class="c-proj mono has-tip" tabindex="0">
+                {{ formatProj(row.projectedPoints) }}
+                <span class="tip" role="tooltip">{{ projTooltip(row) }}</span>
+              </span>
 
               <span class="c-factors" aria-label="Factor grades">
                 @for (g of factorGrades(row); track $index) {
@@ -545,6 +556,35 @@ export class BoardComponent implements OnInit {
 
   archetypeTooltip(row: BoardPlayer): string {
     return buildArchetypeTooltip(row, explainBoardArchetype(row));
+  }
+
+  vorTooltip(row: BoardPlayer): string {
+    const league = this.league();
+    const roster = league?.roster ?? DEFAULT_ROSTER;
+    const teamCount = league?.teamCount ?? 12;
+    const format = resolveVorScoringFormat({
+      reception: league?.scoring?.reception,
+      variant: league?.scoring?.variant ?? league?.scoringSummary?.variant,
+    });
+    const formatLabel =
+      format === 'half_ppr' ? 'Half-PPR' : format === 'standard' ? 'Standard' : 'PPR';
+    return buildVorTooltip(row, this.vorOf(row), {
+      teamCount,
+      formatLabel,
+      startableCapacity: startableCapacity(row.player.position, roster, teamCount, format),
+    });
+  }
+
+  projTooltip(row: BoardPlayer): string {
+    const league = this.league();
+    return buildProjTooltip(
+      row,
+      league?.scoring?.variant ?? league?.scoringSummary?.variant ?? null,
+    );
+  }
+
+  riskTooltip(row: BoardPlayer): string {
+    return buildRiskTooltip(row);
   }
 
   riskTone(risk: number): string {

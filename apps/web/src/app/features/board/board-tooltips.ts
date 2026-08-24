@@ -188,6 +188,78 @@ export function explainBoardArchetype(row: BoardPlayer): string {
   return explainSkillPosition(row.player);
 }
 
+export interface VorTooltipContext {
+  teamCount: number;
+  formatLabel: string;
+  startableCapacity: number;
+}
+
+export function buildVorTooltip(
+  row: BoardPlayer,
+  vor: number | null,
+  ctx: VorTooltipContext,
+): string {
+  const pos = row.player.position;
+  const proj = row.projectedPoints;
+  const cap = ctx.startableCapacity;
+
+  if (proj == null || !Number.isFinite(proj)) {
+    return 'No projection — VOR unavailable';
+  }
+  if (vor == null || !Number.isFinite(vor)) {
+    return [`Proj ${proj.toFixed(1)}`, '  VOR unavailable'].join('\n');
+  }
+
+  const baseline = Math.round((proj - vor) * 10) / 10;
+  const vorLabel = vor > 0 ? `+${vor.toFixed(1)}` : vor.toFixed(1);
+  return [
+    `VOR ${vorLabel}`,
+    `  Proj ${proj.toFixed(1)} − baseline ${baseline.toFixed(1)}`,
+    `  Baseline = rank ${cap} ${pos} (last startable in this league)`,
+    `  ${ctx.teamCount}-team · ${ctx.formatLabel} flex split`,
+  ].join('\n');
+}
+
+export function buildProjTooltip(row: BoardPlayer, scoringLabel?: string | null): string {
+  const proj = row.projectedPoints;
+  if (proj == null || !Number.isFinite(proj)) {
+    return 'No season-long projection on file';
+  }
+
+  const lines = [
+    `Proj ${proj.toFixed(1)} season points`,
+    `  Sleeper weekly projections summed`,
+    scoringLabel
+      ? `  Scored with league rules (${scoringLabel})`
+      : '  Scored with league rules',
+  ];
+  const rank = row.evaluation.value.projectedRank;
+  if (rank != null) {
+    lines.push(`  Overall rank ${rank} (mechanical fallback)`);
+  }
+  return lines.join('\n');
+}
+
+export function buildRiskTooltip(row: BoardPlayer): string {
+  const r = row.evaluation.risk;
+  const c = r.components;
+  const lines = [
+    `Risk ${Math.round(r.riskProfile)} · ~${r.expectedGamesMissed.toFixed(1)} games missed`,
+  ];
+  if (c) {
+    lines.push(
+      `  Career missed  ${pct(c.careerMissedRate)} × 0.40`,
+      `  Archetype inj  ${pct(c.archetypeInjury)} × 0.25`,
+      `  Age curve      ${pct(c.ageCurvePenalty)} × 0.20`,
+      `  Serious inj    ${c.recentSeriousInjury ? 'yes' : 'no'} × 0.15`,
+    );
+  } else {
+    lines.push('  Weighted blend of career, archetype, age, and injury flags');
+  }
+  lines.push(`→ ${Math.round(100 - r.riskProfile)} durability in Draft score`);
+  return lines.join('\n');
+}
+
 /** Spec §7 — one-line purpose blurbs for board column headers. */
 export const BOARD_HEADER_PURPOSE: Record<string, string> = {
   '#': 'Rank on this board (recommendation rank when present, else sort order).',
