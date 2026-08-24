@@ -4,7 +4,10 @@ import {
   BOARD_HEADER_PURPOSE,
   buildArchetypeTooltip,
   buildCeilingTooltip,
+  buildProjTooltip,
+  buildRiskTooltip,
   buildScoreTooltip,
+  buildVorTooltip,
   explainBoardArchetype,
 } from './board-tooltips';
 
@@ -27,6 +30,15 @@ function fakeRow(overrides: {
   };
   valueScore?: number;
   riskProfile?: number;
+  expectedGamesMissed?: number;
+  riskComponents?: {
+    careerMissedRate: number;
+    archetypeInjury: number;
+    ageCurvePenalty: number;
+    recentSeriousInjury: number;
+  };
+  projectedPoints?: number | null;
+  projectedRank?: number | null;
   age?: number;
   seasonsInLeague?: number;
   top5?: number;
@@ -85,16 +97,27 @@ function fakeRow(overrides: {
           fineRate: 0.23,
         },
       },
-      risk: { riskProfile: overrides.riskProfile ?? 20, expectedGamesMissed: 2 },
+      risk: {
+        riskProfile: overrides.riskProfile ?? 20,
+        expectedGamesMissed: overrides.expectedGamesMissed ?? 2,
+        components: overrides.riskComponents ?? {
+          careerMissedRate: 0.12,
+          archetypeInjury: 0.11,
+          ageCurvePenalty: 0.05,
+          recentSeriousInjury: 0,
+        },
+      },
       value: {
         valueScore: overrides.valueScore ?? 10,
         adpRoundPick: '1.08',
         blendedRank: 8,
+        projectedRank: overrides.projectedRank ?? null,
       },
     },
     recommendation:
       overrides.contextualScore != null ? { contextualScore: overrides.contextualScore } : undefined,
     drafted: false,
+    projectedPoints: overrides.projectedPoints ?? null,
   } as BoardPlayer;
 }
 
@@ -167,6 +190,49 @@ describe('explainBoardArchetype', () => {
       }),
     );
     expect(text.toLowerCase()).toMatch(/top-8|rule 4|over half/);
+  });
+});
+
+describe('buildVorTooltip', () => {
+  it('shows proj, baseline, and replacement rank', () => {
+    const text = buildVorTooltip(
+      fakeRow({ position: 'RB', projectedPoints: 280 }),
+      80,
+      { teamCount: 12, formatLabel: 'PPR', startableCapacity: 27 },
+    );
+    expect(text).toMatch(/VOR \+80\.0/);
+    expect(text).toMatch(/Proj 280\.0 − baseline 200\.0/);
+    expect(text).toMatch(/rank 27 RB/);
+    expect(text).toMatch(/12-team · PPR/);
+  });
+
+  it('handles missing projection', () => {
+    const text = buildVorTooltip(fakeRow({ projectedPoints: null }), null, {
+      teamCount: 12,
+      formatLabel: 'PPR',
+      startableCapacity: 27,
+    });
+    expect(text).toMatch(/unavailable/i);
+  });
+});
+
+describe('buildProjTooltip', () => {
+  it('shows projection source and rank when present', () => {
+    const text = buildProjTooltip(fakeRow({ projectedPoints: 312.4, projectedRank: 18 }), 'ppr');
+    expect(text).toMatch(/Proj 312\.4 season points/);
+    expect(text).toMatch(/Sleeper weekly projections/);
+    expect(text).toMatch(/ppr/i);
+    expect(text).toMatch(/Overall rank 18/);
+  });
+});
+
+describe('buildRiskTooltip', () => {
+  it('lists weighted risk components and draft-score durability', () => {
+    const text = buildRiskTooltip(fakeRow({ riskProfile: 22, expectedGamesMissed: 1.8 }));
+    expect(text).toMatch(/Risk 22/);
+    expect(text).toMatch(/Career missed/);
+    expect(text).toMatch(/× 0\.40/);
+    expect(text).toMatch(/78 durability in Draft score/);
   });
 });
 
