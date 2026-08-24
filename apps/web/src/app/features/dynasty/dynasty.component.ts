@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
@@ -53,6 +55,7 @@ interface AgeBar {
 export class DynastyComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   leagueId = '';
   readonly loading = signal(true);
@@ -173,8 +176,13 @@ export class DynastyComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';
-    this.reload();
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const id = params.get('id') ?? '';
+      if (!id || id === this.leagueId) return;
+      this.leagueId = id;
+      this.query.set('');
+      this.reload();
+    });
   }
 
   setMode(mode: DynastyMode): void {

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { BehaviorSubject, of } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../../core/api.service';
 import type { DynastyBoardRow, DynastyOverview, League, Position } from '../../core/api.types';
 import { DynastyComponent } from './dynasty.component';
@@ -97,7 +97,20 @@ function makeOverview(overrides: Partial<DynastyOverview> = {}): DynastyOverview
   };
 }
 
-async function createDynasty(overview: DynastyOverview, league: League = makeLeague()) {
+async function createDynasty(
+  overview: DynastyOverview,
+  league: League = makeLeague(),
+  extras: {
+    paramId?: string;
+    params?: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+    leagueFn?: ReturnType<typeof vi.fn>;
+    dynastyFn?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
+  const paramId = extras.paramId ?? 'league-1';
+  const params = extras.params ?? new BehaviorSubject(convertToParamMap({ id: paramId }));
+  const leagueFn = extras.leagueFn ?? vi.fn(() => of(league));
+  const dynastyFn = extras.dynastyFn ?? vi.fn(() => of(overview));
   await TestBed.configureTestingModule({
     imports: [DynastyComponent],
     providers: [
@@ -105,25 +118,28 @@ async function createDynasty(overview: DynastyOverview, league: League = makeLea
       {
         provide: ApiService,
         useValue: {
-          league: () => of(league),
-          dynasty: () => of(overview),
+          league: leagueFn,
+          dynasty: dynastyFn,
           setDynastyMode: () => of(overview),
         },
       },
       {
         provide: ActivatedRoute,
-        useValue: { snapshot: { paramMap: convertToParamMap({ id: 'league-1' }) } },
+        useValue: {
+          snapshot: { paramMap: convertToParamMap({ id: paramId }) },
+          paramMap: params.asObservable(),
+        },
       },
     ],
   }).compileComponents();
   const fixture = TestBed.createComponent(DynastyComponent);
   fixture.detectChanges();
-  return fixture;
+  return { fixture, params, leagueFn, dynastyFn };
 }
 
 describe('DynastyComponent league rosters', () => {
   it('renders a card for every team with players listed by position', async () => {
-    const fixture = await createDynasty(makeOverview());
+    const { fixture } = await createDynasty(makeOverview());
     const root = fixture.nativeElement as HTMLElement;
     const cards = root.querySelectorAll('.team-card');
     expect(cards.length).toBe(12);
@@ -146,7 +162,7 @@ describe('DynastyComponent league rosters', () => {
           ? { ...team, spent: 70, remaining: 130 }
           : { ...team, spent: 0, remaining: 200 },
     );
-    const fixture = await createDynasty(
+    const { fixture } = await createDynasty(
       overview,
       makeLeague({ type: 'auction', draftType: 'auction', auctionBudget: 200 }),
     );
@@ -157,5 +173,38 @@ describe('DynastyComponent league rosters', () => {
     expect(root.textContent).toContain('$70');
     expect(root.textContent).toContain('$113');
     expect(root.textContent).toContain('$87 left');
+  });
+
+  it('reloads when the league id in the route changes', async () => {
+    const params = new BehaviorSubject(convertToParamMap({ id: 'league-1' }));
+    const otherOverview = makeOverview({
+      leagueId: 'league-2',
+      rosterBoard: [makeRow('saquon-barkley', 'Saquon Barkley', 'RB')],
+      teamRosters: [
+        {
+          rosterId: 'roster-user',
+          name: 'Other You',
+          isUser: true,
+          players: [makeRow('saquon-barkley', 'Saquon Barkley', 'RB')],
+        },
+      ],
+    });
+    const leagueFn = vi.fn((id: string) =>
+      of(id === 'league-2' ? makeLeague({ id: 'league-2', name: 'Other League' }) : makeLeague()),
+    );
+    const dynastyFn = vi.fn((id: string) => of(id === 'league-2' ? otherOverview : makeOverview()));
+    const { fixture } = await createDynasty(makeOverview(), makeLeague(), {
+      params,
+      leagueFn,
+      dynastyFn,
+    });
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Josh Allen');
+    params.next(convertToParamMap({ id: 'league-2' }));
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Saquon Barkley');
+    expect(text).toContain('Other You');
+    expect(text).not.toContain('Josh Allen');
+    expect(dynastyFn).toHaveBeenCalledWith('league-2');
   });
 });
