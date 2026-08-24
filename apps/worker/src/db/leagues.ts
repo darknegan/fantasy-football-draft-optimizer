@@ -20,6 +20,8 @@ function mapLeague(row: Record<string, unknown>): League {
     sleeperUserId: row['sleeper_user_id'] != null ? String(row['sleeper_user_id']) : undefined,
     dynastyMode: (row['dynasty_mode'] as League['dynastyMode']) ?? undefined,
     auctionBudget: row['auction_budget'] != null ? Number(row['auction_budget']) : undefined,
+    draftPlayerPool: (row['draft_player_pool'] as League['draftPlayerPool']) ?? undefined,
+    draftRounds: row['draft_rounds'] != null ? Number(row['draft_rounds']) : undefined,
   };
 }
 
@@ -42,6 +44,8 @@ function leagueInsert(league: League) {
     sleeper_user_id: league.sleeperUserId ?? null,
     dynasty_mode: league.dynastyMode ?? null,
     auction_budget: league.auctionBudget ?? null,
+    draft_player_pool: league.draftPlayerPool ?? 'all',
+    draft_rounds: league.draftRounds ?? 16,
   };
 }
 
@@ -140,7 +144,9 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
           sleeper_draft_id = ${league.sleeperDraftId ?? null},
           sleeper_user_id = ${league.sleeperUserId ?? null},
           dynasty_mode = ${league.dynastyMode ?? null},
-          auction_budget = ${league.auctionBudget ?? null}
+          auction_budget = ${league.auctionBudget ?? null},
+          draft_player_pool = ${league.draftPlayerPool ?? 'all'},
+          draft_rounds = ${league.draftRounds ?? 16}
         WHERE id = ${id}
         RETURNING *
       `;
@@ -152,7 +158,7 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
     INSERT INTO leagues (
       id, user_id, name, platform, external_id, type, draft_type, team_count, season,
       scoring, roster, draft_slot, strategy_id, sleeper_draft_id, sleeper_user_id,
-      dynasty_mode, auction_budget
+      dynasty_mode, auction_budget, draft_player_pool, draft_rounds
     ) VALUES (
       COALESCE(${league.id || null}::uuid, gen_random_uuid()),
       ${league.userId},
@@ -170,7 +176,9 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
       ${league.sleeperDraftId ?? null},
       ${league.sleeperUserId ?? null},
       ${league.dynastyMode ?? null},
-      ${league.auctionBudget ?? null}
+      ${league.auctionBudget ?? null},
+      ${league.draftPlayerPool ?? 'all'},
+      ${league.draftRounds ?? 16}
     )
     RETURNING *
   `;

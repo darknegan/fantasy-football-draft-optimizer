@@ -27,7 +27,7 @@
 
     <div class="round-meta">
       <div class="cap">ROUND</div>
-      <div>{{ round() }} of {{ totalRounds }}</div>
+      <div>{{ round() }} of {{ totalRounds() }}</div>
     </div>
 
     <div class="spacer"></div>
@@ -232,7 +232,7 @@
           <div class="board-head">
             <h2>Draft board</h2>
             <span class="chip muted"
-              >Snake · {{ teamCount() }} teams · {{ totalRounds }} rounds</span
+              >{{ draftFormatLabel() }} · {{ teamCount() }} teams · {{ totalRounds() }} rounds</span
             >
             <span class="spacer"></span>
             <span class="slot-note">Your slot is column {{ userSlot() }}</span>

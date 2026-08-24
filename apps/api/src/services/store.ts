@@ -31,6 +31,7 @@ import {
   buildRosterAgeCurve,
   buildRookieBoard,
   dynastyCompositeScore,
+  isRookiePoolPlayer,
   ownedPickValue,
   seedPickAssets,
 } from '@draftlab/dynasty-engine';
@@ -278,8 +279,15 @@ export class AppStore {
   }
 
   upsertLeague(league: League) {
+    const prev = this.leagues.get(league.id);
     this.leagues.set(league.id, league);
     if (!this.drafts.has(league.id)) {
+      this.drafts.set(league.id, this.createEmptyDraft(league.id));
+    } else if (
+      prev &&
+      (prev.draftPlayerPool !== league.draftPlayerPool || prev.draftRounds !== league.draftRounds) &&
+      (this.drafts.get(league.id)?.picks.length ?? 0) === 0
+    ) {
       this.drafts.set(league.id, this.createEmptyDraft(league.id));
     }
     return league;
@@ -372,12 +380,13 @@ export class AppStore {
     if (!this.leagueEvaluations.has(leagueId)) this.recalculateForLeague(leagueId);
 
     const draftedIds = new Set(draft.picks.filter((p) => p.playerId).map((p) => p.playerId!));
+    const poolSeeds = this.seedsForLeague(league);
     const userRoster = draft.picks
       .filter((p) => p.rosterId === draft.userRosterId && p.playerId)
       .map((p) => this.getPlayer(p.playerId!)!)
       .filter(Boolean);
 
-    const available = this.seeds
+    const available = poolSeeds
       .filter((s) => !draftedIds.has(s.player.id))
       .map((s) => ({
         player: s.player,
@@ -416,7 +425,7 @@ export class AppStore {
     if (league.type === 'dynasty') {
       const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
       const npvByPlayer = new Map<string, number>();
-      for (const s of this.seeds) {
+      for (const s of poolSeeds) {
         const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
         npvByPlayer.set(s.player.id, buildMultiYearCurve(s.player, evaluation, league.season).npv);
       }
@@ -425,7 +434,7 @@ export class AppStore {
 
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
-    return this.seeds
+    return poolSeeds
       .map((s) => ({
         player: withHeadshot(s.player),
         evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
@@ -1163,13 +1172,15 @@ export class AppStore {
   }
 
   private createEmptyDraft(leagueId: string): DraftState {
+    const league = this.leagues.get(leagueId);
+    const pool = league ? this.seedsForLeague(league) : this.seeds;
     return {
       leagueId,
       draftId: `draft-${leagueId}`,
       status: 'pre_draft',
       currentPick: 1,
       picks: [],
-      availablePlayerIds: this.seeds.map((s) => s.player.id),
+      availablePlayerIds: pool.map((s) => s.player.id),
       userRosterId: 'roster-user',
       lastSyncedAt: null,
       syncMode: 'manual',
@@ -1177,6 +1188,21 @@ export class AppStore {
       lastPickedUpstream: null,
       picksUntilUser: null,
     };
+  }
+
+  private seedsForLeague(league: League) {
+    if (this.usesRookiePool(league)) {
+      return this.seeds.filter((s) => isRookiePoolPlayer(s.player, league.season));
+    }
+    return this.seeds;
+  }
+
+  private usesRookiePool(league: League): boolean {
+    if (league.draftPlayerPool === 'rookies') return true;
+    if (league.draftPlayerPool === 'all') return false;
+    // Legacy imports before draft_player_pool was persisted.
+    if (league.type === 'dynasty') return true;
+    return league.draftType === 'rookie';
   }
 
   /** Share of recent picks at each position — used to amplify survival urgency during runs. */

@@ -9,11 +9,13 @@ import {
 } from '@draftlab/evaluation-engine';
 import {
   createManualLeague,
+  mapLeagueType,
   mapSleeperLeague,
   resolveDraftSlot,
   rosterPresetForScoring,
   scoringConfirmation,
   SCORING_PRESETS,
+  selectSleeperDraft,
   sharedSleeperLimiter,
   sharedSleeperStatsClient,
   SleeperApiError,
@@ -380,7 +382,11 @@ app.post('/api/leagues/sleeper/connect', async (c) => {
         let draft = null;
         try {
           const drafts = await client.getLeagueDrafts(l.league_id);
-          draft = drafts[0] ?? null;
+          draft = selectSleeperDraft(
+            drafts,
+            mapLeagueType(l.settings),
+            Number(l.season),
+          );
         } catch {
           draft = null;
         }
@@ -556,7 +562,11 @@ app.post('/api/leagues/:id/sleeper/resync', async (c) => {
     let draft = null;
     try {
       const drafts = await client.getLeagueDrafts(existing.externalId);
-      draft = drafts[0] ?? null;
+      draft = selectSleeperDraft(
+        drafts,
+        mapLeagueType(sleeperLeague.settings),
+        Number(sleeperLeague.season),
+      );
     } catch {
       draft = null;
     }

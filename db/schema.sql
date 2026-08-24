@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS leagues (
   sleeper_user_id TEXT,
   dynasty_mode TEXT,
   auction_budget INT,
+  draft_player_pool TEXT NOT NULL DEFAULT 'all' CHECK (draft_player_pool IN ('all', 'rookies')),
+  draft_rounds INT NOT NULL DEFAULT 16,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (user_id, platform, external_id)
 );

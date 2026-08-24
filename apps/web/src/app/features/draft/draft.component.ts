@@ -128,7 +128,18 @@ export class DraftComponent implements OnInit, OnDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private onlineHandler?: () => void;
 
-  readonly totalRounds = 16;
+  readonly totalRounds = computed(() => {
+    const league = this.league();
+    if (league?.draftRounds) return league.draftRounds;
+    if (
+      league?.draftPlayerPool === 'rookies' ||
+      league?.draftType === 'rookie' ||
+      league?.type === 'dynasty'
+    ) {
+      return 4;
+    }
+    return 16;
+  });
   readonly posTabs = POS_TABS;
 
   leagueId = '';
@@ -160,7 +171,7 @@ export class DraftComponent implements OnInit, OnDestroy {
     const slot = this.userSlot();
     const n = this.teamCount();
     if (!d) return slot;
-    for (let p = d.currentPick; p <= n * this.totalRounds; p++) {
+    for (let p = d.currentPick; p <= n * this.totalRounds(); p++) {
       if (slotForPick(p, n) === slot) return p;
     }
     return d.currentPick;
@@ -226,7 +237,7 @@ export class DraftComponent implements OnInit, OnDestroy {
     const current = d?.currentPick ?? 1;
     const nextYou = this.nextUserPickOverall();
     const maxRound = Math.min(
-      this.totalRounds,
+      this.totalRounds(),
       Math.max(3, Math.ceil(current / n) + 1, Math.ceil((d?.picks.length ?? 0) / n) + 1),
     );
 
@@ -433,6 +444,27 @@ export class DraftComponent implements OnInit, OnDestroy {
     return mode === 'degraded' || mode === 'manual';
   }
 
+  readonly isRookieDraft = computed(() => {
+    const league = this.league();
+    if (!league) return false;
+    if (league.draftPlayerPool === 'rookies') return true;
+    if (league.draftPlayerPool === 'all') return false;
+    return league.type === 'dynasty' || league.draftType === 'rookie';
+  });
+
+  readonly draftFormatLabel = computed(() => {
+    const league = this.league();
+    if (!league) return 'Snake';
+    const mechanics =
+      league.draftType === 'linear'
+        ? 'Linear'
+        : league.draftType === 'auction'
+          ? 'Auction'
+          : 'Snake';
+    if (this.isRookieDraft()) return `Rookie · ${mechanics}`;
+    return mechanics;
+  });
+
   syncTitle() {
     const platform = this.league()?.platform === 'sleeper' ? 'Sleeper' : 'Manual';
     const mode = this.draft()?.syncMode;
@@ -497,7 +529,7 @@ export class DraftComponent implements OnInit, OnDestroy {
     const n = this.teamCount();
     const next = this.nextUserPickOverall();
     // "Survives to" the following user pick (turn after next), matching the mock.
-    for (let p = next + 1; p <= n * this.totalRounds; p++) {
+    for (let p = next + 1; p <= n * this.totalRounds(); p++) {
       if (slotForPick(p, n) === this.userSlot()) return p;
     }
     return next + n;

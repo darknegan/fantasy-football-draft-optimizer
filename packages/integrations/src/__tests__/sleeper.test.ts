@@ -3,7 +3,8 @@ import { nextPollIntervalMs } from '../sleeper/client.js';
 import { mapWeeklyGameLog } from '../sleeper/game-log.js';
 import { sleeperHeadshotThumbUrl, sleeperHeadshotUrl } from '../sleeper/headshot.js';
 import { SleeperRateLimiter } from '../sleeper/rate-limiter.js';
-import { mapRosterPositions, mapScoring, mapDraftType, mapLeagueType } from '../sleeper/map-league.js';
+import { mapRosterPositions, mapScoring, mapDraftType, mapDraftPlayerPool, mapDraftRounds, mapLeagueType, selectSleeperDraft } from '../sleeper/map-league.js';
+import type { SleeperDraft } from '../sleeper/client.js';
 import { summarizeScoring, isSuperflex } from '../sleeper/scoring-summary.js';
 
 describe('SleeperRateLimiter', () => {
@@ -67,6 +68,42 @@ describe('map helpers', () => {
     expect(mapLeagueType({ type: 'dynasty' })).toBe('dynasty');
     expect(mapLeagueType({ type: 2, disable_adds: 1 })).toBe('dynasty');
     expect(mapLeagueType({ disable_adds: 1 })).toBe('redraft');
+  });
+
+  it('maps draft player pool from Sleeper player_type', () => {
+    expect(mapDraftPlayerPool({ settings: { player_type: 1 } } as SleeperDraft, 'dynasty')).toBe(
+      'rookies',
+    );
+    expect(mapDraftPlayerPool({ settings: { player_type: 0 } } as SleeperDraft, 'dynasty')).toBe(
+      'all',
+    );
+    expect(mapDraftPlayerPool(null, 'dynasty')).toBe('rookies');
+    expect(mapDraftPlayerPool(null, 'redraft')).toBe('all');
+  });
+
+  it('maps draft rounds from Sleeper settings', () => {
+    expect(mapDraftRounds({ settings: { rounds: 3 } } as SleeperDraft, 'dynasty')).toBe(3);
+    expect(mapDraftRounds(null, 'dynasty')).toBe(4);
+    expect(mapDraftRounds(null, 'redraft')).toBe(16);
+  });
+
+  it('selects active rookie draft for dynasty leagues', () => {
+    const drafts = [
+      {
+        draft_id: 'startup',
+        status: 'complete',
+        season: '2025',
+        settings: { player_type: 0, rounds: 21 },
+      },
+      {
+        draft_id: 'rookie',
+        status: 'pre_draft',
+        season: '2026',
+        settings: { player_type: 1, rounds: 3 },
+      },
+    ] as SleeperDraft[];
+    const picked = selectSleeperDraft(drafts, 'dynasty', 2026);
+    expect(picked?.draft_id).toBe('rookie');
   });
 });
 

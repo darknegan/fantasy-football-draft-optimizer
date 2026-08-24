@@ -152,6 +152,8 @@ export interface League {
   externalId?: string;
   type: string;
   draftType: string;
+  draftPlayerPool?: 'all' | 'rookies';
+  draftRounds?: number;
   teamCount: number;
   season: number;
   draftSlot?: number;

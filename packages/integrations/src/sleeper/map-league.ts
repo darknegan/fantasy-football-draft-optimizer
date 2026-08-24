@@ -1,4 +1,12 @@
-import type { DraftType, League, LeagueType, RosterShape, ScoringProfile, ScoringVariant } from '@draftlab/domain';
+import type {
+  DraftPlayerPool,
+  DraftType,
+  League,
+  LeagueType,
+  RosterShape,
+  ScoringProfile,
+  ScoringVariant,
+} from '@draftlab/domain';
 import type { SleeperDraft, SleeperLeague } from './client.js';
 import { summarizeScoring } from './scoring-summary.js';
 
@@ -53,6 +61,51 @@ export function mapDraftType(type: string | undefined): DraftType {
   return 'snake';
 }
 
+/** Sleeper draft.settings.player_type: 0 = all players, 1 = rookies only. */
+export function mapDraftPlayerPool(
+  draft: SleeperDraft | null | undefined,
+  leagueType: LeagueType,
+): DraftPlayerPool {
+  if (draft?.settings?.player_type === 1) return 'rookies';
+  if (leagueType === 'dynasty' && !draft) return 'rookies';
+  return 'all';
+}
+
+export function mapDraftRounds(
+  draft: SleeperDraft | null | undefined,
+  leagueType: LeagueType,
+): number {
+  const rounds = draft?.settings?.rounds;
+  if (typeof rounds === 'number' && rounds > 0) return rounds;
+  if (leagueType === 'dynasty') return 4;
+  return 16;
+}
+
+/** Pick the draft Sleeper draft room should mirror (active rookie draft for dynasty). */
+export function selectSleeperDraft(
+  drafts: SleeperDraft[],
+  leagueType: LeagueType,
+  season: number,
+): SleeperDraft | null {
+  if (drafts.length === 0) return null;
+
+  const bySeasonDesc = [...drafts].sort((a, b) => Number(b.season) - Number(a.season));
+
+  if (leagueType === 'dynasty') {
+    const rookieDrafts = drafts.filter((d) => d.settings?.player_type === 1);
+    const seasonRookies = rookieDrafts.filter((d) => Number(d.season) === season);
+    const pool = seasonRookies.length > 0 ? seasonRookies : rookieDrafts;
+    const active = pool.find((d) => d.status !== 'complete');
+    if (active) return active;
+    if (pool.length > 0) {
+      return [...pool].sort((a, b) => Number(b.season) - Number(a.season))[0]!;
+    }
+  }
+
+  const active = bySeasonDesc.find((d) => d.status !== 'complete');
+  return active ?? bySeasonDesc[0] ?? null;
+}
+
 /** Sleeper settings.type: 0 = redraft, 1 = keeper, 2 = dynasty (integer from API). */
 export function mapLeagueType(settings: Record<string, number | string> | undefined): LeagueType {
   const raw = settings?.['type'] ?? settings?.['league_type'];
@@ -84,6 +137,8 @@ export function mapSleeperLeague(
   opts?: { userId?: string; draftSlot?: number; draft?: SleeperDraft | null },
 ): League {
   const draft = opts?.draft;
+  const leagueType = mapLeagueType(league.settings);
+  const season = Number(league.season);
   const roster = mapRosterPositions(league.roster_positions ?? []);
   const scoring = mapScoring(league.scoring_settings ?? {});
   return {
@@ -93,10 +148,12 @@ export function mapSleeperLeague(
     name: league.name,
     platform: 'sleeper',
     externalId: league.league_id,
-    type: mapLeagueType(league.settings),
+    type: leagueType,
     draftType: mapDraftType(draft?.type),
+    draftPlayerPool: mapDraftPlayerPool(draft, leagueType),
+    draftRounds: mapDraftRounds(draft, leagueType),
     teamCount: league.total_rosters,
-    season: Number(league.season),
+    season,
     scoring,
     roster,
     draftSlot: opts?.draftSlot,
