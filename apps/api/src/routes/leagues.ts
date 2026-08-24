@@ -12,7 +12,7 @@ import {
   sharedSleeperLimiter,
 } from '@draftlab/integrations';
 import { authenticate, requireUser } from '../auth/plugin.js';
-import { getLeagueForUser, listLeaguesForUser, updateLeagueRow, upsertLeagueRow } from '../db/leagues.js';
+import { deleteLeagueRow, getLeagueForUser, listLeaguesForUser, updateLeagueRow, upsertLeagueRow } from '../db/leagues.js';
 import type { AppStore } from '../services/store.js';
 import type { DraftPoller } from '../services/draft-poller.js';
 
@@ -271,6 +271,95 @@ export async function leagueRoutes(
       if (!draft) return reply.code(404).send({ error: 'Draft not found' });
       poller.stop(req.params.id);
       return draft;
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/api/leagues/:id/draft/reset',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (reply.sent) return;
+      const user = requireUser(req);
+      const league = await ownedLeague(store, pool, user.sub, req.params.id);
+      if (!league) return reply.code(404).send({ error: 'League not found' });
+      const draft = store.getDraft(req.params.id);
+      if (!draft) return reply.code(404).send({ error: 'Draft not found' });
+      if (league.platform === 'sleeper' && draft.syncMode === 'polling') {
+        return reply.code(400).send({
+          error: 'Cannot reset a live Sleeper draft — switch to manual mode first.',
+        });
+      }
+      poller.stop(req.params.id);
+      const reset = store.resetDraft(req.params.id);
+      if (!reset) return reply.code(404).send({ error: 'Draft not found' });
+      return {
+        draft: reset,
+        board: store.getBoard(req.params.id),
+        adherence: store.adherence(req.params.id),
+      };
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/api/leagues/:id/sleeper/resync',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (reply.sent) return;
+      const user = requireUser(req);
+      const existing = await ownedLeague(store, pool, user.sub, req.params.id);
+      if (!existing) return reply.code(404).send({ error: 'League not found' });
+      if (existing.platform !== 'sleeper' || !existing.externalId) {
+        return reply.code(400).send({ error: 'League is not linked to Sleeper' });
+      }
+      const client = new SleeperClient();
+      try {
+        const sleeperLeague = await client.getLeague(existing.externalId);
+        let draft = null;
+        try {
+          const drafts = await client.getLeagueDrafts(existing.externalId);
+          draft = drafts[0] ?? null;
+        } catch {
+          draft = null;
+        }
+        const mapped = mapSleeperLeague(sleeperLeague, {
+          userId: user.sub,
+          draft,
+          draftSlot: existing.draftSlot,
+        });
+        mapped.id = existing.id;
+        mapped.sleeperUserId = existing.sleeperUserId ?? mapped.sleeperUserId;
+        mapped.strategyId = existing.strategyId ?? mapped.strategyId;
+        if (draft && mapped.sleeperUserId) {
+          mapped.draftSlot = resolveDraftSlot(draft, mapped.sleeperUserId) ?? mapped.draftSlot;
+        }
+        const persisted = await upsertLeagueRow(pool, mapped);
+        const saved = store.upsertLeague(persisted);
+        store.recalculateForLeague(saved.id);
+        if (saved.sleeperDraftId) poller.start(saved.id);
+        return { ...saved, scoringSummary: scoringConfirmation(saved) };
+      } catch (err) {
+        return reply.code(502).send({
+          error: 'Failed to reach Sleeper',
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/api/leagues/:id',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (reply.sent) return;
+      const user = requireUser(req);
+      if (!(await ownedLeague(store, pool, user.sub, req.params.id))) {
+        return reply.code(404).send({ error: 'League not found' });
+      }
+      poller.stop(req.params.id);
+      const deleted = await deleteLeagueRow(pool, user.sub, req.params.id);
+      if (!deleted) return reply.code(404).send({ error: 'League not found' });
+      store.removeLeague(req.params.id);
+      return { ok: true };
     },
   );
 

@@ -169,6 +169,24 @@ export class ApiService {
     return this.http.post<DraftState>(`/api/leagues/${leagueId}/draft/manual-mode`, {});
   }
 
+  resetDraft(leagueId: string) {
+    return this.http.post<{ draft: DraftState; board: BoardPlayer[]; adherence: AdherenceResult }>(
+      `/api/leagues/${leagueId}/draft/reset`,
+      {},
+    );
+  }
+
+  resyncSleeperLeague(leagueId: string) {
+    return this.http.post<League & { scoringSummary: ScoringSummary }>(
+      `/api/leagues/${leagueId}/sleeper/resync`,
+      {},
+    );
+  }
+
+  deleteLeague(leagueId: string) {
+    return this.http.delete<{ ok: boolean }>(`/api/leagues/${leagueId}`);
+  }
+
   startPolling(leagueId: string) {
     return this.http.post<DraftState>(`/api/leagues/${leagueId}/draft/start-polling`, {});
   }

@@ -65,4 +65,16 @@ export class FormatState {
     this.activeBandsByLeague.set(leagueId, { ...proposal.proposedBands });
     this.activeWeightsByLeague.set(leagueId, { ...proposal.proposedWeights });
   }
+
+  clearLeague(leagueId: string) {
+    this.dynastyMode.delete(leagueId);
+    this.pickAssets.delete(leagueId);
+    this.auctionBudgets.delete(leagueId);
+    this.auctionBids.delete(leagueId);
+    this.contractRules.delete(leagueId);
+    this.outcomes.delete(leagueId);
+    this.calibration.delete(leagueId);
+    this.activeBandsByLeague.delete(leagueId);
+    this.activeWeightsByLeague.delete(leagueId);
+  }
 }

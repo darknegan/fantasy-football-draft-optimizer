@@ -219,3 +219,25 @@ export async function updateLeagueRow(
   `;
   return rows[0] ? mapLeague(rows[0] as Record<string, unknown>) : null;
 }
+
+export async function deleteLeagueRow(
+  db: Db,
+  userId: string,
+  leagueId: string,
+): Promise<boolean> {
+  if (db.kind === 'supabase') {
+    const { error, count } = await db.sb
+      .from('leagues')
+      .delete({ count: 'exact' })
+      .eq('id', leagueId)
+      .eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0;
+  }
+
+  const rows = await db.sql`
+    DELETE FROM leagues WHERE id = ${leagueId} AND user_id = ${userId}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}

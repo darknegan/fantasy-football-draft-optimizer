@@ -43,7 +43,7 @@ import {
 import { AppStore } from '../../api/src/services/store.js';
 import { dbUnavailable, requireAccessJwt, type WorkerUser } from './auth.js';
 import { dbHealthCheck } from './db/client.js';
-import { updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
+import { deleteLeagueRow, updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
 import { loadUserLeagues, ownedLeague, withDb } from './leagues.js';
 import { authRoutes } from './routes/auth.js';
 
@@ -509,6 +509,101 @@ app.post('/api/leagues/:id/draft/manual-mode', async (c) => {
     });
     if (!draft) return c.json({ error: 'Draft not found' }, 404);
     return c.json(draft);
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+});
+
+app.post('/api/leagues/:id/draft/reset', async (c) => {
+  const user = c.get('user');
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const draft = store.getDraft(league.id);
+    if (!draft) return c.json({ error: 'Draft not found' }, 404);
+    if (league.platform === 'sleeper' && draft.syncMode === 'polling') {
+      return c.json(
+        { error: 'Cannot reset a live Sleeper draft — switch to manual mode first.' },
+        400,
+      );
+    }
+    const reset = store.resetDraft(league.id);
+    if (!reset) return c.json({ error: 'Draft not found' }, 404);
+    return c.json({
+      draft: reset,
+      board: store.getBoard(league.id),
+      adherence: store.adherence(league.id),
+    });
+  } catch (err) {
+    return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
+  }
+});
+
+app.post('/api/leagues/:id/sleeper/resync', async (c) => {
+  const user = c.get('user');
+  try {
+    const existing = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!existing) return c.json({ error: 'League not found' }, 404);
+    if (existing.platform !== 'sleeper' || !existing.externalId) {
+      return c.json({ error: 'League is not linked to Sleeper' }, 400);
+    }
+    const client = new SleeperClient();
+    const sleeperLeague = await client.getLeague(existing.externalId);
+    let draft = null;
+    try {
+      const drafts = await client.getLeagueDrafts(existing.externalId);
+      draft = drafts[0] ?? null;
+    } catch {
+      draft = null;
+    }
+    const mapped = mapSleeperLeague(sleeperLeague, {
+      userId: user.sub,
+      draft,
+      draftSlot: existing.draftSlot,
+    });
+    mapped.id = existing.id;
+    mapped.sleeperUserId = existing.sleeperUserId ?? mapped.sleeperUserId;
+    mapped.strategyId = existing.strategyId ?? mapped.strategyId;
+    if (draft && mapped.sleeperUserId) {
+      mapped.draftSlot = resolveDraftSlot(draft, mapped.sleeperUserId) ?? mapped.draftSlot;
+    }
+    const saved = await withDb(c.env, c.executionCtx, async (db) => {
+      const persisted = await upsertLeagueRow(db, mapped);
+      const next = store.upsertLeague(persisted);
+      store.recalculateForLeague(next.id);
+      return next;
+    });
+    return c.json({ ...saved, scoringSummary: scoringConfirmation(saved) });
+  } catch (err) {
+    const status: ContentfulStatusCode =
+      err instanceof SleeperApiError && err.status === 429 ? 503 : 502;
+    return c.json(
+      {
+        error: 'Failed to reach Sleeper',
+        detail: err instanceof Error ? err.message : String(err),
+      },
+      status,
+    );
+  }
+});
+
+app.delete('/api/leagues/:id', async (c) => {
+  const user = c.get('user');
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    const deleted = await withDb(c.env, c.executionCtx, (db) =>
+      deleteLeagueRow(db, user.sub, league.id),
+    );
+    if (!deleted) return c.json({ error: 'League not found' }, 404);
+    store.removeLeague(league.id);
+    return c.json({ ok: true });
   } catch (err) {
     return c.json(dbUnavailable(err instanceof Error ? err.message : String(err)), 503);
   }
