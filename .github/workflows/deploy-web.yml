@@ -1,0 +1,48 @@
+# Deploy DraftLab web (Angular SPA + edge worker) to Cloudflare on merge to main.
+#
+# Secrets (repo settings → Actions → Repository secrets):
+#   CLOUDFLARE_API_TOKEN   — Account → Workers Scripts → Edit
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare account id
+
+name: deploy-web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "package-lock.json"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build shared packages
+        run: npm run build:packages
+        working-directory: .
+
+      - name: Build and deploy draftlab-web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm run build
+          npx --yes wrangler@4 deploy
