@@ -9,6 +9,21 @@ function player(id: string) {
 }
 
 describe('dynastyOverview league rosters', () => {
+  it('leaves every team empty before any picks or auction bids', () => {
+    const store = new AppStore([player('josh-allen'), player('bijan-robinson')]);
+    const { auction, dynasty } = store.seedDemoLeagues('demo-user');
+
+    for (const leagueId of [auction.id, dynasty.id]) {
+      const overview = store.dynastyOverview(leagueId);
+      expect(overview?.teamRosters).toHaveLength(12);
+      expect(overview?.rosterBoard).toEqual([]);
+      expect(overview?.summary?.rosterCount).toBe(0);
+      for (const team of overview?.teamRosters ?? []) {
+        expect(team.players).toEqual([]);
+      }
+    }
+  });
+
   it('returns a card for every team in a snake league, grouped by position', () => {
     const store = new AppStore([
       player('josh-allen'),

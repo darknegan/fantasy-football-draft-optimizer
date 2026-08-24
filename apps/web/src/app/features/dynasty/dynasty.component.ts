@@ -69,7 +69,7 @@ export class DynastyComponent implements OnInit {
     const season = this.league()?.season ?? 2025;
     return (
       o?.summary ?? {
-        rosterCount: o?.rosterBoard?.length ?? o?.board.length ?? 0,
+        rosterCount: o?.rosterBoard?.length ?? 0,
         meanAge: o?.ageCurve.meanAge ?? 0,
         agingRisk: 0,
         contendWindow: { startSeason: season, endSeason: season + 2, seasons: 3 },
@@ -84,7 +84,7 @@ export class DynastyComponent implements OnInit {
   readonly rosterRows = computed((): DynastyBoardRow[] => {
     const o = this.overview();
     if (!o) return [];
-    return o.rosterBoard?.length ? o.rosterBoard : o.board.slice(0, 12);
+    return o.rosterBoard ?? [];
   });
 
   readonly isAuction = computed(() => {
