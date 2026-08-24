@@ -9,7 +9,31 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import type { DynastyBoardRow, DynastyMode, DynastyOverview, League } from '../../core/api.types';
+import type {
+  DynastyBoardRow,
+  DynastyMode,
+  DynastyOverview,
+  DynastyTeamRoster,
+  League,
+  Position,
+} from '../../core/api.types';
+
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+
+interface PositionGroup {
+  position: Position;
+  players: DynastyBoardRow[];
+}
+
+interface TeamRosterView {
+  rosterId: string;
+  name: string;
+  isUser: boolean;
+  spent?: number;
+  remaining?: number;
+  groups: PositionGroup[];
+  playerCount: number;
+}
 
 interface AgeBar {
   label: string;
@@ -58,6 +82,57 @@ export class DynastyComponent implements OnInit {
     const o = this.overview();
     if (!o) return [];
     return o.rosterBoard?.length ? o.rosterBoard : o.board.slice(0, 12);
+  });
+
+  readonly isAuction = computed(() => {
+    const overview = this.overview();
+    if (overview?.isAuction != null) return overview.isAuction;
+    const league = this.league();
+    return league?.draftType === 'auction' || league?.type === 'auction';
+  });
+
+  readonly teamViews = computed((): TeamRosterView[] => {
+    const overview = this.overview();
+    if (!overview) return [];
+    const q = this.query().trim().toLowerCase();
+    const teams: DynastyTeamRoster[] = overview.teamRosters?.length
+      ? overview.teamRosters
+      : [
+          {
+            rosterId: overview.userRosterId ?? 'roster-user',
+            name: 'You',
+            isUser: true,
+            players: this.rosterRows(),
+          },
+        ];
+
+    return teams
+      .map((team) => {
+        const nameHit = Boolean(q) && team.name.toLowerCase().includes(q);
+        const players = nameHit
+          ? team.players
+          : q
+            ? team.players.filter(
+                (row) =>
+                  row.name.toLowerCase().includes(q) ||
+                  row.position.toLowerCase().includes(q) ||
+                  row.archetype.toLowerCase().includes(q),
+              )
+            : team.players;
+        return {
+          rosterId: team.rosterId,
+          name: team.name,
+          isUser: team.isUser,
+          spent: team.spent,
+          remaining: team.remaining,
+          playerCount: players.length,
+          groups: POSITIONS.map((position) => ({
+            position,
+            players: players.filter((row) => row.position === position),
+          })),
+        };
+      })
+      .filter((team) => !q || team.playerCount > 0 || team.name.toLowerCase().includes(q));
   });
 
   readonly filteredRoster = computed(() => {
@@ -117,7 +192,9 @@ export class DynastyComponent implements OnInit {
     const l = this.league();
     const s = this.summary();
     const name = l?.name ?? 'League';
-    return `${name} · ${s.rosterCount} rostered · average age ${s.meanAge.toFixed(1)} · valuation horizon ${s.horizon.startSeason}–${s.horizon.endSeason}`;
+    const teams = this.league()?.teamCount ?? this.overview()?.teamRosters?.length;
+    const teamBit = teams != null ? `${teams}-team league · ` : '';
+    return `${name} · ${teamBit}${s.rosterCount} rostered · average age ${s.meanAge.toFixed(1)} · valuation horizon ${s.horizon.startSeason}–${s.horizon.endSeason}`;
   }
 
   platformLabel(): string {
@@ -204,6 +281,10 @@ export class DynastyComponent implements OnInit {
       return `${p.label} From trade`;
     }
     return `${p.label} Own`;
+  }
+
+  formatPaid(amount: number | undefined): string {
+    return amount != null ? `$${amount}` : '—';
   }
 
   pickSubtitle(p: DynastyOverview['pickAssets'][number]): string {

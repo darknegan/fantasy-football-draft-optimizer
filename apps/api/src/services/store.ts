@@ -52,7 +52,12 @@ import {
   simulateStrategy,
   type SimPlayer,
 } from '@draftlab/strategy-engine';
-import { buildCheatSheet, computeVor, projectUserPickProgress, resolveVorScoringFormat } from '@draftlab/tiers';
+import {
+  buildCheatSheet,
+  computeVor,
+  projectUserPickProgress,
+  resolveVorScoringFormat,
+} from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
@@ -688,18 +693,13 @@ export class AppStore {
     if (!league || !draft) return null;
 
     const mode = this.formats.dynastyMode.get(leagueId) ?? league.dynastyMode ?? 'neutral';
-    const userRoster = draft.picks
-      .filter((p) => p.rosterId === draft.userRosterId && p.playerId)
-      .map((p) => this.getPlayer(p.playerId!)!)
-      .filter(Boolean);
+    const isAuction = this.isAuctionLeague(league);
+    const amountByPlayer = this.auctionAmountByPlayer(leagueId, draft);
 
-    // If no picks yet, seed a plausible starter set from top dynasty scores for the age curve demo.
-    const rosterPlayers =
-      userRoster.length > 0 ? userRoster : this.seeds.slice(0, 10).map((s) => s.player);
-
-    const toRow = (playerId: string) => {
-      const player = this.getPlayer(playerId)!;
-      const evaluation = this.getLeagueEvaluation(leagueId, playerId)!;
+    const toRow = (playerId: string, extras?: { amount?: number; rosterId?: string }) => {
+      const player = this.getPlayer(playerId);
+      const evaluation = this.getLeagueEvaluation(leagueId, playerId);
+      if (!player || !evaluation) return null;
       const curve = buildMultiYearCurve(player, evaluation, league.season);
       const first = curve.points[0]?.value ?? 0;
       const last = curve.points[curve.points.length - 1]?.value ?? 0;
@@ -719,6 +719,8 @@ export class AppStore {
         trend,
         peakYearOffset: curve.peakYearOffset,
         contendWindow: curve.contendWindow,
+        amount: extras?.amount,
+        rosterId: extras?.rosterId,
         curve: {
           points: curve.points.map((p) => ({
             yearOffset: p.yearOffset,
@@ -730,12 +732,43 @@ export class AppStore {
       };
     };
 
-    const rosterBoard = rosterPlayers
-      .map((p) => toRow(p.id))
-      .sort((a, b) => b.dynastyScore - a.dynastyScore);
+    const picksByRoster = new Map<string, string[]>();
+    for (const pick of draft.picks) {
+      if (!pick.playerId) continue;
+      const list = picksByRoster.get(pick.rosterId) ?? [];
+      if (!list.includes(pick.playerId)) list.push(pick.playerId);
+      picksByRoster.set(pick.rosterId, list);
+    }
+    const hasRealRosters =
+      [...picksByRoster.values()].some((ids) => ids.length > 0) || amountByPlayer.size > 0;
+
+    const teams = this.listLeagueTeams(league, draft);
+    const posOrder: Record<string, number> = { QB: 0, RB: 1, WR: 2, TE: 3 };
+    const teamRosters = teams.map((team) => {
+      let playerIds = picksByRoster.get(team.rosterId) ?? [];
+      if (playerIds.length === 0 && team.isUser && !hasRealRosters) {
+        playerIds = this.seeds.slice(0, 10).map((s) => s.player.id);
+      }
+      const players = playerIds
+        .map((id) => toRow(id, { amount: amountByPlayer.get(id), rosterId: team.rosterId }))
+        .filter((row): row is NonNullable<typeof row> => Boolean(row))
+        .sort(
+          (a, b) =>
+            (posOrder[a.position] ?? 9) - (posOrder[b.position] ?? 9) ||
+            b.dynastyScore - a.dynastyScore,
+        );
+      return { ...team, players };
+    });
+
+    const userTeam = teamRosters.find((t) => t.isUser) ?? teamRosters[0];
+    const rosterBoard = userTeam?.players ?? [];
+    const rosterPlayers = rosterBoard
+      .map((row) => this.getPlayer(row.playerId))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
     const board = this.seeds
       .map((s) => toRow(s.player.id))
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
       .sort((a, b) => b.dynastyScore - a.dynastyScore)
       .slice(0, 40);
 
@@ -766,11 +799,14 @@ export class AppStore {
     return {
       leagueId,
       mode,
+      isAuction,
+      userRosterId: draft.userRosterId,
       ageCurve,
       pickAssets,
       ownedPickValue: ownedPickValue(pickAssets, draft.userRosterId),
       board,
       rosterBoard,
+      teamRosters,
       rookieBoard: buildRookieBoard(
         this.seeds.map((s) => ({
           player: s.player,
@@ -932,7 +968,9 @@ export class AppStore {
       })
       .sort((a, b) => b.fairValue - a.fairValue || b.draftScore - a.draftScore);
 
-    const toSigned = (b: (typeof pool.bids)[number]): {
+    const toSigned = (
+      b: (typeof pool.bids)[number],
+    ): {
       playerId: string;
       name: string;
       position: 'QB' | 'RB' | 'WR' | 'TE';
@@ -1015,6 +1053,7 @@ export class AppStore {
       playerId: body.playerId,
       rosterId,
       source: 'manual',
+      amount: body.amount,
     });
 
     return this.auctionState(leagueId);
@@ -1160,6 +1199,72 @@ export class AppStore {
       if (key.startsWith(`${leagueId}:`)) this.compareCache.delete(key);
     }
     return true;
+  }
+
+  private isAuctionLeague(league: League): boolean {
+    return league.draftType === 'auction' || league.type === 'auction';
+  }
+
+  private rosterSlotCount(league: League): number {
+    const r = league.roster;
+    return r.qb + r.rb + r.wr + r.te + r.flex + r.superflex + r.bench;
+  }
+
+  private auctionAmountByPlayer(leagueId: string, draft: DraftState): Map<string, number> {
+    const amounts = new Map<string, number>();
+    for (const bid of this.formats.auctionBids.get(leagueId) ?? []) {
+      amounts.set(bid.playerId, bid.amount);
+    }
+    for (const pick of draft.picks) {
+      if (pick.playerId && pick.amount != null) amounts.set(pick.playerId, pick.amount);
+    }
+    return amounts;
+  }
+
+  private listLeagueTeams(league: League, draft: DraftState) {
+    const userRosterId = draft.userRosterId;
+    if (this.isAuctionLeague(league)) {
+      this.formats.ensureAuction(
+        league.id,
+        league.teamCount,
+        league.auctionBudget ?? 200,
+        this.rosterSlotCount(league),
+        userRosterId,
+      );
+      return (this.formats.auctionBudgets.get(league.id) ?? []).map((budget) => ({
+        rosterId: budget.rosterId,
+        name: budget.name,
+        isUser: budget.rosterId === userRosterId,
+        spent: budget.spent,
+        remaining: budget.remaining,
+      }));
+    }
+
+    const teams: Array<{ rosterId: string; name: string; isUser: boolean }> = [];
+    const seen = new Set<string>();
+    const userSlot = league.draftSlot ?? 1;
+    for (let i = 1; i <= league.teamCount; i++) {
+      const rosterId = i === userSlot ? userRosterId : `roster-${i}`;
+      if (seen.has(rosterId)) continue;
+      seen.add(rosterId);
+      teams.push({
+        rosterId,
+        name: rosterId === userRosterId ? 'You' : `Team ${i}`,
+        isUser: rosterId === userRosterId,
+      });
+    }
+    for (const pick of draft.picks) {
+      if (seen.has(pick.rosterId)) continue;
+      seen.add(pick.rosterId);
+      const slot = pick.rosterId.replace(/^roster-/, '');
+      teams.push({
+        rosterId: pick.rosterId,
+        name: pick.rosterId === userRosterId ? 'You' : `Team ${slot}`,
+        isUser: pick.rosterId === userRosterId,
+      });
+    }
+    teams.sort((a, b) => Number(b.isUser) - Number(a.isUser));
+    return teams;
   }
 
   private createEmptyDraft(leagueId: string): DraftState {
