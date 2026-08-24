@@ -153,6 +153,40 @@ describe('DynastyComponent league rosters', () => {
     expect(root.textContent).not.toContain('$52');
   });
 
+  it('keeps every team blank when the roster board is empty', async () => {
+    const emptyTeams = Array.from({ length: 12 }, (_, i) => ({
+      rosterId: i === 0 ? 'roster-user' : `roster-${i + 1}`,
+      name: i === 0 ? 'You' : `Team ${i + 1}`,
+      isUser: i === 0,
+      spent: 0,
+      remaining: 200,
+      players: [] as DynastyBoardRow[],
+    }));
+    const { fixture } = await createDynasty(
+      makeOverview({
+        isAuction: true,
+        rosterBoard: [],
+        teamRosters: emptyTeams,
+        summary: {
+          rosterCount: 0,
+          meanAge: 0,
+          agingRisk: 0,
+          contendWindow: { startSeason: 2026, endSeason: 2028, seasons: 3 },
+          horizon: { startSeason: 2027, endSeason: 2030 },
+          pickCount: 0,
+          firsts: 0,
+          seconds: 0,
+        },
+      }),
+      makeLeague({ type: 'auction', draftType: 'auction', auctionBudget: 200 }),
+    );
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('0 players');
+    expect(root.textContent).not.toContain('Josh Allen');
+    expect(root.textContent).not.toContain('Bijan Robinson');
+    expect(root.querySelector('.curves-table tbody .empty')).toBeTruthy();
+  });
+
   it('shows winning bid amounts in auction leagues', async () => {
     const overview = makeOverview({ isAuction: true });
     overview.teamRosters = (overview.teamRosters ?? []).map((team) =>

@@ -739,16 +739,10 @@ export class AppStore {
       if (!list.includes(pick.playerId)) list.push(pick.playerId);
       picksByRoster.set(pick.rosterId, list);
     }
-    const hasRealRosters =
-      [...picksByRoster.values()].some((ids) => ids.length > 0) || amountByPlayer.size > 0;
-
     const teams = this.listLeagueTeams(league, draft);
     const posOrder: Record<string, number> = { QB: 0, RB: 1, WR: 2, TE: 3 };
     const teamRosters = teams.map((team) => {
-      let playerIds = picksByRoster.get(team.rosterId) ?? [];
-      if (playerIds.length === 0 && team.isUser && !hasRealRosters) {
-        playerIds = this.seeds.slice(0, 10).map((s) => s.player.id);
-      }
+      const playerIds = picksByRoster.get(team.rosterId) ?? [];
       const players = playerIds
         .map((id) => toRow(id, { amount: amountByPlayer.get(id), rosterId: team.rosterId }))
         .filter((row): row is NonNullable<typeof row> => Boolean(row))
