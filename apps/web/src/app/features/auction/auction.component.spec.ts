@@ -321,9 +321,13 @@ describe('AuctionComponent on-the-block', () => {
     input.value = 'The Geckos';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
+
+    expect(renameAuctionTeam).not.toHaveBeenCalled();
+
     input.dispatchEvent(new Event('blur'));
     fixture.detectChanges();
 
+    expect(renameAuctionTeam).toHaveBeenCalledTimes(1);
     expect(renameAuctionTeam).toHaveBeenCalledWith('league-1', 'roster-2', 'The Geckos');
     const select = root.querySelector('.winner-form select') as HTMLSelectElement;
     const labels = Array.from(select.options).map((opt) => opt.textContent?.replace(/\s+/g, ' ').trim());
