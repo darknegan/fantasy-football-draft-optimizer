@@ -1,4 +1,5 @@
 import type { Position, PositionBenchmarkConfig, ScoringVariant } from '@draftlab/domain';
+import { SKILL_POSITIONS } from '@draftlab/domain';
 import { BENCHMARKS_2025, getBenchmarkConfig, setActiveBenchmarks } from './benchmarks.js';
 
 export type BenchmarkScoringKey = 'std' | 'half' | 'ppr';
@@ -39,14 +40,15 @@ const VARIANT_TO_KEY: Record<ScoringVariant, BenchmarkScoringKey> = {
 export function mergeBenchmarkArtifact(
   artifact: BenchmarksArtifact,
   variant: ScoringVariant = 'half_ppr',
-  base: Record<Position, PositionBenchmarkConfig> = BENCHMARKS_2025,
-): Record<Position, PositionBenchmarkConfig> {
+  base: Partial<Record<Position, PositionBenchmarkConfig>> = BENCHMARKS_2025,
+): Partial<Record<Position, PositionBenchmarkConfig>> {
   const key = VARIANT_TO_KEY[variant];
-  const positions: Position[] = ['QB', 'RB', 'WR', 'TE'];
-  const out = {} as Record<Position, PositionBenchmarkConfig>;
+  const positions = [...SKILL_POSITIONS];
+  const out: Partial<Record<Position, PositionBenchmarkConfig>> = {};
 
   for (const position of positions) {
     const template = base[position];
+    if (!template) continue;
     const artifactFactors = artifact.benchmarks[position]?.factors ?? [];
     const byId = new Map(artifactFactors.map((f) => [f.factor_id, f]));
 
@@ -70,10 +72,11 @@ export function mergeBenchmarkArtifact(
 export function activateBenchmarkArtifact(
   artifact: BenchmarksArtifact,
   variant: ScoringVariant = 'half_ppr',
-): Record<Position, PositionBenchmarkConfig> {
+): typeof BENCHMARKS_2025 {
   const merged = mergeBenchmarkArtifact(artifact, variant);
-  setActiveBenchmarks(merged);
-  return merged;
+  const skill = merged as typeof BENCHMARKS_2025;
+  setActiveBenchmarks(skill);
+  return skill;
 }
 
 export { getBenchmarkConfig };

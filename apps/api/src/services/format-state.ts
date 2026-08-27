@@ -78,6 +78,7 @@ export class FormatState {
       auctionTeams: teams,
       auctionBids: this.auctionBids.get(leagueId) ?? [],
       contractRules: this.contractRules.get(leagueId),
+      userTeamCode: teams.find((t) => t.rosterId === 'roster-user')?.code,
     };
   }
 

@@ -20,6 +20,10 @@ function startingDemandPerTeam(position: Position, roster: RosterShape): number 
       return roster.wr + roster.flex * FLEX_SHARE.WR;
     case 'TE':
       return roster.te + roster.flex * FLEX_SHARE.TE;
+    case 'K':
+      return roster.k ?? 0;
+    case 'DEF':
+      return roster.def ?? 0;
   }
 }
 

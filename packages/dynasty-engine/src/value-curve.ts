@@ -12,6 +12,8 @@ const PEAK_AGE: Record<Position, number> = {
   RB: 24,
   WR: 26,
   TE: 27,
+  K: 32,
+  DEF: 28,
 };
 
 /** How quickly value falls after the peak (per year). */
@@ -20,6 +22,8 @@ const POST_PEAK_DECAY: Record<Position, number> = {
   RB: 0.18,
   WR: 0.1,
   TE: 0.09,
+  K: 0.08,
+  DEF: 0.07,
 };
 
 /** Pre-peak growth rate toward peak. */
@@ -28,6 +32,8 @@ const PRE_PEAK_GROWTH: Record<Position, number> = {
   RB: 0.12,
   WR: 0.1,
   TE: 0.09,
+  K: 0.04,
+  DEF: 0.04,
 };
 
 const ARCHETYPE_ASSET_BIAS: Record<ArchetypeId, number> = {

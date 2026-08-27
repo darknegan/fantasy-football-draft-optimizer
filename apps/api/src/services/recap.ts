@@ -1,4 +1,5 @@
 import type { DraftState, League, Player, PlayerEvaluation, Position } from '@draftlab/domain';
+import { emptyPositionCounts } from '@draftlab/domain';
 import { picksFromEvents, scoreAdherence } from '@draftlab/strategy-engine';
 
 export interface DraftRecap {
@@ -27,7 +28,14 @@ export function buildRecap(opts: {
   const adherence = scoreAdherence(strategyId, adherencePicks);
 
   const userPicks = opts.draft.picks.filter((p) => p.rosterId === opts.draft.userRosterId && p.playerId);
-  const rosterByPosition: DraftRecap['rosterByPosition'] = { QB: [], RB: [], WR: [], TE: [] };
+  const rosterByPosition: DraftRecap['rosterByPosition'] = {
+    QB: [],
+    RB: [],
+    WR: [],
+    TE: [],
+    K: [],
+    DEF: [],
+  };
   let scoreSum = 0;
   let scored = 0;
   let bestValue: DraftRecap['bestValue'] = null;
@@ -53,9 +61,20 @@ export function buildRecap(opts: {
 
   const weaknesses: string[] = [];
   const shape = opts.league.roster;
-  (['QB', 'RB', 'WR', 'TE'] as Position[]).forEach((pos) => {
-    const need = pos === 'QB' ? shape.qb + shape.superflex : pos === 'RB' ? shape.rb : pos === 'WR' ? shape.wr : shape.te;
-    if (rosterByPosition[pos].length < need) {
+  (['QB', 'RB', 'WR', 'TE', 'K', 'DEF'] as Position[]).forEach((pos) => {
+    const need =
+      pos === 'QB'
+        ? shape.qb + shape.superflex
+        : pos === 'RB'
+          ? shape.rb
+          : pos === 'WR'
+            ? shape.wr
+            : pos === 'TE'
+              ? shape.te
+              : pos === 'K'
+                ? (shape.k ?? 0)
+                : (shape.def ?? 0);
+    if (need > 0 && rosterByPosition[pos].length < need) {
       weaknesses.push(`Short ${pos}: ${rosterByPosition[pos].length}/${need} starters`);
     }
   });

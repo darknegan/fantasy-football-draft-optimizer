@@ -16,6 +16,7 @@ export async function ensureWfflForUser(
   if (existing) {
     store.applyWfflTemplateIfEmpty(existing.id);
     const current = store.getLeague(existing.id) ?? existing;
+    await deps.upsert(current);
     await deps.persistFormat(current.id, current);
     return current;
   }

@@ -31,14 +31,14 @@ afterEach(() => {
 describe('mergeBenchmarkArtifact', () => {
   it('overwrites ceilings from the artifact for the scoring variant', () => {
     const merged = mergeBenchmarkArtifact(fixture, 'half_ppr');
-    const passAtt = merged.QB.factors.find((f) => f.id === 'pass_attempts');
+    const passAtt = merged.QB!.factors.find((f) => f.id === 'pass_attempts');
     expect(passAtt?.benchmark).toBe(31.5);
     expect(passAtt?.label).toBe('Pass attempts / g');
   });
 
   it('keeps metadata fallback when artifact has null for a factor', () => {
     const merged = mergeBenchmarkArtifact(fixture, 'half_ppr');
-    const rushing = merged.QB.factors.find((f) => f.id === 'rushing_tds');
+    const rushing = merged.QB!.factors.find((f) => f.id === 'rushing_tds');
     expect(rushing?.benchmark).toBeGreaterThan(0);
   });
 });

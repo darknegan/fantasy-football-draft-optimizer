@@ -1,6 +1,22 @@
 import type { InitialsColor, UserPreferences } from './user-preferences.js';
 
-export type Position = 'QB' | 'RB' | 'WR' | 'TE';
+export const SKILL_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+export const SPECIALIST_POSITIONS = ['K', 'DEF'] as const;
+export const POSITIONS = [...SKILL_POSITIONS, ...SPECIALIST_POSITIONS] as const;
+export type SkillPosition = (typeof SKILL_POSITIONS)[number];
+export type Position = (typeof POSITIONS)[number];
+
+export function emptyPositionCounts(): Record<Position, number> {
+  return { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+}
+
+export function isSkillPosition(position: Position): position is SkillPosition {
+  return (SKILL_POSITIONS as readonly string[]).includes(position);
+}
+
+export function isSpecialistPosition(position: Position): boolean {
+  return position === 'K' || position === 'DEF';
+}
 
 export type FactorGrade = 'elite' | 'green' | 'yellow' | 'orange' | 'red' | 'critical' | 'unknown';
 
@@ -244,7 +260,39 @@ export interface RosterShape {
   flex: number;
   superflex: number;
   bench: number;
+  /** Dedicated kicker slots. Omitted/0 in skill-only leagues. */
+  k?: number;
+  /** Dedicated team-defense slots. Omitted/0 in skill-only leagues. */
+  def?: number;
   totalStarters: number;
+}
+
+export function rosterSpotCount(roster: RosterShape): number {
+  return (
+    roster.qb +
+    roster.rb +
+    roster.wr +
+    roster.te +
+    roster.flex +
+    roster.superflex +
+    roster.bench +
+    (roster.k ?? 0) +
+    (roster.def ?? 0)
+  );
+}
+
+/** Kickers/DEF only appear when the league actually rostered those slots. */
+export function isDraftablePosition(position: Position, roster: RosterShape): boolean {
+  if (position === 'K') return (roster.k ?? 0) > 0;
+  if (position === 'DEF') return (roster.def ?? 0) > 0;
+  return true;
+}
+
+export function draftablePositions(roster: RosterShape): Position[] {
+  const positions: Position[] = [...SKILL_POSITIONS];
+  if ((roster.k ?? 0) > 0) positions.push('K');
+  if ((roster.def ?? 0) > 0) positions.push('DEF');
+  return positions;
 }
 
 export interface User {
@@ -447,6 +495,8 @@ export interface LeagueFormatState {
   auctionTeams?: AuctionTeamBudget[];
   auctionBids?: AuctionBid[];
   contractRules?: ContractRules;
+  /** WFFL (and similar) franchise the logged-in user is drafting as. */
+  userTeamCode?: string;
 }
 
 export interface AuctionTeamBudget {

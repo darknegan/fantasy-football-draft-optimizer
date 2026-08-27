@@ -179,6 +179,9 @@ export function classifyArchetype(player: Player): ArchetypeId {
       return classifyTe(player);
     case 'QB':
       return classifyQb(player);
+    case 'K':
+    case 'DEF':
+      return 'TRUSTY_VETERAN';
   }
 }
 

@@ -89,6 +89,8 @@ async function createAuction(
     bid?: ReturnType<typeof vi.fn>;
     renameAuctionTeam?: ReturnType<typeof vi.fn>;
     releaseAuctionContract?: ReturnType<typeof vi.fn>;
+    claimAuctionTeam?: ReturnType<typeof vi.fn>;
+    league?: League;
   } = {},
 ) {
   const bid = extras.bid ?? vi.fn(() => of(state));
@@ -106,6 +108,7 @@ async function createAuction(
       }),
     );
   const releaseAuctionContract = extras.releaseAuctionContract ?? vi.fn(() => of(state));
+  const claimAuctionTeam = extras.claimAuctionTeam ?? vi.fn(() => of(state));
   await TestBed.configureTestingModule({
     imports: [AuctionComponent],
     providers: [
@@ -113,11 +116,12 @@ async function createAuction(
       {
         provide: ApiService,
         useValue: {
-          league: () => of(makeLeague()),
+          league: () => of(extras.league ?? makeLeague()),
           auctionState: () => of(state),
           auctionBid: bid,
           renameAuctionTeam,
           releaseAuctionContract,
+          claimAuctionTeam,
           auctionMaxBid: () =>
             of({
               playerId: hall.playerId,
@@ -137,7 +141,7 @@ async function createAuction(
   }).compileComponents();
   const fixture = TestBed.createComponent(AuctionComponent);
   fixture.detectChanges();
-  return { fixture, bid, renameAuctionTeam, releaseAuctionContract };
+  return { fixture, bid, renameAuctionTeam, releaseAuctionContract, claimAuctionTeam };
 }
 
 describe('AuctionComponent on-the-block', () => {
@@ -393,5 +397,82 @@ describe('AuctionComponent on-the-block', () => {
     expect(confirm).toHaveBeenCalled();
     expect(releaseAuctionContract).toHaveBeenCalledWith('league-1', 'puka-nacua');
     confirm.mockRestore();
+  });
+
+  it('lets you claim another franchise from the room tab', async () => {
+    const claimed = makeState({
+      userBudget: { ...rival, name: 'Team 2' },
+      budgets: [
+        { ...you, name: 'You' },
+        { ...rival, name: 'Team 2' },
+      ],
+    });
+    const claimAuctionTeam = vi.fn(() => of(claimed));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { fixture } = await createAuction(makeState(), { claimAuctionTeam });
+    const root: HTMLElement = fixture.nativeElement;
+    const roomTab = Array.from(root.querySelectorAll('.panel-tab')).find((el) =>
+      el.textContent?.includes('Budgets'),
+    ) as HTMLButtonElement;
+    roomTab.click();
+    fixture.detectChanges();
+
+    const youCard = Array.from(root.querySelectorAll('.team-room')).find((node) =>
+      node.classList.contains('you'),
+    );
+    expect(youCard?.textContent).toContain('You');
+    expect(youCard?.querySelector('.claim-team-btn')).toBeNull();
+
+    const claim = Array.from(root.querySelectorAll('.claim-team-btn')).find((el) =>
+      el.textContent?.includes('This is my team'),
+    ) as HTMLButtonElement;
+    expect(claim).toBeTruthy();
+    claim.click();
+    fixture.detectChanges();
+    expect(confirm).toHaveBeenCalled();
+    expect(claimAuctionTeam).toHaveBeenCalledWith('league-1', 'roster-2');
+    confirm.mockRestore();
+  });
+
+  it('adds K and DEF filters when the league roster has those slots', async () => {
+    const kicker = {
+      playerId: 'brandon-aubrey',
+      name: 'Brandon Aubrey',
+      position: 'K' as const,
+      age: 31,
+      draftScore: 20,
+      fairValue: 4,
+      inflatedValue: 4,
+      vorpShare: 0,
+    };
+    const { fixture } = await createAuction(makeState({ values: [hall, kicker] }), {
+      league: {
+        ...makeLeague(),
+        roster: {
+          qb: 1,
+          rb: 2,
+          wr: 2,
+          te: 1,
+          flex: 2,
+          superflex: 0,
+          k: 1,
+          def: 1,
+          bench: 5,
+          totalStarters: 10,
+        },
+      },
+    });
+    const tabs = Array.from(fixture.nativeElement.querySelectorAll('.pos-tab')).map((el) =>
+      (el as HTMLElement).textContent?.trim(),
+    );
+    expect(tabs).toEqual(['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+  });
+
+  it('hides K and DEF filters in skill-only leagues', async () => {
+    const { fixture } = await createAuction(makeState());
+    const tabs = Array.from(fixture.nativeElement.querySelectorAll('.pos-tab')).map((el) =>
+      (el as HTMLElement).textContent?.trim(),
+    );
+    expect(tabs).toEqual(['ALL', 'QB', 'RB', 'WR', 'TE']);
   });
 });

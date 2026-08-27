@@ -6,6 +6,7 @@ import {
   matchPlayerId,
   WFFL_BUDGET,
   WFFL_EXTERNAL_ID,
+  WFFL_ROSTER,
   WFFL_TEAMS,
 } from '../../data/wffl-league.js';
 import { AppStore } from '../store.js';
@@ -55,9 +56,16 @@ describe('WFFL global keeper auction', () => {
     const state = store.auctionState(league.id)!;
     expect(state.budgets).toHaveLength(12);
     expect(state.budgets[0]!.name).toBe('Manhattan Empire');
-    expect(state.userBudget.remaining).toBe(169);
-    expect(state.signedRoster?.some((p) => p.name === 'Puka Nacua')).toBe(true);
-    expect(state.values.some((v) => v.name === 'Puka Nacua')).toBe(false);
+    expect(state.userBudget.name).toBe('Plano Red Pandas');
+    expect(state.userBudget.code).toBe('PRP');
+    expect(state.userBudget.spent).toBe(26);
+    expect(state.userBudget.deadCap).toBe(3);
+    expect(state.userBudget.remaining).toBe(171);
+    expect(state.signedRoster?.some((p) => p.name === 'Bucky Irving')).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Quinshon Judkins')).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Michael Pittman')).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Puka Nacua')).toBe(false);
+    expect(state.values.some((v) => v.name === 'Bucky Irving')).toBe(false);
     expect(state.history?.records).toHaveLength(12);
     expect(state.history?.draft2025.length).toBe(166);
 
@@ -69,16 +77,65 @@ describe('WFFL global keeper auction', () => {
     const store = new AppStore(catalog);
     const league = store.seedWfflLeague('user-1');
     const before = store.auctionState(league.id)!;
-    const puka = before.signedRoster?.find((p) => p.name === 'Puka Nacua');
-    expect(puka).toBeTruthy();
-    expect(puka!.dropPenalty).toBe(3);
+    const bucky = before.signedRoster?.find((p) => p.name === 'Bucky Irving');
+    expect(bucky).toBeTruthy();
+    expect(bucky!.dropPenalty).toBe(2);
 
-    const after = store.releaseAuctionContract(league.id, puka!.playerId);
+    const after = store.releaseAuctionContract(league.id, bucky!.playerId);
     expect(after && 'error' in after).toBe(false);
     const state = after as NonNullable<typeof before>;
-    expect(state.signedRoster?.some((p) => p.name === 'Puka Nacua')).toBe(false);
-    expect(state.userBudget.deadCap).toBe(3);
-    expect(state.userBudget.remaining).toBe(169 + 15 - 3);
-    expect(state.values.some((v) => v.playerId === puka!.playerId)).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Bucky Irving')).toBe(false);
+    expect(state.userBudget.deadCap).toBe(5);
+    expect(state.userBudget.remaining).toBe(171 + 8 - 2);
+  });
+
+  it('lets a user claim another franchise without moving keepers', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    const before = store.auctionState(league.id)!;
+    const man = before.budgets.find((b) => b.code === 'MAN');
+    expect(man).toBeTruthy();
+
+    const after = store.claimAuctionTeam(league.id, man!.rosterId);
+    expect(after && 'error' in after).toBe(false);
+    const state = after as NonNullable<typeof before>;
+    expect(state.userBudget.code).toBe('MAN');
+    expect(state.userBudget.name).toBe('Manhattan Empire');
+    expect(state.userBudget.remaining).toBe(169);
+    expect(state.signedRoster?.some((p) => p.name === 'Puka Nacua')).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Bucky Irving')).toBe(false);
+    const pandas = state.budgets.find((b) => b.code === 'PRP');
+    expect(pandas?.rosterId).not.toBe(state.userBudget.rosterId);
+    expect(state.teamRosters?.find((t) => t.code === 'PRP')?.players.some((p) => p.name === 'Bucky Irving')).toBe(
+      true,
+    );
+  });
+
+  it('upgrades existing WFFL clones to the K/DEF roster', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    store.updateLeague(league.id, {
+      roster: { qb: 1, rb: 2, wr: 2, te: 1, flex: 2, superflex: 0, bench: 8, totalStarters: 8 },
+    });
+    store.applyWfflTemplateIfEmpty(league.id);
+    expect(store.getLeague(league.id)?.roster).toEqual(WFFL_ROSTER);
+    const state = store.auctionState(league.id)!;
+    expect(state.values.some((v) => v.position === 'K')).toBe(true);
+    expect(state.userBudget.rosterSlotsTotal).toBe(15);
+  });
+
+  it('lists kickers and defenses on the WFFL board at last-year cost', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    const state = store.auctionState(league.id)!;
+    expect(state.values.some((v) => v.position === 'K')).toBe(true);
+    expect(state.values.some((v) => v.position === 'DEF')).toBe(true);
+    expect(state.values.find((v) => v.name === 'Brandon Aubrey')?.fairValue).toBe(4);
+    expect(state.values.find((v) => v.name === 'Cam Little')?.fairValue).toBe(7);
+    expect(state.values.find((v) => v.name === 'Broncos')?.fairValue).toBe(6);
+    expect(state.values.find((v) => v.name === 'Younghoe Koo')?.lastYearCost).toBe(1);
+    const board = store.getBoard(league.id);
+    expect(board.some((row) => row.player.position === 'K')).toBe(true);
+    expect(board.some((row) => row.player.position === 'DEF')).toBe(true);
   });
 });

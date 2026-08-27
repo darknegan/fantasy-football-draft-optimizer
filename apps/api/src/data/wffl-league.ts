@@ -23,9 +23,13 @@ export const WFFL_ROSTER: RosterShape = {
   te: 1,
   flex: 2,
   superflex: 0,
-  bench: 8,
-  totalStarters: 8,
+  k: 1,
+  def: 1,
+  bench: 5,
+  totalStarters: 10,
 };
+
+export const WFFL_DEFAULT_TEAM_CODE = 'PRP';
 
 export const WFFL_CONTRACT_RULES: ContractRules = {
   maxLength: 5,
@@ -195,6 +199,11 @@ const NAME_ALIASES: Record<string, string> = {
   'c. okonkwo': 'chigoziem okonkwo',
   'josh downs': 'josh downs',
   'j. downs': 'josh downs',
+  'y koo': 'younghoe koo',
+  'younghoe koo': 'younghoe koo',
+  '49ers dst': '49ers',
+  'ravens defense': 'ravens',
+  'jags': 'jaguars',
 };
 
 export function slugifyPlayerName(name: string): string {
@@ -286,16 +295,35 @@ export function wfflHistory(): WfflHistoryPayload {
 
 export function lastYearCostByPlayerName(): Map<string, number> {
   const map = new Map<string, number>();
+  const add = (name: string, amount: number) => {
+    const normalized = normalizeName(name);
+    map.set(normalized, amount);
+    map.set(slugifyPlayerName(name), amount);
+    const stripped = normalized.replace(/\s+(dst|defense|def)$/g, '');
+    if (stripped && stripped !== normalized) {
+      map.set(stripped, amount);
+      map.set(slugifyPlayerName(stripped), amount);
+    }
+    const alias = NORMALIZED_ALIASES[normalized] ?? NORMALIZED_ALIASES[stripped];
+    if (alias) {
+      map.set(alias, amount);
+      map.set(slugifyPlayerName(alias), amount);
+    }
+  };
   for (const pick of wfflHistory().draft2025) {
-    map.set(normalizeName(pick.playerName), pick.amount);
-    map.set(slugifyPlayerName(pick.playerName), pick.amount);
+    add(pick.playerName, pick.amount);
   }
   return map;
 }
 
 export function lookupLastYearCost(playerName: string, byName = lastYearCostByPlayerName()): number | null {
+  const wanted = NORMALIZED_ALIASES[normalizeName(playerName)] ?? normalizeName(playerName);
   return (
-    byName.get(normalizeName(playerName)) ?? byName.get(slugifyPlayerName(playerName)) ?? null
+    byName.get(wanted) ??
+    byName.get(slugifyPlayerName(wanted)) ??
+    byName.get(normalizeName(playerName)) ??
+    byName.get(slugifyPlayerName(playerName)) ??
+    null
   );
 }
 
@@ -311,7 +339,7 @@ export function buildWfflAuction(opts: {
   userTeamCode?: string;
   rosterSlots: number;
 }): ResolvedWfflAuction {
-  const userTeamCode = opts.userTeamCode ?? WFFL_TEAMS[0]!.code;
+  const userTeamCode = opts.userTeamCode ?? WFFL_DEFAULT_TEAM_CODE;
   const teams: AuctionTeamBudget[] = WFFL_TEAMS.map((team) => ({
     rosterId: wfflRosterId(team.code, userTeamCode),
     name: wfflDisplayName(team),
@@ -365,11 +393,19 @@ export function buildWfflAuction(opts: {
   return { teams, bids, contractRules: { ...WFFL_CONTRACT_RULES }, userTeamCode };
 }
 
-export function wfflFormatSnapshot(auction: ResolvedWfflAuction): LeagueFormatState {
+export function wfflDraftSlot(teamCode: string): number {
+  const idx = WFFL_TEAMS.findIndex((t) => t.code === teamCode);
+  return idx >= 0 ? idx + 1 : 1;
+}
+
+export function wfflFormatSnapshot(
+  auction: ResolvedWfflAuction,
+): LeagueFormatState {
   return {
     auctionTeams: auction.teams,
     auctionBids: auction.bids,
     contractRules: auction.contractRules,
+    userTeamCode: auction.userTeamCode,
   };
 }
 
