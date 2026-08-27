@@ -699,6 +699,31 @@ app.patch('/api/leagues/:id/auction/teams/:rosterId', async (c) => {
   }
 });
 
+app.post('/api/leagues/:id/auction/claim-team', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ rosterId?: string }>();
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    if (!body.rosterId) return c.json({ error: 'rosterId required' }, 400);
+    const result = store.claimAuctionTeam(league.id, body.rosterId);
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    if ('error' in result) return c.json({ error: result.error }, 400);
+    const snap = store.snapshotFormatState(league.id);
+    if (snap) {
+      await withDb(c.env, c.executionCtx, (db) =>
+        persistLeagueFormatState(db, user.sub, league.id, snap),
+      );
+    }
+    return c.json(result);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return c.json({ error: 'Could not claim team', detail }, 500);
+  }
+});
+
 app.post('/api/leagues/:id/auction/release', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{ playerId?: string }>();

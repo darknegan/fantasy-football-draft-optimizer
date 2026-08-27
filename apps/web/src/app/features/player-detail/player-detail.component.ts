@@ -114,6 +114,8 @@ const POS_BENCH_LABEL: Record<Position, string> = {
   RB: 'league-winning running backs',
   WR: 'league-winning wide receivers',
   TE: 'league-winning tight ends',
+  K: 'kickers',
+  DEF: 'team defenses',
 };
 
 @Component({

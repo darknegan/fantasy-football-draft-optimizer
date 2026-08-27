@@ -17,6 +17,15 @@ export function computeCeilingScore(
   inputs: FactorInput[],
   options: CeilingOptions = {},
 ): CeilingResult {
+  if (position === 'K' || position === 'DEF') {
+    return {
+      ceilingScore: null,
+      factors: [],
+      knownFactors: 0,
+      confidenceScore: 0,
+      provisional: true,
+    };
+  }
   const config = options.config ?? getBenchmarkConfig(position, options.season ?? 2025);
 
   if (config.provisional) {

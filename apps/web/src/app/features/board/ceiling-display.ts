@@ -5,6 +5,8 @@ export const POSITION_CATALOG_COUNT: Record<Position, number> = {
   RB: 16,
   TE: 13,
   WR: 17,
+  K: 0,
+  DEF: 0,
 };
 
 export interface CeilingDisplayRow {

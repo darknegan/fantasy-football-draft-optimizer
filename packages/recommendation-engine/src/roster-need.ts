@@ -1,16 +1,19 @@
 import type { Player, Position, PositionNeed, RosterShape } from '@draftlab/domain';
+import { emptyPositionCounts, SKILL_POSITIONS } from '@draftlab/domain';
 
 const FLEX_ELIGIBLE: Position[] = ['RB', 'WR', 'TE'];
 
 export function countByPosition(roster: Player[]): Record<Position, number> {
-  const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  const counts = emptyPositionCounts();
   for (const p of roster) counts[p.position] += 1;
   return counts;
 }
 
 export function computePositionNeeds(roster: Player[], shape: RosterShape): PositionNeed[] {
   const counts = countByPosition(roster);
-  const positions: Position[] = ['QB', 'RB', 'WR', 'TE'];
+  const positions: Position[] = [...SKILL_POSITIONS];
+  if ((shape.k ?? 0) > 0) positions.push('K');
+  if ((shape.def ?? 0) > 0) positions.push('DEF');
 
   return positions.map((position) => {
     const required =
@@ -20,7 +23,11 @@ export function computePositionNeeds(roster: Player[], shape: RosterShape): Posi
           ? shape.rb
           : position === 'WR'
             ? shape.wr
-            : shape.te;
+            : position === 'TE'
+              ? shape.te
+              : position === 'K'
+                ? (shape.k ?? 0)
+                : (shape.def ?? 0);
 
     const filled = counts[position];
     const flexEligible = FLEX_ELIGIBLE.includes(position);

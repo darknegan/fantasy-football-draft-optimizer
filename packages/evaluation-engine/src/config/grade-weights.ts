@@ -31,6 +31,8 @@ const CEILING_KNOWN_FACTORS: Record<Position, number> = {
   RB: 16,
   TE: 13,
   WR: 17,
+  K: 1,
+  DEF: 1,
 };
 
 export const CEILING_RANGE: Record<Position, { min: number; max: number }> = Object.fromEntries(

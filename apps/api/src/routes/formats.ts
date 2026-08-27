@@ -129,6 +129,21 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
     },
   );
 
+  app.post<{ Params: { id: string }; Body: { rosterId?: string } }>(
+    '/api/leagues/:id/auction/claim-team',
+    auth,
+    async (req, reply) => {
+      if (!(await requireOwnedLeague(req, reply, store, pool))) return;
+      const rosterId = typeof req.body?.rosterId === 'string' ? req.body.rosterId : '';
+      if (!rosterId) return reply.code(400).send({ error: 'rosterId required' });
+      const result = store.claimAuctionTeam(req.params.id, rosterId);
+      if (!result) return reply.code(404).send({ error: 'League not found' });
+      if ('error' in result) return reply.code(400).send(result);
+      await persistAuction(store, pool, requireUser(req).sub, req.params.id);
+      return result;
+    },
+  );
+
   app.get<{ Params: { id: string } }>(
     '/api/leagues/:id/calibration',
     auth,

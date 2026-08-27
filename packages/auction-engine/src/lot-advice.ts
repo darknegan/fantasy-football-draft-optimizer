@@ -1,4 +1,5 @@
 import type { Position, StrategyId } from '@draftlab/domain';
+import { emptyPositionCounts } from '@draftlab/domain';
 import { classifyFit, getRoundTarget, getStrategy } from '@draftlab/strategy-engine';
 
 export type AuctionLotVerdict = 'take' | 'pass';
@@ -26,6 +27,8 @@ export interface AuctionLotAdviceInput {
     te: number;
     flex: number;
     superflex: number;
+    k?: number;
+    def?: number;
   };
   /** Remaining board used to price replacement starters. */
   available?: Array<{ position: Position; fairValue: number }>;
@@ -45,13 +48,15 @@ const STRATEGY_IDS: readonly StrategyId[] = [
   'elite_te',
 ];
 
-const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 /** Typical startable cost, not the cheapest remaining waiver. */
 const QUALITY_FLOOR: Record<Position | 'FLEX', number> = {
   QB: 8,
   RB: 16,
   WR: 16,
   TE: 10,
+  K: 2,
+  DEF: 2,
   FLEX: 14,
 };
 const MIN_PER_STARTER_HOLE = 16;
@@ -73,11 +78,13 @@ function requiredStarters(
   if (position === 'QB') return roster.qb + roster.superflex;
   if (position === 'RB') return roster.rb;
   if (position === 'WR') return roster.wr;
-  return roster.te;
+  if (position === 'TE') return roster.te;
+  if (position === 'K') return roster.k ?? 0;
+  return roster.def ?? 0;
 }
 
 function counts(signed: Array<{ position: Position }>): Record<Position, number> {
-  const out: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  const out = emptyPositionCounts();
   for (const p of signed) out[p.position] += 1;
   return out;
 }

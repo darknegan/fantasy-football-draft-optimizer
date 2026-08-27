@@ -127,6 +127,15 @@ app-board {
     color: var(--dl-pos-te);
     background: color-mix(in srgb, var(--dl-pos-te) 18%, transparent);
   }
+  &.K {
+    color: var(--dl-pos-k);
+    background: color-mix(in srgb, var(--dl-pos-k) 18%, transparent);
+  }
+  &.DEF {
+    width: 2.4rem;
+    color: var(--dl-pos-def);
+    background: color-mix(in srgb, var(--dl-pos-def) 18%, transparent);
+  }
 }
 
 .tier {

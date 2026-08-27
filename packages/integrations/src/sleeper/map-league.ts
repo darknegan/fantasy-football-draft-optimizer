@@ -10,6 +10,8 @@ export function mapRosterPositions(positions: string[]): RosterShape {
   const te = count('TE');
   const flex = count('FLEX');
   const superflex = count('SUPER_FLEX');
+  const k = count('K');
+  const def = count('DEF') + count('DST');
   const bench = count('BN');
   return {
     qb,
@@ -18,8 +20,10 @@ export function mapRosterPositions(positions: string[]): RosterShape {
     te,
     flex,
     superflex,
+    k,
+    def,
     bench,
-    totalStarters: qb + rb + wr + te + flex + superflex,
+    totalStarters: qb + rb + wr + te + flex + superflex + k + def,
   };
 }
 

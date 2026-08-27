@@ -764,6 +764,29 @@
   cursor: wait;
 }
 
+.claim-team-btn {
+  border: 1px solid var(--dl-border-strong);
+  background: transparent;
+  color: var(--dl-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.claim-team-btn:hover:not(:disabled) {
+  border-color: var(--dl-accent);
+  color: var(--dl-accent);
+}
+
+.claim-team-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .history-block {
   margin-top: 1.25rem;
 }

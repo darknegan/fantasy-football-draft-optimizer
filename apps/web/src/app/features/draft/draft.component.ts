@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { draftablePositions, emptyPositionCounts } from '@draftlab/domain';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { clearQueuedPick, clearQueuedPicksForLeague, listQueuedPicks, queuePick } from '../../core/offline-draft.store';
@@ -112,8 +113,6 @@ const STRATEGY_NAMES: Record<string, string> = {
 type PosFilter = Position | 'ALL';
 type MainTab = 'available' | 'board';
 
-const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
-
 @Component({
   selector: 'app-draft',
   imports: [DateAgoPipe],
@@ -129,7 +128,10 @@ export class DraftComponent implements OnInit, OnDestroy {
   private onlineHandler?: () => void;
 
   readonly totalRounds = 16;
-  readonly posTabs = POS_TABS;
+  readonly posTabs = computed((): PosFilter[] => [
+    'ALL',
+    ...draftablePositions(this.league()?.roster ?? DEFAULT_ROSTER),
+  ]);
 
   leagueId = '';
   readonly league = signal<League | null>(null);
@@ -308,17 +310,18 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   readonly teamNeeds = computed((): NeedView[] => {
     const shape = this.league()?.roster ?? DEFAULT_ROSTER;
-    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    const counts = emptyPositionCounts();
     for (const slot of this.rosterSlots()) {
       if (slot.playerName) counts[slot.position] += 1;
     }
-    const required: Record<Position, number> = {
-      QB: shape.qb + shape.superflex,
-      RB: shape.rb,
-      WR: shape.wr,
-      TE: shape.te,
-    };
-    const order: Position[] = ['WR', 'TE', 'RB', 'QB'];
+    const required = emptyPositionCounts();
+    required.QB = shape.qb + shape.superflex;
+    required.RB = shape.rb;
+    required.WR = shape.wr;
+    required.TE = shape.te;
+    required.K = shape.k ?? 0;
+    required.DEF = shape.def ?? 0;
+    const order = draftablePositions(shape);
     return order.map((position) => {
       const filled = counts[position];
       const need = Math.max(0, required[position] - filled);
@@ -384,7 +387,7 @@ export class DraftComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.pickNumber - a.pickNumber)
       .slice(0, 10);
     if (recent.length < 5) return null;
-    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    const counts = emptyPositionCounts();
     for (const p of recent) {
       const pos = this.board().find((b) => b.player.id === p.playerId)?.player.position;
       if (pos) counts[pos] += 1;

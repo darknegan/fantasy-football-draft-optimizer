@@ -8,6 +8,7 @@ import type {
   ScoringProfile,
   StrategyId,
 } from '@draftlab/domain';
+import { emptyPositionCounts } from '@draftlab/domain';
 import {
   getRoundTarget,
   strategyFitMultiplier,
@@ -52,7 +53,7 @@ export function recommendPlayers(ctx: RecommendContext): PlayerRecommendation[] 
   const targets = asSet(ctx.targets);
   const avoids = asSet(ctx.avoids);
 
-  const poolSizeByPosition = { QB: 0, RB: 0, WR: 0, TE: 0 } as Record<Position, number>;
+  const poolSizeByPosition = emptyPositionCounts();
   for (const { player } of ctx.available) {
     poolSizeByPosition[player.position] += 1;
   }
