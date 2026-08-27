@@ -225,6 +225,10 @@ export class ApiService {
     );
   }
 
+  claimAuctionTeam(leagueId: string, rosterId: string) {
+    return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/claim-team`, { rosterId });
+  }
+
   auctionMaxBid(leagueId: string, playerId: string) {
     return this.http.get<MaxBidResult>(`/api/leagues/${leagueId}/auction/max-bid`, {
       params: { playerId },

@@ -364,5 +364,9 @@ function dedicatedSlots(pos: Position, roster: RosterShape): number {
       return roster.wr;
     case 'TE':
       return roster.te;
+    case 'K':
+      return roster.k ?? 0;
+    case 'DEF':
+      return roster.def ?? 0;
   }
 }

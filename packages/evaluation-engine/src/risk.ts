@@ -25,6 +25,8 @@ function ageCurvePenalty(player: Player): number {
       if (age >= 36) return Math.min(1, 0.35 + (age - 36) * 0.1);
       if (age >= 34) return 0.15 + (age - 34) * 0.1;
       return 0;
+    default:
+      return 0;
   }
 }
 

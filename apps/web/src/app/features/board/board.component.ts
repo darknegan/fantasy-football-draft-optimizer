@@ -18,6 +18,7 @@ import {
   startableCapacity,
   type QualityBand,
 } from '@draftlab/tiers';
+import { draftablePositions } from '@draftlab/domain';
 import { ApiService } from '../../core/api.service';
 import type { BoardPlayer, DraftState, FactorGrade, League, Position, RosterShape } from '../../core/api.types';
 import {
@@ -38,7 +39,6 @@ type SortKey = 'vor' | 'draft' | 'ceiling' | 'adp' | 'value' | 'risk' | 'proj';
 type RiskFilter = 'any' | 'low' | 'mid' | 'high';
 type ValueFilter = 'any' | 'positive' | 'negative' | 'even';
 
-const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'vor', label: 'VOR' },
   { value: 'proj', label: 'Proj' },
@@ -69,7 +69,7 @@ const RISK_MAX = 100;
     <div class="board">
       <div class="filters">
         <div class="pos-tabs" role="tablist" aria-label="Position">
-          @for (tab of posTabs; track tab) {
+          @for (tab of posTabs(); track tab) {
             <button
               type="button"
               role="tab"
@@ -316,7 +316,10 @@ export class BoardComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly Math = Math;
-  readonly posTabs = POS_TABS;
+  readonly posTabs = computed((): PosFilter[] => [
+    'ALL',
+    ...draftablePositions(this.league()?.roster ?? DEFAULT_ROSTER),
+  ]);
   readonly sortOptions = SORT_OPTIONS;
   readonly configuredFactorCount = configuredFactorCount;
   readonly scoreLabel = scoreLabel;

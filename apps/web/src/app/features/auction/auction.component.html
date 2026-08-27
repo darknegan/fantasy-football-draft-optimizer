@@ -150,7 +150,7 @@
 
             <div class="list-filters">
               <div class="pos-tabs" role="tablist" aria-label="Position">
-                @for (tab of posTabs; track tab) {
+                @for (tab of posTabs(); track tab) {
                   <button
                     type="button"
                     role="tab"
@@ -252,6 +252,15 @@
                         />
                         @if (team.isYou) {
                           <span class="chip">You</span>
+                        } @else {
+                          <button
+                            type="button"
+                            class="claim-team-btn"
+                            [disabled]="claimingId() === team.rosterId"
+                            (click)="claimTeam(team)"
+                          >
+                            This is my team
+                          </button>
                         }
                       </div>
                       <p class="team-need-summary">

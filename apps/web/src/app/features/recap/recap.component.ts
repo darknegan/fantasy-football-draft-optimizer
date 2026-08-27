@@ -83,7 +83,7 @@ export class RecapComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   leagueId = '';
   readonly recap = signal<DraftRecap | null>(null);
-  readonly positions = ['QB', 'RB', 'WR', 'TE'];
+  readonly positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'] as const;
 
   ngOnInit() {
     this.leagueId = this.route.snapshot.paramMap.get('id') ?? '';

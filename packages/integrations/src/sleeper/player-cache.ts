@@ -30,7 +30,7 @@ export class SleeperPlayerCache {
     for (const [id, value] of Object.entries(raw)) {
       const p = value as Record<string, unknown>;
       const pos = String(p['position'] ?? '');
-      if (!['QB', 'RB', 'WR', 'TE'].includes(pos)) continue;
+      if (!['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(pos)) continue;
       next.set(id, {
         sleeperId: id,
         name: String(p['full_name'] ?? `${p['first_name'] ?? ''} ${p['last_name'] ?? ''}`.trim()),

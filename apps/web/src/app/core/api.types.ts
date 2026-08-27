@@ -1,4 +1,4 @@
-export type Position = 'QB' | 'RB' | 'WR' | 'TE';
+export type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
 export type FactorGrade = 'elite' | 'green' | 'yellow' | 'orange' | 'red' | 'critical' | 'unknown';
 export type StrategyTier = 'S' | 'A' | 'B' | 'C' | 'unrated';
 
@@ -105,6 +105,8 @@ export interface RosterShape {
   flex: number;
   superflex: number;
   bench: number;
+  k?: number;
+  def?: number;
   totalStarters: number;
 }
 

@@ -1,4 +1,5 @@
 import type {
+  AuctionPlayerValue,
   BoardPlayer,
   ContractRules,
   DraftState,
@@ -9,6 +10,7 @@ import type {
   Position,
   StrategyId,
 } from '@draftlab/domain';
+import { emptyPositionCounts, isDraftablePosition, isSpecialistPosition, rosterSpotCount } from '@draftlab/domain';
 import { withHeadshot } from '@draftlab/integrations';
 import {
   addDeadCap,
@@ -62,6 +64,7 @@ import {
   resolveVorScoringFormat,
 } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
+import { mergeKickerDefenseSeeds } from '../data/kickers-defenses.js';
 import {
   buildWfflAuction,
   isWfflLeague,
@@ -69,11 +72,13 @@ import {
   lookupLastYearCost,
   WFFL_BUDGET,
   WFFL_CONTRACT_RULES,
+  WFFL_DEFAULT_TEAM_CODE,
   WFFL_EXTERNAL_ID,
   WFFL_LEAGUE_NAME,
   WFFL_ROSTER,
   WFFL_SCORING,
   WFFL_SEASON,
+  wfflDraftSlot,
   wfflFormatSnapshot,
   wfflHistory,
 } from '../data/wffl-league.js';
@@ -104,7 +109,7 @@ export class AppStore {
     seeds: SeedPlayer[],
     opts?: { seedDemoUserId?: string; auctionBoards?: AuctionValuesArtifact[] },
   ) {
-    this.seeds = seeds;
+    this.seeds = mergeKickerDefenseSeeds(seeds);
     this.auctionBoards = opts?.auctionBoards ?? [];
     for (const seed of this.seeds) {
       const evaluation = evaluatePlayer({
@@ -220,7 +225,7 @@ export class AppStore {
       season: WFFL_SEASON,
       scoring: WFFL_SCORING,
       roster: WFFL_ROSTER,
-      draftSlot: 1,
+      draftSlot: wfflDraftSlot(WFFL_DEFAULT_TEAM_CODE),
       strategyId: 'balanced',
       auctionBudget: WFFL_BUDGET,
       contractRules: { ...WFFL_CONTRACT_RULES },
@@ -233,16 +238,21 @@ export class AppStore {
     return this.leagues.get(league.id)!;
   }
 
-  applyWfflTemplate(leagueId: string) {
+  applyWfflTemplate(leagueId: string, userTeamCode = WFFL_DEFAULT_TEAM_CODE) {
     const league = this.leagues.get(leagueId);
     if (!league) return null;
     const auction = buildWfflAuction({
       players: this.listPlayers(),
       rosterSlots: this.rosterSlotCount(league),
+      userTeamCode,
     });
     const snapshot = wfflFormatSnapshot(auction);
     this.formats.seedAuction(leagueId, snapshot);
-    this.updateLeague(leagueId, { contractRules: auction.contractRules, formatState: snapshot });
+    this.updateLeague(leagueId, {
+      contractRules: auction.contractRules,
+      formatState: snapshot,
+      draftSlot: wfflDraftSlot(userTeamCode),
+    });
     this.mirrorAuctionPicks(leagueId);
     return snapshot;
   }
@@ -253,9 +263,93 @@ export class AppStore {
     if (league?.formatState?.auctionTeams?.length) {
       this.formats.seedAuction(leagueId, league.formatState);
       this.mirrorAuctionPicks(leagueId);
+      this.ensureWfflDefaultTeam(leagueId);
       return;
     }
     if (!bids?.length) this.applyWfflTemplate(leagueId);
+  }
+
+  /**
+   * Make `rosterId` the logged-in user's franchise. Keepers stay with the
+   * named team; only which roster is "You" changes.
+   */
+  claimAuctionTeam(leagueId: string, rosterId: string) {
+    const league = this.leagues.get(leagueId);
+    const draft = this.drafts.get(leagueId);
+    const budgets = this.formats.auctionBudgets.get(leagueId);
+    if (!league || !draft || !budgets) return null;
+    const target = budgets.find((b) => b.rosterId === rosterId);
+    if (!target) return { error: 'Unknown roster' as const };
+    const userId = draft.userRosterId;
+    if (target.rosterId === userId) {
+      if (target.code) {
+        this.updateLeague(leagueId, {
+          formatState: { ...league.formatState, userTeamCode: target.code },
+          draftSlot: isWfflLeague(league.externalId) ? wfflDraftSlot(target.code) : league.draftSlot,
+        });
+        this.syncLeagueFormatState(leagueId);
+      }
+      return this.auctionState(leagueId);
+    }
+
+    const remap = (id: string) => (id === userId ? rosterId : id === rosterId ? userId : id);
+    this.formats.auctionBudgets.set(
+      leagueId,
+      budgets.map((b) => ({ ...b, rosterId: remap(b.rosterId) })),
+    );
+    this.formats.auctionBids.set(
+      leagueId,
+      (this.formats.auctionBids.get(leagueId) ?? []).map((b) => ({
+        ...b,
+        rosterId: remap(b.rosterId),
+      })),
+    );
+    if (draft.picks.length) {
+      this.patchDraft(leagueId, {
+        picks: draft.picks.map((p) => ({ ...p, rosterId: remap(p.rosterId) })),
+      });
+    }
+    const claimed = this.formats.auctionBudgets.get(leagueId)?.find((b) => b.rosterId === userId);
+    const code = claimed?.code;
+    this.updateLeague(leagueId, {
+      formatState: {
+        ...this.formats.snapshotAuction(leagueId),
+        userTeamCode: code,
+      },
+      draftSlot: code && isWfflLeague(league.externalId) ? wfflDraftSlot(code) : league.draftSlot,
+    });
+    this.syncLeagueFormatState(leagueId);
+    return this.auctionState(leagueId);
+  }
+
+  /** Existing WFFL clones that never picked a franchise default to Plano. */
+  ensureWfflDefaultTeam(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league || !isWfflLeague(league.externalId)) return;
+    const chosen = league.formatState?.userTeamCode;
+    const budgets = this.formats.auctionBudgets.get(leagueId) ?? [];
+    const you = budgets.find((b) => b.rosterId === (this.drafts.get(leagueId)?.userRosterId ?? 'roster-user'));
+    if (chosen) {
+      if (you?.code && you.code !== chosen) {
+        const target = budgets.find((b) => b.code === chosen);
+        if (target) this.claimAuctionTeam(leagueId, target.rosterId);
+      }
+      return;
+    }
+    if (you?.code === WFFL_DEFAULT_TEAM_CODE) {
+      this.updateLeague(leagueId, {
+        formatState: { ...league.formatState, userTeamCode: WFFL_DEFAULT_TEAM_CODE },
+        draftSlot: wfflDraftSlot(WFFL_DEFAULT_TEAM_CODE),
+      });
+      this.syncLeagueFormatState(leagueId);
+      return;
+    }
+    const liveBids = (this.formats.auctionBids.get(leagueId) ?? []).filter(
+      (b) => !b.isKeeper && !b.isPenalty,
+    );
+    if (liveBids.length) return;
+    const target = budgets.find((b) => b.code === WFFL_DEFAULT_TEAM_CODE);
+    if (target) this.claimAuctionTeam(leagueId, target.rosterId);
   }
 
   snapshotFormatState(leagueId: string) {
@@ -488,13 +582,14 @@ export class AppStore {
     if (!league || !draft) return [];
     if (!this.leagueEvaluations.has(leagueId)) this.recalculateForLeague(leagueId);
 
+    const catalog = this.leagueCatalog(league);
     const draftedIds = new Set(draft.picks.filter((p) => p.playerId).map((p) => p.playerId!));
     const userRoster = draft.picks
       .filter((p) => p.rosterId === draft.userRosterId && p.playerId)
       .map((p) => this.getPlayer(p.playerId!)!)
       .filter(Boolean);
 
-    const available = this.seeds
+    const available = catalog
       .filter((s) => !draftedIds.has(s.player.id))
       .map((s) => ({
         player: s.player,
@@ -542,7 +637,7 @@ export class AppStore {
 
     const recById = new Map(recs.map((r) => [r.playerId, r]));
 
-    return this.seeds
+    return catalog
       .map((s) => ({
         player: withHeadshot(s.player),
         evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
@@ -852,7 +947,7 @@ export class AppStore {
       picksByRoster.set(pick.rosterId, list);
     }
     const teams = this.listLeagueTeams(league, draft);
-    const posOrder: Record<string, number> = { QB: 0, RB: 1, WR: 2, TE: 3 };
+    const posOrder: Record<string, number> = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4, DEF: 5 };
     const teamRosters = teams.map((team) => {
       const playerIds = picksByRoster.get(team.rosterId) ?? [];
       const players = playerIds
@@ -872,7 +967,7 @@ export class AppStore {
       .map((row) => this.getPlayer(row.playerId))
       .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-    const board = this.seeds
+    const board = this.leagueCatalog(league)
       .map((s) => toRow(s.player.id))
       .filter((row): row is NonNullable<typeof row> => Boolean(row))
       .sort((a, b) => b.dynastyScore - a.dynastyScore)
@@ -914,7 +1009,7 @@ export class AppStore {
       rosterBoard,
       teamRosters,
       rookieBoard: buildRookieBoard(
-        this.seeds.map((s) => ({
+        this.leagueCatalog(league).map((s) => ({
           player: s.player,
           evaluation: this.getLeagueEvaluation(leagueId, s.player.id)!,
         })),
@@ -948,14 +1043,7 @@ export class AppStore {
     if (!league) return null;
     const draft = this.drafts.get(leagueId)!;
     const budget = league.auctionBudget ?? 200;
-    const slots =
-      league.roster.qb +
-      league.roster.rb +
-      league.roster.wr +
-      league.roster.te +
-      league.roster.flex +
-      league.roster.superflex +
-      league.roster.bench;
+    const slots = this.rosterSlotCount(league);
     this.formats.ensureAuction(leagueId, league.teamCount, budget, slots, draft.userRosterId);
 
     const bids = this.formats.auctionBids.get(leagueId) ?? [];
@@ -969,7 +1057,8 @@ export class AppStore {
       const sleeperId = seed.player.externalIds.sleeper;
       if (sleeperId) sleeperIdToPlayerId.set(String(sleeperId), seed.player.id);
     }
-    const baseValues = board
+    const skillSeeds = this.seeds.filter((s) => !isSpecialistPosition(s.player.position));
+    const priced = board
       ? dollarValuesFromAuctionBoard(board, {
           sleeperIdToPlayerId,
           teamCount: league.teamCount,
@@ -977,7 +1066,7 @@ export class AppStore {
           rosterSlots: slots,
         })
       : computeDollarValues(
-          this.seeds.map((s) => ({
+          skillSeeds.map((s) => ({
             playerId: s.player.id,
             position: s.player.position,
             draftScore: this.getLeagueEvaluation(leagueId, s.player.id)!.draftScore,
@@ -989,6 +1078,11 @@ export class AppStore {
             rosterSlots: slots,
           },
         );
+    const pricedIds = new Set(priced.map((v) => v.playerId));
+    const baseValues: AuctionPlayerValue[] = [
+      ...priced,
+      ...this.specialistStubValues(league).filter((v) => !pricedIds.has(v.playerId)),
+    ];
     const inflationRate = computeInflationRate(bids, baseValues);
     const values = applyInflation(baseValues, inflationRate, purchased);
     const rankByPlayerId = new Map<string, number>();
@@ -1038,8 +1132,9 @@ export class AppStore {
     // Dollar curve may omit edge cases; fall back to $1 stubs so the auction
     // room never shows a truncated board vs the player board page.
     const valueById = new Map(pool.values.map((v) => [v.playerId, v]));
+    const catalog = this.leagueCatalog(pool.league);
     const vorById = computeVor(
-      this.seeds.map((s) => ({
+      catalog.map((s) => ({
         id: s.player.id,
         position: s.player.position,
         projectedPoints: s.market.projectedPoints,
@@ -1051,16 +1146,19 @@ export class AppStore {
         variant: pool.league.scoring.variant,
       }),
     );
-    const valueRows = this.seeds
+    const lastYearCosts = isWfflLeague(pool.league.externalId) ? lastYearCostByPlayerName() : null;
+    const valueRows = catalog
       .filter((s) => !pool.purchased.has(s.player.id))
       .map((s) => {
         const evaluation = this.getLeagueEvaluation(leagueId, s.player.id)!;
         const priced = valueById.get(s.player.id);
+        const lastYearCost = lastYearCosts ? lookupLastYearCost(s.player.name, lastYearCosts) : null;
+        const stub = lastYearCost ?? 1;
         return {
           playerId: s.player.id,
-          fairValue: priced?.fairValue ?? 1,
-          inflatedValue: priced?.inflatedValue ?? 1,
-          ceilingValue: priced?.ceilingValue ?? null,
+          fairValue: priced?.fairValue ?? stub,
+          inflatedValue: priced?.inflatedValue ?? stub,
+          ceilingValue: priced?.ceilingValue ?? (isSpecialistPosition(s.player.position) ? stub : null),
           vorpShare: priced?.vorpShare ?? 0,
           name: s.player.name,
           position: s.player.position,
@@ -1070,6 +1168,7 @@ export class AppStore {
           overallRank: pool.rankByPlayerId.get(s.player.id) ?? null,
           vor: vorById.get(s.player.id) ?? null,
           projectedPoints: s.market.projectedPoints ?? null,
+          lastYearCost,
         };
       })
       .sort((a, b) => b.fairValue - a.fairValue || b.draftScore - a.draftScore);
@@ -1079,7 +1178,7 @@ export class AppStore {
     ): {
       playerId: string;
       name: string;
-      position: 'QB' | 'RB' | 'WR' | 'TE';
+      position: Position;
       amount: number;
       contractYears: number;
       team: string;
@@ -1126,20 +1225,13 @@ export class AppStore {
       penalties: pool.bids.filter((b) => b.rosterId === budget.rosterId && b.isPenalty).map(toSigned),
     }));
 
-    const lastYearCosts = isWfflLeague(pool.league.externalId) ? lastYearCostByPlayerName() : null;
-
     return {
       leagueId,
       inflationRate: pool.inflationRate,
       budgets,
       bids: pool.bids,
       contractRules: rules,
-      values: valueRows.map((row) => ({
-        ...row,
-        lastYearCost: lastYearCosts
-          ? lookupLastYearCost(row.name, lastYearCosts)
-          : null,
-      })),
+      values: valueRows,
       nominations: nominations.map((n) => ({
         ...n,
         name: this.getPlayer(n.playerId)?.name ?? n.playerId,
@@ -1396,8 +1488,31 @@ export class AppStore {
   }
 
   private rosterSlotCount(league: League): number {
-    const r = league.roster;
-    return r.qb + r.rb + r.wr + r.te + r.flex + r.superflex + r.bench;
+    return rosterSpotCount(league.roster);
+  }
+
+  private leagueCatalog(league: League) {
+    return this.seeds.filter((s) => isDraftablePosition(s.player.position, league.roster));
+  }
+
+  private specialistStubValues(league: League): AuctionPlayerValue[] {
+    const lastYearCosts = isWfflLeague(league.externalId) ? lastYearCostByPlayerName() : null;
+    return this.seeds
+      .filter(
+        (s) =>
+          isSpecialistPosition(s.player.position) &&
+          isDraftablePosition(s.player.position, league.roster),
+      )
+      .map((s) => {
+        const fair = Math.max(1, lastYearCosts ? (lookupLastYearCost(s.player.name, lastYearCosts) ?? 1) : 1);
+        return {
+          playerId: s.player.id,
+          fairValue: fair,
+          inflatedValue: fair,
+          vorpShare: 0,
+          ceilingValue: fair,
+        };
+      });
   }
 
   private auctionAmountByPlayer(leagueId: string, draft: DraftState): Map<string, number> {
@@ -1484,13 +1599,13 @@ export class AppStore {
       .sort((a, b) => b.pickNumber - a.pickNumber)
       .slice(0, window);
     if (recent.length < 4) return {};
-    const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+    const counts = emptyPositionCounts();
     for (const p of recent) {
       const pos = this.getPlayer(p.playerId!)?.position;
       if (pos) counts[pos] += 1;
     }
     const out: Partial<Record<Position, number>> = {};
-    for (const pos of ['QB', 'RB', 'WR', 'TE'] as Position[]) {
+    for (const pos of Object.keys(counts) as Position[]) {
       const share = counts[pos] / recent.length;
       // Flag a run when a position is clearly over-represented vs equal mix (~25%).
       if (share >= 0.45) out[pos] = Math.min(1, (share - 0.25) / 0.5);

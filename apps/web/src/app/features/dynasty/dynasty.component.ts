@@ -20,7 +20,7 @@ import type {
   Position,
 } from '../../core/api.types';
 
-const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
 interface PositionGroup {
   position: Position;

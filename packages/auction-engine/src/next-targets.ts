@@ -23,6 +23,8 @@ export interface AuctionNextTargetInput {
     te: number;
     flex: number;
     superflex: number;
+    k?: number;
+    def?: number;
   };
   available: Array<{
     playerId: string;
@@ -65,7 +67,9 @@ function requiredStarters(
   if (position === 'QB') return roster.qb + roster.superflex;
   if (position === 'RB') return roster.rb;
   if (position === 'WR') return roster.wr;
-  return roster.te;
+  if (position === 'TE') return roster.te;
+  if (position === 'K') return roster.k ?? 0;
+  return roster.def ?? 0;
 }
 
 function filledCount(

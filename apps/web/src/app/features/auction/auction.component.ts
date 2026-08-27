@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { recommendAuctionLot, suggestNextTargets } from '@draftlab/auction-engine';
+import { draftablePositions, emptyPositionCounts } from '@draftlab/domain';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import type {
@@ -60,7 +61,6 @@ interface TeamRoomView {
   targets: TeamTargetView[];
 }
 
-const POS_TABS: PosFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 const DEFAULT_ROSTER = { qb: 1, rb: 2, wr: 2, te: 1, flex: 1, superflex: 0, bench: 6, totalStarters: 7 };
 
 @Component({
@@ -73,7 +73,10 @@ export class AuctionComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly posTabs = POS_TABS;
+  readonly posTabs = computed((): PosFilter[] => [
+    'ALL',
+    ...draftablePositions(this.league()?.roster ?? DEFAULT_ROSTER),
+  ]);
 
   leagueId = '';
   readonly loading = signal(true);
@@ -91,6 +94,7 @@ export class AuctionComponent implements OnInit {
   readonly mainTab = signal<MainTab>('available');
   readonly winnerRosterId = signal<string | null>(null);
   readonly winnerAmount = signal(1);
+  readonly claimingId = signal<string | null>(null);
   /** Last committed name per roster, used to restore on cancel / blank blur. */
   private readonly teamNameBackup = signal<Record<string, string>>({});
 
@@ -471,7 +475,7 @@ export class AuctionComponent implements OnInit {
   }
 
   dropContract(playerId: string, name: string, penalty: number): void {
-    if (this.droppingId() || this.bidding()) return;
+    if (this.droppingId() || this.bidding() || this.claimingId()) return;
     const confirmDrop =
       penalty > 0
         ? `Drop ${name}? This season's dead-cap penalty is $${penalty}.`
@@ -487,6 +491,24 @@ export class AuctionComponent implements OnInit {
       error: (err: { error?: { error?: string }; message?: string }) => {
         this.droppingId.set(null);
         this.error.set(err?.error?.error ?? err?.message ?? 'Could not drop that contract.');
+      },
+    });
+  }
+
+  claimTeam(team: TeamRoomView): void {
+    if (this.claimingId() || this.bidding() || team.isYou) return;
+    const confirmClaim = `Draft as ${team.name}? Keepers and remaining budget stay with that franchise.`;
+    if (typeof window !== 'undefined' && !window.confirm(confirmClaim)) return;
+    this.claimingId.set(team.rosterId);
+    this.error.set(null);
+    this.api.claimAuctionTeam(this.leagueId, team.rosterId).subscribe({
+      next: (s) => {
+        this.applyState(s);
+        this.claimingId.set(null);
+      },
+      error: (err: { error?: { error?: string }; message?: string }) => {
+        this.claimingId.set(null);
+        this.error.set(err?.error?.error ?? err?.message ?? 'Could not switch teams.');
       },
     });
   }
@@ -576,40 +598,56 @@ function buildTeamNeeds(
     te: number;
     flex: number;
     superflex: number;
+    k?: number;
+    def?: number;
   },
 ): TeamNeedView[] {
-  const counts: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  const counts = emptyPositionCounts();
   for (const p of players) counts[p.position] += 1;
 
-  const required: Record<Position, number> = {
-    QB: shape.qb + shape.superflex,
-    RB: shape.rb,
-    WR: shape.wr,
-    TE: shape.te,
-  };
+  const required = emptyPositionCounts();
+  required.QB = shape.qb + shape.superflex;
+  required.RB = shape.rb;
+  required.WR = shape.wr;
+  required.TE = shape.te;
+  required.K = shape.k ?? 0;
+  required.DEF = shape.def ?? 0;
 
   const flexFilled = Math.max(
     0,
     counts.RB + counts.WR + counts.TE - shape.rb - shape.wr - shape.te,
   );
   const flexOpen = Math.max(0, shape.flex - flexFilled);
+  const positions = draftablePositions({
+    qb: shape.qb,
+    rb: shape.rb,
+    wr: shape.wr,
+    te: shape.te,
+    flex: shape.flex,
+    superflex: shape.superflex,
+    bench: 0,
+    k: shape.k,
+    def: shape.def,
+    totalStarters: 0,
+  });
 
-  return (['QB', 'RB', 'WR', 'TE'] as Position[]).map((position) => {
+  return positions.map((position) => {
     const filled = counts[position];
     const req = required[position];
     const starterOpen = Math.max(0, req - filled);
+    const flexEligible = position === 'RB' || position === 'WR' || position === 'TE';
     // Soft flex need once starters are filled for flex-eligible positions.
     const open =
       starterOpen > 0
         ? starterOpen
-        : position !== 'QB' && flexOpen > 0
+        : flexEligible && flexOpen > 0
           ? Math.min(flexOpen, 1)
           : 0;
     let urgency: NeedUrgency = 'filled';
     if (starterOpen > 0) {
       const ratio = filled / Math.max(req, 1);
       urgency = ratio === 0 ? 'critical' : ratio < 0.5 ? 'high' : 'moderate';
-    } else if (position !== 'QB' && flexOpen > 0) {
+    } else if (flexEligible && flexOpen > 0) {
       urgency = 'low';
     }
     const label =
@@ -625,7 +663,7 @@ function buildTeamNeeds(
     const detail =
       starterOpen > 0
         ? `${starterOpen} starter${starterOpen === 1 ? '' : 's'} open`
-        : position !== 'QB' && flexOpen > 0
+        : flexEligible && flexOpen > 0
           ? 'Can fill flex'
           : `${filled}/${req} starters`;
     return { position, filled, required: req, open, urgency, label, detail };

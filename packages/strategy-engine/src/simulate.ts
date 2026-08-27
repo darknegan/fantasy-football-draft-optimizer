@@ -1,4 +1,5 @@
 import type { Position, StrategyId } from '@draftlab/domain';
+import { emptyPositionCounts } from '@draftlab/domain';
 import { strategyFitMultiplier } from './fit.js';
 import { snakePickNumbers } from './slots.js';
 import { getStrategy } from './strategies.js';
@@ -151,7 +152,7 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
 
   const includeDetails = opts.includeDetails !== false;
   const scores: number[] = [];
-  const mixTotals: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0 };
+  const mixTotals = emptyPositionCounts();
   const samples: StrategySimResult['sampleRosters'] = [];
   const playerHits = new Map<string, { name: string; position: Position; count: number }>();
 
@@ -214,6 +215,8 @@ export function simulateStrategy(opts: SimulateOptions): StrategySimResult {
     RB: round2(mixTotals.RB / denom),
     WR: round2(mixTotals.WR / denom),
     TE: round2(mixTotals.TE / denom),
+    K: round2(mixTotals.K / denom),
+    DEF: round2(mixTotals.DEF / denom),
   };
 
   const sigmaLabel = Math.max(
