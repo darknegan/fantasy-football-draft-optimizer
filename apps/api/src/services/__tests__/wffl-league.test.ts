@@ -6,6 +6,7 @@ import {
   matchPlayerId,
   WFFL_BUDGET,
   WFFL_EXTERNAL_ID,
+  WFFL_ROSTER,
   WFFL_TEAMS,
 } from '../../data/wffl-league.js';
 import { AppStore } from '../store.js';
@@ -108,6 +109,19 @@ describe('WFFL global keeper auction', () => {
     expect(state.teamRosters?.find((t) => t.code === 'PRP')?.players.some((p) => p.name === 'Bucky Irving')).toBe(
       true,
     );
+  });
+
+  it('upgrades existing WFFL clones to the K/DEF roster', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    store.updateLeague(league.id, {
+      roster: { qb: 1, rb: 2, wr: 2, te: 1, flex: 2, superflex: 0, bench: 8, totalStarters: 8 },
+    });
+    store.applyWfflTemplateIfEmpty(league.id);
+    expect(store.getLeague(league.id)?.roster).toEqual(WFFL_ROSTER);
+    const state = store.auctionState(league.id)!;
+    expect(state.values.some((v) => v.position === 'K')).toBe(true);
+    expect(state.userBudget.rosterSlotsTotal).toBe(15);
   });
 
   it('lists kickers and defenses on the WFFL board at last-year cost', () => {

@@ -264,9 +264,33 @@ export class AppStore {
       this.formats.seedAuction(leagueId, league.formatState);
       this.mirrorAuctionPicks(leagueId);
       this.ensureWfflDefaultTeam(leagueId);
+      this.syncWfflLeagueShape(leagueId);
       return;
     }
     if (!bids?.length) this.applyWfflTemplate(leagueId);
+    else this.syncWfflLeagueShape(leagueId);
+  }
+
+  /** Keep cloned WFFL leagues on the current roster/budget/name even after first seed. */
+  private syncWfflLeagueShape(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league || !isWfflLeague(league.externalId)) return;
+    const slots = this.rosterSlotCount({ ...league, roster: WFFL_ROSTER });
+    const budgets = this.formats.auctionBudgets.get(leagueId);
+    if (budgets?.some((b) => b.rosterSlotsTotal !== slots)) {
+      this.formats.auctionBudgets.set(
+        leagueId,
+        budgets.map((b) => ({ ...b, rosterSlotsTotal: slots })),
+      );
+      this.syncLeagueFormatState(leagueId);
+    }
+    this.updateLeague(leagueId, {
+      name: WFFL_LEAGUE_NAME,
+      roster: WFFL_ROSTER,
+      scoring: WFFL_SCORING,
+      auctionBudget: WFFL_BUDGET,
+      contractRules: { ...WFFL_CONTRACT_RULES },
+    });
   }
 
   /**
