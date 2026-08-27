@@ -51,6 +51,10 @@ interface TeamRoomView {
   perSlot: number;
   isYou: boolean;
   players: AuctionSignedPlayer[];
+  penalties: AuctionSignedPlayer[];
+  deadCap: number;
+  owner?: string;
+  conference?: string;
   needs: TeamNeedView[];
   needSummary: string;
   targets: TeamTargetView[];
@@ -79,6 +83,7 @@ export class AuctionComponent implements OnInit {
   readonly contract = signal<ContractValuation | null>(null);
   readonly error = signal<string | null>(null);
   readonly bidding = signal(false);
+  readonly droppingId = signal<string | null>(null);
   readonly selectedId = signal<string | null>(null);
   readonly contractYears = signal(4);
   readonly posFilter = signal<PosFilter>('ALL');
@@ -196,12 +201,15 @@ export class AuctionComponent implements OnInit {
     if (!s) return [];
     const shape = league?.roster ?? DEFAULT_ROSTER;
     const you = s.userBudget.rosterId;
-    const byTeam = new Map((s.teamRosters ?? []).map((t) => [t.rosterId, t.players] as const));
+    const byTeam = new Map((s.teamRosters ?? []).map((t) => [t.rosterId, t] as const));
     const available = s.values;
 
     return s.budgets.map((b) => {
-      let players = byTeam.get(b.rosterId) ?? [];
+      const roster = byTeam.get(b.rosterId);
+      let players = roster?.players ?? [];
       if (!players.length && b.rosterId === you) players = s.signedRoster ?? [];
+      const penalties = roster?.penalties ?? [];
+      const deadCap = roster?.deadCap ?? b.deadCap ?? 0;
 
       const spotsLeft = Math.max(0, b.rosterSlotsTotal - b.rosterSlotsFilled);
       const perSlot = spotsLeft > 0 ? Math.round(b.remaining / spotsLeft) : b.remaining;
@@ -244,6 +252,10 @@ export class AuctionComponent implements OnInit {
         perSlot,
         isYou: b.rosterId === you,
         players: [...players].sort((a, c) => c.amount - a.amount),
+        penalties,
+        deadCap,
+        owner: roster?.owner ?? b.owner,
+        conference: roster?.conference ?? b.conference,
         needs,
         needSummary,
         targets,
@@ -274,7 +286,8 @@ export class AuctionComponent implements OnInit {
     const total = s.lotTotal ?? teams * s.userBudget.rosterSlotsTotal;
     const board = this.state()?.valueBoard?.label;
     const boardBit = board ? ` · ${board}` : '';
-    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}${boardBit}`;
+    const wffl = l.externalId === 'global:wffl' ? ' · WFFL keepers + drop penalties' : '';
+    return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}${boardBit}${wffl}`;
   }
 
   cap(): number {
@@ -456,6 +469,32 @@ export class AuctionComponent implements OnInit {
         },
       });
   }
+
+  dropContract(playerId: string, name: string, penalty: number): void {
+    if (this.droppingId() || this.bidding()) return;
+    const confirmDrop =
+      penalty > 0
+        ? `Drop ${name}? This season's dead-cap penalty is $${penalty}.`
+        : `Drop ${name}? No dead-cap penalty this year.`;
+    if (typeof window !== 'undefined' && !window.confirm(confirmDrop)) return;
+    this.droppingId.set(playerId);
+    this.error.set(null);
+    this.api.releaseAuctionContract(this.leagueId, playerId).subscribe({
+      next: (s) => {
+        this.applyState(s);
+        this.droppingId.set(null);
+      },
+      error: (err: { error?: { error?: string }; message?: string }) => {
+        this.droppingId.set(null);
+        this.error.set(err?.error?.error ?? err?.message ?? 'Could not drop that contract.');
+      },
+    });
+  }
+
+  readonly standings = computed(() => {
+    const records = this.state()?.history?.records ?? [];
+    return [...records].sort((a, b) => a.averageStanding - b.averageStanding);
+  });
 
   reload(): void {
     this.loading.set(true);

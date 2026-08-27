@@ -6,6 +6,7 @@ import {
   computeInflationRate,
   computeMaxBid,
   DEFAULT_CONTRACT_RULES,
+  dropPenaltyAmount,
   initTeamBudgets,
   suggestNominations,
   valueContract,
@@ -93,6 +94,41 @@ describe('nominations + contracts + budgets', () => {
     });
     expect(deal.yearProjections).toHaveLength(4);
     expect(deal.deadCapOnRelease).toBe(25);
+  });
+
+  it('charges year-based drop penalties rounded up', () => {
+    const rules = {
+      ...DEFAULT_CONTRACT_RULES,
+      maxLength: 5,
+      dropPenaltyPctByYear: { 2: 0.5, 3: 0.25, 4: 0.15 },
+    };
+    expect(dropPenaltyAmount({ currentSalary: 8, contractYear: 2, rules })).toBe(4);
+    expect(dropPenaltyAmount({ currentSalary: 12, contractYear: 3, rules })).toBe(3);
+    expect(dropPenaltyAmount({ currentSalary: 15, contractYear: 4, rules })).toBe(3);
+    expect(dropPenaltyAmount({ currentSalary: 29, contractYear: 5, rules })).toBe(0);
+    expect(dropPenaltyAmount({ currentSalary: 17, contractYear: 1, rules })).toBe(0);
+  });
+
+  it('escalates salary on multi-year contracts when growth is configured', () => {
+    const curve: MultiYearCurve = {
+      playerId: 'p',
+      npv: 200,
+      peakYearOffset: 1,
+      contendWindow: { start: 0, end: 3 },
+      points: [
+        { yearOffset: 0, season: 2026, value: 80, productionWeight: 1, assetWeight: 0.4 },
+        { yearOffset: 1, season: 2027, value: 75, productionWeight: 0.85, assetWeight: 0.5 },
+        { yearOffset: 2, season: 2028, value: 60, productionWeight: 0.7, assetWeight: 0.6 },
+      ],
+    };
+    const deal = valueContract({
+      playerId: 'p',
+      annualSalary: 2,
+      years: 3,
+      curve,
+      rules: { ...DEFAULT_CONTRACT_RULES, salaryGrowth: [1.5, 1.25] },
+    });
+    expect(deal.yearProjections.map((y) => y.salary)).toEqual([2, 3, 4]);
   });
 
   it('tracks team budgets after bids', () => {

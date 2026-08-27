@@ -1,9 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import type { ContractRules, DynastyMode } from '@draftlab/domain';
-import { authenticate } from '../auth/plugin.js';
+import { authenticate, requireUser } from '../auth/plugin.js';
 import { requireOwnedLeague } from '../auth/ownership.js';
+import { persistLeagueFormatState } from '../db/leagues.js';
 import type { AppStore } from '../services/store.js';
+
+async function persistAuction(store: AppStore, pool: Pool, userId: string, leagueId: string) {
+  const snapshot = store.snapshotFormatState(leagueId);
+  if (snapshot) await persistLeagueFormatState(pool, userId, leagueId, snapshot);
+}
 
 export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: Pool) {
   const auth = { preHandler: authenticate };
@@ -45,6 +51,7 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
     const result = store.placeAuctionBid(req.params.id, req.body);
     if (!result) return reply.code(404).send({ error: 'League not found' });
     if ('error' in result) return reply.code(400).send(result);
+    await persistAuction(store, pool, requireUser(req).sub, req.params.id);
     return result;
   });
 
@@ -57,8 +64,24 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
     const result = store.renameAuctionTeam(req.params.id, req.params.rosterId, name);
     if (!result) return reply.code(404).send({ error: 'League not found' });
     if ('error' in result) return reply.code(400).send(result);
+    await persistAuction(store, pool, requireUser(req).sub, req.params.id);
     return result;
   });
+
+  app.post<{ Params: { id: string }; Body: { playerId?: string } }>(
+    '/api/leagues/:id/auction/release',
+    auth,
+    async (req, reply) => {
+      if (!(await requireOwnedLeague(req, reply, store, pool))) return;
+      const playerId = req.body?.playerId;
+      if (!playerId) return reply.code(400).send({ error: 'playerId required' });
+      const result = store.releaseAuctionContract(req.params.id, playerId);
+      if (!result) return reply.code(404).send({ error: 'League not found' });
+      if ('error' in result) return reply.code(400).send(result);
+      await persistAuction(store, pool, requireUser(req).sub, req.params.id);
+      return result;
+    },
+  );
 
   app.get<{ Params: { id: string }; Querystring: { playerId?: string } }>(
     '/api/leagues/:id/auction/max-bid',
@@ -101,6 +124,7 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
       if (!(await requireOwnedLeague(req, reply, store, pool))) return;
       const rules = store.setContractRules(req.params.id, req.body);
       if (!rules) return reply.code(404).send({ error: 'League not found' });
+      await persistAuction(store, pool, requireUser(req).sub, req.params.id);
       return rules;
     },
   );

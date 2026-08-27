@@ -214,6 +214,10 @@ export class ApiService {
     return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/bid`, body);
   }
 
+  releaseAuctionContract(leagueId: string, playerId: string) {
+    return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/release`, { playerId });
+  }
+
   renameAuctionTeam(leagueId: string, rosterId: string, name: string) {
     return this.http.patch<AuctionState>(
       `/api/leagues/${leagueId}/auction/teams/${encodeURIComponent(rosterId)}`,

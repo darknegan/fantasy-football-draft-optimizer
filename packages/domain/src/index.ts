@@ -298,6 +298,8 @@ export interface League {
   auctionBudget?: number;
   /** Configurable multi-year contract rules for auction leagues. */
   contractRules?: ContractRules;
+  /** Persisted auction/dynasty room state (teams, keepers, dead cap). */
+  formatState?: LeagueFormatState;
 }
 
 export interface PickEvent {
@@ -429,6 +431,22 @@ export interface ContractRules {
   allowExtensions: boolean;
   franchiseTag: boolean;
   rolloverUnusedCap: boolean;
+  /**
+   * Year-over-year salary multipliers after year 1.
+   * Example `[1.5, 1.25, 1.15]` → Y2 = 150% of Y1, Y3 = 125% of Y2, Y4 = 115% of Y3.
+   */
+  salaryGrowth?: number[];
+  /**
+   * Share of the current-year salary charged as dead cap when a player is
+   * dropped, keyed by 1-based contract year. Missing years charge 0.
+   */
+  dropPenaltyPctByYear?: Partial<Record<number, number>>;
+}
+
+export interface LeagueFormatState {
+  auctionTeams?: AuctionTeamBudget[];
+  auctionBids?: AuctionBid[];
+  contractRules?: ContractRules;
 }
 
 export interface AuctionTeamBudget {
@@ -439,6 +457,11 @@ export interface AuctionTeamBudget {
   remaining: number;
   rosterSlotsFilled: number;
   rosterSlotsTotal: number;
+  /** Dead-cap / drop-penalty dollars that reduce remaining budget without filling a slot. */
+  deadCap?: number;
+  code?: string;
+  owner?: string;
+  conference?: string;
 }
 
 export interface AuctionPlayerValue {
@@ -456,6 +479,17 @@ export interface AuctionBid {
   amount: number;
   contractYears?: number;
   nominatedAt?: string;
+  /** Display name when the catalog id is missing or ambiguous. */
+  playerName?: string;
+  position?: Position;
+  /** 1-based year of the deal the player is currently in. */
+  contractYear?: number;
+  /** Remaining yearly salaries, including the current season. */
+  salarySchedule?: number[];
+  isKeeper?: boolean;
+  /** Dead-cap charge that does not occupy a roster slot. */
+  isPenalty?: boolean;
+  expiresSeason?: number;
 }
 
 export interface MaxBidResult {

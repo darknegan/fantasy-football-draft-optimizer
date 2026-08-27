@@ -8,6 +8,7 @@ import type {
   DraftScoreWeights,
   DynastyMode,
   GradingBands,
+  LeagueFormatState,
 } from '@draftlab/domain';
 import { DEFAULT_CONTRACT_RULES } from '@draftlab/auction-engine';
 import { DEFAULT_BANDS, DEFAULT_WEIGHTS } from '@draftlab/calibration-engine';
@@ -34,7 +35,13 @@ export class FormatState {
     return this.activeWeightsByLeague.get(leagueId) ?? { ...DEFAULT_WEIGHTS };
   }
 
-  ensureAuction(leagueId: string, teamCount: number, budget: number, rosterSlots: number, userRosterId: string) {
+  ensureAuction(
+    leagueId: string,
+    teamCount: number,
+    budget: number,
+    rosterSlots: number,
+    userRosterId: string,
+  ) {
     if (!this.auctionBudgets.has(leagueId)) {
       const teams: AuctionTeamBudget[] = [];
       for (let i = 1; i <= teamCount; i++) {
@@ -47,6 +54,7 @@ export class FormatState {
           remaining: budget,
           rosterSlotsFilled: 0,
           rosterSlotsTotal: rosterSlots,
+          deadCap: 0,
         });
       }
       this.auctionBudgets.set(leagueId, teams);
@@ -55,6 +63,22 @@ export class FormatState {
     if (!this.contractRules.has(leagueId)) {
       this.contractRules.set(leagueId, { ...DEFAULT_CONTRACT_RULES });
     }
+  }
+
+  seedAuction(leagueId: string, snapshot: LeagueFormatState) {
+    if (snapshot.auctionTeams) this.auctionBudgets.set(leagueId, snapshot.auctionTeams);
+    if (snapshot.auctionBids) this.auctionBids.set(leagueId, snapshot.auctionBids);
+    if (snapshot.contractRules) this.contractRules.set(leagueId, snapshot.contractRules);
+  }
+
+  snapshotAuction(leagueId: string): LeagueFormatState | null {
+    const teams = this.auctionBudgets.get(leagueId);
+    if (!teams) return null;
+    return {
+      auctionTeams: teams,
+      auctionBids: this.auctionBids.get(leagueId) ?? [],
+      contractRules: this.contractRules.get(leagueId),
+    };
   }
 
   ensureDynasty(leagueId: string, mode: DynastyMode = 'neutral') {

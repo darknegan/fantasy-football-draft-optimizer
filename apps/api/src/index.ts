@@ -6,12 +6,13 @@ import websocket from '@fastify/websocket';
 import { createAppStore, getArtifactMeta } from './create-store.js';
 import type { AppStore } from './services/store.js';
 import { assertDbReady, getPool, isDbConnectionError, requireEnv } from './db/pool.js';
-import { createUser, findUserByEmail } from './db/users.js';
-import { upsertLeagueRow } from './db/leagues.js';
+import { createUser, findUserByEmail, listUserIds } from './db/users.js';
+import { persistLeagueFormatState, listLeaguesForUser, upsertLeagueRow } from './db/leagues.js';
 import { hashPassword } from './auth/password.js';
 import { verifyAccessToken } from './auth/tokens.js';
 import { registerAuthDecorators, getBearerToken } from './auth/plugin.js';
 import { DraftPoller } from './services/draft-poller.js';
+import { ensureWfflForUser } from './services/ensure-wffl.js';
 import { playerRoutes } from './routes/players.js';
 import { leagueRoutes } from './routes/leagues.js';
 import { strategyRoutes } from './routes/strategies.js';
@@ -40,7 +41,28 @@ async function maybeSeedDemoUser(pool: ReturnType<typeof getPool>, store: AppSto
   for (const league of [demos.demo, demos.dynasty, demos.auction]) {
     await upsertLeagueRow(pool, league);
   }
-  console.log(`Seeded demo user ${email} with ${3} leagues`);
+  await ensureWfflForUser(store, user.id, {
+    list: () => listLeaguesForUser(pool, user.id),
+    upsert: (league) => upsertLeagueRow(pool, league),
+    persistFormat: async (leagueId, league) => {
+      await persistLeagueFormatState(pool, user.id, leagueId, league.formatState);
+    },
+  });
+  console.log(`Seeded demo user ${email} with ${4} leagues`);
+}
+
+async function seedWfflForAllUsers(pool: ReturnType<typeof getPool>, store: AppStore) {
+  const ids = await listUserIds(pool);
+  for (const userId of ids) {
+    await ensureWfflForUser(store, userId, {
+      list: () => listLeaguesForUser(pool, userId),
+      upsert: (league) => upsertLeagueRow(pool, league),
+      persistFormat: async (leagueId, league) => {
+        await persistLeagueFormatState(pool, userId, leagueId, league.formatState);
+      },
+    });
+  }
+  if (ids.length) console.log(`Ensured WFFL auction league for ${ids.length} user(s)`);
 }
 
 async function main() {
@@ -56,6 +78,7 @@ async function main() {
   await assertDbReady(pool);
   const store = await createAppStore();
   await maybeSeedDemoUser(pool, store);
+  await seedWfflForAllUsers(pool, store);
 
   const app = Fastify({ logger: true });
   await app.register(cors, {
@@ -123,7 +146,7 @@ async function main() {
     }
   });
 
-  await authRoutes(app, pool);
+  await authRoutes(app, pool, store);
   await playerRoutes(app, store);
   await leagueRoutes(app, store, poller, pool);
   await strategyRoutes(app, store, pool);

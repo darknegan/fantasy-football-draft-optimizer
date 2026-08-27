@@ -20,6 +20,7 @@ import {
   revokeSessionForUser,
 } from '../db/refresh-tokens.js';
 import { authenticate, requireUser } from '../auth/plugin.js';
+import { listLeaguesForUser, persistLeagueFormatState, upsertLeagueRow } from '../db/leagues.js';
 import { hashPassword, validateEmail, validatePassword, verifyPassword } from '../auth/password.js';
 import { REFRESH_COOKIE } from '../auth/tokens.js';
 import {
@@ -28,9 +29,10 @@ import {
   publicUserWithCounts,
   rotateRefreshSession,
 } from '../auth/session.js';
-import { listLeaguesForUser } from '../db/leagues.js';
+import { ensureWfflForUser } from '../services/ensure-wffl.js';
+import type { AppStore } from '../services/store.js';
 
-export async function authRoutes(app: FastifyInstance, pool: Pool) {
+export async function authRoutes(app: FastifyInstance, pool: Pool, store: AppStore) {
   app.post<{
     Body: { email?: string; password?: string; displayName?: string };
   }>('/auth/register', async (req, reply) => {
@@ -48,6 +50,13 @@ export async function authRoutes(app: FastifyInstance, pool: Pool) {
 
     const passwordHash = await hashPassword(password);
     const user = await createUser(pool, { email, displayName, passwordHash });
+    await ensureWfflForUser(store, user.id, {
+      list: () => listLeaguesForUser(pool, user.id),
+      upsert: (league) => upsertLeagueRow(pool, league),
+      persistFormat: async (leagueId, league) => {
+        await persistLeagueFormatState(pool, user.id, leagueId, league.formatState);
+      },
+    });
     const session = await issueSession(pool, reply, user, req);
     return reply.code(201).send(session);
   });

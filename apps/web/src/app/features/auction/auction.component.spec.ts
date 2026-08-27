@@ -88,6 +88,7 @@ async function createAuction(
   extras: {
     bid?: ReturnType<typeof vi.fn>;
     renameAuctionTeam?: ReturnType<typeof vi.fn>;
+    releaseAuctionContract?: ReturnType<typeof vi.fn>;
   } = {},
 ) {
   const bid = extras.bid ?? vi.fn(() => of(state));
@@ -104,6 +105,7 @@ async function createAuction(
         ),
       }),
     );
+  const releaseAuctionContract = extras.releaseAuctionContract ?? vi.fn(() => of(state));
   await TestBed.configureTestingModule({
     imports: [AuctionComponent],
     providers: [
@@ -115,6 +117,7 @@ async function createAuction(
           auctionState: () => of(state),
           auctionBid: bid,
           renameAuctionTeam,
+          releaseAuctionContract,
           auctionMaxBid: () =>
             of({
               playerId: hall.playerId,
@@ -134,7 +137,7 @@ async function createAuction(
   }).compileComponents();
   const fixture = TestBed.createComponent(AuctionComponent);
   fixture.detectChanges();
-  return { fixture, bid, renameAuctionTeam };
+  return { fixture, bid, renameAuctionTeam, releaseAuctionContract };
 }
 
 describe('AuctionComponent on-the-block', () => {
@@ -333,5 +336,62 @@ describe('AuctionComponent on-the-block', () => {
     const labels = Array.from(select.options).map((opt) => opt.textContent?.replace(/\s+/g, ' ').trim());
     expect(labels).toContain('The Geckos · $200 left');
     expect(labels).not.toContain('Team 2 · $200 left');
+  });
+
+  it('drops a signed keeper after confirming the year-based penalty', async () => {
+    const releaseAuctionContract = vi.fn(() => of(makeState()));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { fixture } = await createAuction(
+      makeState({
+        signedRoster: [
+          {
+            playerId: 'puka-nacua',
+            name: 'Puka Nacua',
+            position: 'WR',
+            amount: 15,
+            contractYears: 2,
+            team: 'LAR',
+            contractYear: 4,
+            dropPenalty: 3,
+          },
+        ],
+        teamRosters: [
+          {
+            rosterId: you.rosterId,
+            name: you.name,
+            players: [
+              {
+                playerId: 'puka-nacua',
+                name: 'Puka Nacua',
+                position: 'WR',
+                amount: 15,
+                contractYears: 2,
+                team: 'LAR',
+                contractYear: 4,
+                dropPenalty: 3,
+              },
+            ],
+          },
+          { rosterId: rival.rosterId, name: rival.name, players: [] },
+        ],
+      }),
+      { releaseAuctionContract },
+    );
+    const root: HTMLElement = fixture.nativeElement;
+    const roomTab = Array.from(root.querySelectorAll('.panel-tab')).find((el) =>
+      el.textContent?.includes('Budgets'),
+    ) as HTMLButtonElement;
+    roomTab.click();
+    fixture.detectChanges();
+
+    const drop = Array.from(root.querySelectorAll('.drop-btn')).find((el) =>
+      el.textContent?.includes('Drop $3'),
+    ) as HTMLButtonElement;
+    expect(drop).toBeTruthy();
+    drop.click();
+    fixture.detectChanges();
+    expect(confirm).toHaveBeenCalled();
+    expect(releaseAuctionContract).toHaveBeenCalledWith('league-1', 'puka-nacua');
+    confirm.mockRestore();
   });
 });

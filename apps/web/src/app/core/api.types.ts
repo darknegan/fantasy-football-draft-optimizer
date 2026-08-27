@@ -366,6 +366,12 @@ export interface AuctionSignedPlayer {
   amount: number;
   contractYears: number;
   team: string;
+  contractYear?: number;
+  isKeeper?: boolean;
+  isPenalty?: boolean;
+  salarySchedule?: number[];
+  expiresSeason?: number;
+  dropPenalty?: number;
 }
 
 export interface AuctionState {
@@ -379,6 +385,10 @@ export interface AuctionState {
     remaining: number;
     rosterSlotsFilled: number;
     rosterSlotsTotal: number;
+    deadCap?: number;
+    code?: string;
+    owner?: string;
+    conference?: string;
   }>;
   bids: Array<{ playerId: string; rosterId: string; amount: number; contractYears?: number }>;
   contractRules: {
@@ -388,6 +398,8 @@ export interface AuctionState {
     allowExtensions: boolean;
     franchiseTag: boolean;
     rolloverUnusedCap: boolean;
+    salaryGrowth?: number[];
+    dropPenaltyPctByYear?: Record<number, number>;
   };
   values: Array<{
     playerId: string;
@@ -405,6 +417,7 @@ export interface AuctionState {
     projectedPoints?: number | null;
     /** Scaled sleeperMCP auction `max` — pay-up-to for this scoring board. */
     ceilingValue?: number | null;
+    lastYearCost?: number | null;
   }>;
   nominations: Array<{
     playerId: string;
@@ -419,13 +432,38 @@ export interface AuctionState {
   teamRosters?: Array<{
     rosterId: string;
     name: string;
+    code?: string;
+    owner?: string;
+    conference?: string;
+    deadCap?: number;
     players: AuctionSignedPlayer[];
+    penalties?: AuctionSignedPlayer[];
   }>;
   lotNumber?: number;
   lotTotal?: number;
   cap?: number;
   /** sleeperMCP auction board selected for this league's scoring. */
   valueBoard?: { id: string; label: string } | null;
+  history?: {
+    records: Array<{
+      teamCode: string;
+      owner: string;
+      championships: number;
+      playoffAppearances: number;
+      totalWins: number;
+      totalLosses: number;
+      averageStanding: number;
+      seasons: Array<{ season: number; wins: number; losses: number; standing: number }>;
+    }>;
+    draft2025: Array<{
+      pickNumber: number;
+      playerName: string;
+      position: string;
+      amount: number;
+      owner: string;
+      teamCode: string;
+    }>;
+  } | null;
 }
 
 export interface MaxBidResult {

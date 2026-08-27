@@ -127,3 +127,8 @@ export async function countLeaguesForUser(pool: Pool, userId: string): Promise<n
   ]);
   return Number(result.rows[0]?.['n'] ?? 0);
 }
+
+export async function listUserIds(pool: Pool): Promise<string[]> {
+  const result = await pool.query(`SELECT id FROM users`);
+  return result.rows.map((row) => String(row['id']));
+}

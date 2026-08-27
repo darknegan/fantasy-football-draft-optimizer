@@ -85,9 +85,12 @@ CREATE TABLE IF NOT EXISTS leagues (
   sleeper_user_id TEXT,
   dynasty_mode TEXT,
   auction_budget INT,
+  format_state JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (user_id, platform, external_id)
 );
+
+ALTER TABLE leagues ADD COLUMN IF NOT EXISTS format_state JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_leagues_user ON leagues(user_id);
 
