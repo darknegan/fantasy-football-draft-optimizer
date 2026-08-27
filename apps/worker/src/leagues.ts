@@ -1,7 +1,8 @@
 import type { League } from '@draftlab/domain';
 import type { AppStore } from '../../api/src/services/store.js';
 import { createDb, endDb, type Db } from './db/client.js';
-import { getLeagueForUser, listLeaguesForUser } from './db/leagues.js';
+import { getLeagueForUser, listLeaguesForUser, persistLeagueFormatState, upsertLeagueRow } from './db/leagues.js';
+import { ensureWfflForUser } from '../../api/src/services/ensure-wffl.js';
 
 type WaitUntilCtx = { waitUntil(promise: Promise<unknown>): void };
 
@@ -36,7 +37,12 @@ export async function ownedLeague(
 }
 
 export async function loadUserLeagues(store: AppStore, db: Db, userId: string): Promise<League[]> {
-  const fromDb = await listLeaguesForUser(db, userId);
-  store.hydrateLeagues(fromDb);
+  await ensureWfflForUser(store, userId, {
+    list: () => listLeaguesForUser(db, userId),
+    upsert: (league) => upsertLeagueRow(db, league),
+    persistFormat: async (leagueId, league) => {
+      await persistLeagueFormatState(db, userId, leagueId, league.formatState);
+    },
+  });
   return store.listLeagues(userId);
 }

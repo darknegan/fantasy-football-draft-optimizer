@@ -43,7 +43,7 @@ import {
 import { AppStore } from '../../api/src/services/store.js';
 import { dbUnavailable, requireAccessJwt, type WorkerUser } from './auth.js';
 import { dbHealthCheck } from './db/client.js';
-import { deleteLeagueRow, updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
+import { deleteLeagueRow, persistLeagueFormatState, updateLeagueRow, upsertLeagueRow } from './db/leagues.js';
 import { loadUserLeagues, ownedLeague, withDb } from './leagues.js';
 import { authRoutes } from './routes/auth.js';
 
@@ -662,6 +662,12 @@ app.post('/api/leagues/:id/auction/bid', async (c) => {
     const result = store.placeAuctionBid(league.id, body);
     if (!result) return c.json({ error: 'League not found' }, 404);
     if ('error' in result) return c.json({ error: result.error }, 400);
+    const snap = store.snapshotFormatState(league.id);
+    if (snap) {
+      await withDb(c.env, c.executionCtx, (db) =>
+        persistLeagueFormatState(db, user.sub, league.id, snap),
+      );
+    }
     return c.json(result);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
@@ -680,10 +686,41 @@ app.patch('/api/leagues/:id/auction/teams/:rosterId', async (c) => {
     const result = store.renameAuctionTeam(league.id, c.req.param('rosterId'), body.name ?? '');
     if (!result) return c.json({ error: 'League not found' }, 404);
     if ('error' in result) return c.json({ error: result.error }, 400);
+    const snap = store.snapshotFormatState(league.id);
+    if (snap) {
+      await withDb(c.env, c.executionCtx, (db) =>
+        persistLeagueFormatState(db, user.sub, league.id, snap),
+      );
+    }
     return c.json(result);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return c.json({ error: 'Could not rename team', detail }, 500);
+  }
+});
+
+app.post('/api/leagues/:id/auction/release', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ playerId?: string }>();
+  try {
+    const league = await withDb(c.env, c.executionCtx, (db) =>
+      ownedLeague(store, db, user.sub, c.req.param('id')),
+    );
+    if (!league) return c.json({ error: 'League not found' }, 404);
+    if (!body.playerId) return c.json({ error: 'playerId required' }, 400);
+    const result = store.releaseAuctionContract(league.id, body.playerId);
+    if (!result) return c.json({ error: 'League not found' }, 404);
+    if ('error' in result) return c.json({ error: result.error }, 400);
+    const snap = store.snapshotFormatState(league.id);
+    if (snap) {
+      await withDb(c.env, c.executionCtx, (db) =>
+        persistLeagueFormatState(db, user.sub, league.id, snap),
+      );
+    }
+    return c.json(result);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return c.json({ error: 'Could not drop contract', detail }, 500);
   }
 });
 

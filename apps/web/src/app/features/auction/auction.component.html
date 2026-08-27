@@ -204,7 +204,8 @@
                     <strong>{{ row.name }}</strong>
                     <div class="meta">
                       Age {{ row.age
-                      }}{{ row.overallRank != null ? ' · #' + row.overallRank + ' market' : '' }}
+                      }}{{ row.overallRank != null ? ' · #' + row.overallRank + ' market' : ''
+                      }}{{ row.lastYearCost != null ? ' · $' + row.lastYearCost + ' last year' : '' }}
                     </div>
                   </div>
                   <span class="c-arch">{{
@@ -253,12 +254,23 @@
                           <span class="chip">You</span>
                         }
                       </div>
-                      <p class="team-need-summary">{{ team.needSummary }}</p>
+                      <p class="team-need-summary">
+                        @if (team.owner) {
+                          {{ team.owner
+                          }}{{ team.conference ? ' · ' + team.conference : '' }}
+                          ·
+                        }
+                        {{ team.needSummary }}
+                      </p>
                     </div>
                     <div class="team-budget">
                       <div class="team-budget-amt dl-mono">${{ team.remaining }}</div>
                       <div class="team-budget-meta">
-                        ${{ team.spent }} spent · {{ team.spotsLeft }} spots · ${{ team.perSlot }}/slot
+                        ${{ team.spent }} spent
+                        @if (team.deadCap) {
+                          · ${{ team.deadCap }} dead cap
+                        }
+                        · {{ team.spotsLeft }} spots · ${{ team.perSlot }}/slot
                       </div>
                     </div>
                   </header>
@@ -272,12 +284,38 @@
                             <span class="pos tiny" [class]="p.position">{{ p.position }}</span>
                             <span class="signed-name">{{ p.name }}</span>
                             <span class="dl-mono">${{ p.amount }}</span>
-                            <span class="signed-years">{{ p.contractYears }}yr</span>
+                            <span class="signed-years"
+                              >{{ p.contractYears }}yr
+                              @if (p.contractYear) {
+                                · Y{{ p.contractYear }}
+                              }
+                            </span>
+                            <button
+                              type="button"
+                              class="drop-btn"
+                              [disabled]="droppingId() === p.playerId"
+                              (click)="dropContract(p.playerId, p.name, p.dropPenalty ?? 0)"
+                            >
+                              Drop{{ (p.dropPenalty ?? 0) > 0 ? ' $' + p.dropPenalty : '' }}
+                            </button>
                           </li>
                         } @empty {
                           <li class="empty-note">No players signed yet</li>
                         }
                       </ul>
+                      @if (team.penalties.length) {
+                        <h4 class="penalty-head">Drop penalties</h4>
+                        <ul>
+                          @for (p of team.penalties; track p.playerId + '-pen') {
+                            <li class="penalty-row">
+                              <span class="pos tiny" [class]="p.position">{{ p.position }}</span>
+                              <span class="signed-name">{{ p.name }}</span>
+                              <span class="dl-mono">${{ p.amount }}</span>
+                              <span class="signed-years">dead cap</span>
+                            </li>
+                          }
+                        </ul>
+                      }
                     </section>
 
                     <section class="team-needs">
@@ -315,6 +353,37 @@
                 </article>
               }
             </div>
+
+            @if (standings().length) {
+              <section class="history-block">
+                <div class="section-head">
+                  <h2>WFFL history</h2>
+                  <p>2022–2025 standings from the master sheet</p>
+                </div>
+                <table class="history-table">
+                  <thead>
+                    <tr>
+                      <th>Team</th>
+                      <th>Owner</th>
+                      <th>Record</th>
+                      <th>Avg</th>
+                      <th>Titles</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of standings(); track row.teamCode) {
+                      <tr>
+                        <td>{{ row.teamCode }}</td>
+                        <td>{{ row.owner }}</td>
+                        <td class="dl-mono">{{ row.totalWins }}–{{ row.totalLosses }}</td>
+                        <td class="dl-mono">{{ row.averageStanding }}</td>
+                        <td class="dl-mono">{{ row.championships }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </section>
+            }
           </div>
         }
       </div>

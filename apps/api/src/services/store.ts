@@ -11,6 +11,7 @@ import type {
 } from '@draftlab/domain';
 import { withHeadshot } from '@draftlab/integrations';
 import {
+  addDeadCap,
   applyBidToBudgets,
   applyInflation,
   computeDollarValues,
@@ -18,6 +19,8 @@ import {
   computeMaxBid,
   DEFAULT_CONTRACT_RULES,
   dollarValuesFromAuctionBoard,
+  dropPenaltyAmount,
+  removeBidFromBudgets,
   selectAuctionBoard,
   suggestNominations,
   valueContract,
@@ -59,6 +62,21 @@ import {
   resolveVorScoringFormat,
 } from '@draftlab/tiers';
 import type { SeedPlayer } from '../data/seed-players.js';
+import {
+  buildWfflAuction,
+  isWfflLeague,
+  lastYearCostByPlayerName,
+  lookupLastYearCost,
+  WFFL_BUDGET,
+  WFFL_CONTRACT_RULES,
+  WFFL_EXTERNAL_ID,
+  WFFL_LEAGUE_NAME,
+  WFFL_ROSTER,
+  WFFL_SCORING,
+  WFFL_SEASON,
+  wfflFormatSnapshot,
+  wfflHistory,
+} from '../data/wffl-league.js';
 import { FormatState } from './format-state.js';
 import { buildRecap } from './recap.js';
 
@@ -187,6 +205,99 @@ export class AppStore {
     return { demo, dynasty, auction };
   }
 
+  seedWfflLeague(userId: string) {
+    const existing = this.listLeagues(userId).find((l) => isWfflLeague(l.externalId));
+    if (existing) {
+      this.applyWfflTemplateIfEmpty(existing.id);
+      return existing;
+    }
+    const league = createManualLeague({
+      userId,
+      name: WFFL_LEAGUE_NAME,
+      type: 'auction',
+      draftType: 'auction',
+      teamCount: 12,
+      season: WFFL_SEASON,
+      scoring: WFFL_SCORING,
+      roster: WFFL_ROSTER,
+      draftSlot: 1,
+      strategyId: 'balanced',
+      auctionBudget: WFFL_BUDGET,
+      contractRules: { ...WFFL_CONTRACT_RULES },
+    });
+    league.externalId = WFFL_EXTERNAL_ID;
+    this.leagues.set(league.id, league);
+    this.drafts.set(league.id, this.createEmptyDraft(league.id));
+    this.applyWfflTemplate(league.id);
+    this.recalculateForLeague(league.id);
+    return this.leagues.get(league.id)!;
+  }
+
+  applyWfflTemplate(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    const auction = buildWfflAuction({
+      players: this.listPlayers(),
+      rosterSlots: this.rosterSlotCount(league),
+    });
+    const snapshot = wfflFormatSnapshot(auction);
+    this.formats.seedAuction(leagueId, snapshot);
+    this.updateLeague(leagueId, { contractRules: auction.contractRules, formatState: snapshot });
+    this.mirrorAuctionPicks(leagueId);
+    return snapshot;
+  }
+
+  applyWfflTemplateIfEmpty(leagueId: string) {
+    const bids = this.formats.auctionBids.get(leagueId);
+    const league = this.leagues.get(leagueId);
+    if (league?.formatState?.auctionTeams?.length) {
+      this.formats.seedAuction(leagueId, league.formatState);
+      this.mirrorAuctionPicks(leagueId);
+      return;
+    }
+    if (!bids?.length) this.applyWfflTemplate(leagueId);
+  }
+
+  snapshotFormatState(leagueId: string) {
+    return this.formats.snapshotAuction(leagueId);
+  }
+
+  private restoreFormatState(league: League) {
+    if (league.formatState?.auctionTeams?.length) {
+      this.formats.seedAuction(league.id, league.formatState);
+      this.mirrorAuctionPicks(league.id);
+      return;
+    }
+    if (isWfflLeague(league.externalId)) this.applyWfflTemplateIfEmpty(league.id);
+  }
+
+  private syncLeagueFormatState(leagueId: string) {
+    const snapshot = this.formats.snapshotAuction(leagueId);
+    if (!snapshot) return;
+    this.updateLeague(leagueId, { formatState: snapshot, contractRules: snapshot.contractRules });
+  }
+
+  private mirrorAuctionPicks(leagueId: string) {
+    const draft = this.drafts.get(leagueId);
+    if (!draft) return;
+    const bids = this.formats.auctionBids.get(leagueId) ?? [];
+    let pickNumber = draft.picks.length;
+    for (const bid of bids) {
+      if (bid.isPenalty) continue;
+      if (draft.picks.some((p) => p.playerId === bid.playerId)) continue;
+      pickNumber += 1;
+      this.applyPick(leagueId, {
+        pickNumber,
+        round: 1,
+        slot: 1,
+        playerId: bid.playerId,
+        rosterId: bid.rosterId,
+        source: 'manual',
+        amount: bid.amount,
+      });
+    }
+  }
+
   private seedDemoOutcomes(leagueId: string) {
     const board = this.getBoard(leagueId)
       .filter((b) => b.recommendation)
@@ -276,6 +387,7 @@ export class AppStore {
   hydrateLeagues(leagues: League[]) {
     for (const league of leagues) {
       this.upsertLeague(league);
+      this.restoreFormatState(league);
       if (!this.leagueEvaluations.has(league.id)) {
         this.recalculateForLeague(league.id);
       }
@@ -847,7 +959,7 @@ export class AppStore {
     this.formats.ensureAuction(leagueId, league.teamCount, budget, slots, draft.userRosterId);
 
     const bids = this.formats.auctionBids.get(leagueId) ?? [];
-    const purchased = new Set(bids.map((b) => b.playerId));
+    const purchased = new Set(bids.filter((b) => !b.isPenalty).map((b) => b.playerId));
     const board = selectAuctionBoard(this.auctionBoards, {
       scoring: league.scoring,
       roster: league.roster,
@@ -971,25 +1083,50 @@ export class AppStore {
       amount: number;
       contractYears: number;
       team: string;
+      contractYear?: number;
+      isKeeper?: boolean;
+      isPenalty?: boolean;
+      salarySchedule?: number[];
+      expiresSeason?: number;
+      dropPenalty: number;
     } => {
       const player = this.getPlayer(b.playerId);
       return {
         playerId: b.playerId,
-        name: player?.name ?? b.playerId,
-        position: player?.position ?? 'WR',
+        name: player?.name ?? b.playerName ?? b.playerId,
+        position: player?.position ?? b.position ?? 'WR',
         amount: b.amount,
-        contractYears: b.contractYears ?? 1,
+        contractYears: b.contractYears ?? b.salarySchedule?.length ?? 1,
         team: player?.team ?? '',
+        contractYear: b.contractYear,
+        isKeeper: b.isKeeper,
+        isPenalty: b.isPenalty,
+        salarySchedule: b.salarySchedule,
+        expiresSeason: b.expiresSeason,
+        dropPenalty: dropPenaltyAmount({
+          currentSalary: b.amount,
+          contractYear: b.contractYear ?? 1,
+          rules,
+        }),
       };
     };
 
-    const signedRoster = pool.bids.filter((b) => b.rosterId === user.rosterId).map(toSigned);
+    const signedRoster = pool.bids
+      .filter((b) => b.rosterId === user.rosterId && !b.isPenalty)
+      .map(toSigned);
 
     const teamRosters = budgets.map((budget) => ({
       rosterId: budget.rosterId,
       name: budget.name,
-      players: pool.bids.filter((b) => b.rosterId === budget.rosterId).map(toSigned),
+      code: budget.code,
+      owner: budget.owner,
+      conference: budget.conference,
+      deadCap: budget.deadCap ?? 0,
+      players: pool.bids.filter((b) => b.rosterId === budget.rosterId && !b.isPenalty).map(toSigned),
+      penalties: pool.bids.filter((b) => b.rosterId === budget.rosterId && b.isPenalty).map(toSigned),
     }));
+
+    const lastYearCosts = isWfflLeague(pool.league.externalId) ? lastYearCostByPlayerName() : null;
 
     return {
       leagueId,
@@ -997,7 +1134,12 @@ export class AppStore {
       budgets,
       bids: pool.bids,
       contractRules: rules,
-      values: valueRows,
+      values: valueRows.map((row) => ({
+        ...row,
+        lastYearCost: lastYearCosts
+          ? lookupLastYearCost(row.name, lastYearCosts)
+          : null,
+      })),
       nominations: nominations.map((n) => ({
         ...n,
         name: this.getPlayer(n.playerId)?.name ?? n.playerId,
@@ -1005,10 +1147,11 @@ export class AppStore {
       userBudget: user,
       signedRoster,
       teamRosters,
-      lotNumber: pool.bids.length + 1,
+      lotNumber: pool.bids.filter((b) => !b.isPenalty).length + 1,
       lotTotal: budgets.reduce((n, b) => n + b.rosterSlotsTotal, 0),
       cap: user.startingBudget,
       valueBoard: pool.valueBoard,
+      history: isWfflLeague(pool.league.externalId) ? wfflHistory() : null,
     };
   }
 
@@ -1033,13 +1176,17 @@ export class AppStore {
       amount: body.amount,
       contractYears: body.contractYears,
       nominatedAt: new Date().toISOString(),
+      contractYear: 1,
+      playerName: this.getPlayer(body.playerId)?.name,
+      position: this.getPlayer(body.playerId)?.position,
+      isPenalty: false,
     };
     const bids = [...pool.bids, bid];
     this.formats.auctionBids.set(leagueId, bids);
     this.formats.auctionBudgets.set(leagueId, applyBidToBudgets(budgets, bid));
 
     // Mirror into draft picks for shared board/recap tooling.
-    const pickNumber = bids.length;
+    const pickNumber = bids.filter((b) => !b.isPenalty).length;
     this.applyPick(leagueId, {
       pickNumber,
       round: 1,
@@ -1049,6 +1196,7 @@ export class AppStore {
       source: 'manual',
       amount: body.amount,
     });
+    this.syncLeagueFormatState(leagueId);
 
     return this.auctionState(leagueId);
   }
@@ -1070,6 +1218,53 @@ export class AppStore {
       leagueId,
       budgets.map((b) => (b.rosterId === rosterId ? { ...b, name: trimmed } : b)),
     );
+    this.syncLeagueFormatState(leagueId);
+    return this.auctionState(leagueId);
+  }
+
+  releaseAuctionContract(leagueId: string, playerId: string) {
+    const pool = this.auctionPool(leagueId);
+    if (!pool) return null;
+    const bid = pool.bids.find((b) => b.playerId === playerId && !b.isPenalty);
+    if (!bid) return { error: 'No contract on this player' as const };
+
+    const rules =
+      this.formats.contractRules.get(leagueId) ??
+      pool.league.contractRules ??
+      DEFAULT_CONTRACT_RULES;
+    const penalty = dropPenaltyAmount({
+      currentSalary: bid.amount,
+      contractYear: bid.contractYear ?? 1,
+      rules,
+    });
+
+    let bids = pool.bids.filter((b) => b !== bid);
+    let budgets = removeBidFromBudgets(this.formats.auctionBudgets.get(leagueId)!, bid);
+    if (penalty > 0) {
+      const dead = {
+        playerId: bid.playerId,
+        rosterId: bid.rosterId,
+        amount: penalty,
+        isPenalty: true,
+        playerName: bid.playerName,
+        position: bid.position,
+        nominatedAt: new Date().toISOString(),
+        contractYears: 0,
+      };
+      bids = [...bids, dead];
+      budgets = addDeadCap(budgets, bid.rosterId, penalty);
+    }
+    this.formats.auctionBids.set(leagueId, bids);
+    this.formats.auctionBudgets.set(leagueId, budgets);
+
+    const draft = this.drafts.get(leagueId);
+    if (draft) {
+      draft.picks = draft.picks.filter((p) => p.playerId !== playerId);
+      if (!draft.availablePlayerIds.includes(playerId) && this.getPlayer(playerId)) {
+        draft.availablePlayerIds = [...draft.availablePlayerIds, playerId];
+      }
+    }
+    this.syncLeagueFormatState(leagueId);
     return this.auctionState(leagueId);
   }
 
@@ -1125,6 +1320,7 @@ export class AppStore {
     };
     this.formats.contractRules.set(leagueId, next);
     this.updateLeague(leagueId, { contractRules: next, type: 'auction', draftType: 'auction' });
+    this.syncLeagueFormatState(leagueId);
     return next;
   }
 

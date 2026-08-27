@@ -712,7 +712,16 @@
   gap: 0.3rem;
 }
 
-.team-signed li,
+.team-signed li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.78rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--dl-border-subtle);
+}
+
 .team-needs li {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
@@ -721,6 +730,62 @@
   font-size: 0.78rem;
   padding: 0.3rem 0;
   border-bottom: 1px solid var(--dl-border-subtle);
+}
+
+.team-signed li.penalty-row,
+.team-signed li.empty-note {
+  grid-template-columns: auto 1fr auto auto;
+}
+
+.team-signed li:last-child,
+.team-needs li:last-child {
+  border-bottom: 0;
+}
+
+.penalty-head {
+  margin-top: 0.75rem !important;
+}
+
+.drop-btn {
+  border: 0;
+  background: color-mix(in srgb, var(--dl-warning) 16%, transparent);
+  color: var(--dl-warning);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+}
+
+.drop-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.history-block {
+  margin-top: 1.25rem;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.history-table th,
+.history-table td {
+  text-align: left;
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--dl-border-subtle);
+}
+
+.history-table th {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dl-text-tertiary);
 }
 
 .team-signed li:last-child,

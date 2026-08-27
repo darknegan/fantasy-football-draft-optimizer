@@ -520,6 +520,7 @@ function leagueHasScoring(league: League | null | undefined): boolean {
 
 function leagueFormatNote(league: League | null | undefined): string | null {
   if (!league) return null;
+  if (league.externalId === 'global:wffl') return 'Auction keepers · year-based drop penalties';
   const summary = league.scoringSummary;
   const roster = league.roster;
   const superflex =

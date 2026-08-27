@@ -1,0 +1,2862 @@
+{
+  "leagueName": "WFFL",
+  "sourceTitle": "WFFL MASTER SHEET",
+  "draft2025": [
+    {
+      "pickNumber": 1,
+      "playerName": "Trey McBride",
+      "position": "TE",
+      "amount": 25,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 2,
+      "playerName": "Rashee Rice",
+      "position": "WR",
+      "amount": 11,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 3,
+      "playerName": "Najee Harris",
+      "position": "RB",
+      "amount": 4,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 4,
+      "playerName": "Treyveon Henderson",
+      "position": "RB",
+      "amount": 24,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 5,
+      "playerName": "James Conner",
+      "position": "RB",
+      "amount": 17,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 6,
+      "playerName": "Saquon Barkley",
+      "position": "RB",
+      "amount": 54,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 7,
+      "playerName": "Ja'Marr Chase",
+      "position": "WR",
+      "amount": 64,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 8,
+      "playerName": "Courtland Sutton",
+      "position": "WR",
+      "amount": 19,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 9,
+      "playerName": "Justin Jefferson",
+      "position": "WR",
+      "amount": 51,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 10,
+      "playerName": "Bijan Robinson",
+      "position": "RB",
+      "amount": 62,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 11,
+      "playerName": "CeeDee Lamb",
+      "position": "WR",
+      "amount": 60,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 12,
+      "playerName": "Malik Nabors",
+      "position": "WR",
+      "amount": 47,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 13,
+      "playerName": "Derrick Henry",
+      "position": "RB",
+      "amount": 45,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 14,
+      "playerName": "Nico Collins",
+      "position": "WR",
+      "amount": 51,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 15,
+      "playerName": "Christian McCaffrey",
+      "position": "RB",
+      "amount": 52,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 16,
+      "playerName": "Ashton Jeanty",
+      "position": "RB",
+      "amount": 45,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 17,
+      "playerName": "Alvin Kamara",
+      "position": "RB",
+      "amount": 25,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 18,
+      "playerName": "Jonathan Taylor",
+      "position": "RB",
+      "amount": 40,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 19,
+      "playerName": "DK Metcalf",
+      "position": "WR",
+      "amount": 23,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 20,
+      "playerName": "Jahmyr Gibbs",
+      "position": "RB",
+      "amount": 66,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 21,
+      "playerName": "James Cook",
+      "position": "RB",
+      "amount": 38,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 22,
+      "playerName": "Josh Jacobs",
+      "position": "RB",
+      "amount": 50,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 23,
+      "playerName": "Kaleb Johnson",
+      "position": "RB",
+      "amount": 9,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 24,
+      "playerName": "Lamarr Jackson",
+      "position": "QB",
+      "amount": 32,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 25,
+      "playerName": "Joe Burrow",
+      "position": "QB",
+      "amount": 19,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 26,
+      "playerName": "George Kittle",
+      "position": "TE",
+      "amount": 21,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 27,
+      "playerName": "Omarion Hampton",
+      "position": "RB",
+      "amount": 35,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 28,
+      "playerName": "DeAndre Swift",
+      "position": "RB",
+      "amount": 26,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 29,
+      "playerName": "Josh Allen",
+      "position": "QB",
+      "amount": 26,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 30,
+      "playerName": "Chubba Hubbard",
+      "position": "RB",
+      "amount": 27,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 31,
+      "playerName": "Travis Kelce",
+      "position": "TE",
+      "amount": 9,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 32,
+      "playerName": "Emeka Egbuka",
+      "position": "WR",
+      "amount": 16,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 33,
+      "playerName": "Jalen Hurts",
+      "position": "QB",
+      "amount": 19,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 34,
+      "playerName": "Aaron Jones",
+      "position": "RB",
+      "amount": 15,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 35,
+      "playerName": "Terry McLaurin",
+      "position": "WR",
+      "amount": 30,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 36,
+      "playerName": "Tee Higgins",
+      "position": "WR",
+      "amount": 34,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 37,
+      "playerName": "Tyreek Hill",
+      "position": "WR",
+      "amount": 29,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 38,
+      "playerName": "AJ Brown",
+      "position": "WR",
+      "amount": 40,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 39,
+      "playerName": "Marvin Harrison",
+      "position": "WR",
+      "amount": 26,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 40,
+      "playerName": "Bo Nix",
+      "position": "QB",
+      "amount": 9,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 41,
+      "playerName": "Tet McMillan",
+      "position": "WR",
+      "amount": 27,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 42,
+      "playerName": "Patrick Mahomes",
+      "position": "QB",
+      "amount": 14,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 43,
+      "playerName": "David Montgomery",
+      "position": "RB",
+      "amount": 23,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 44,
+      "playerName": "RJ Harvey",
+      "position": "RB",
+      "amount": 27,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 45,
+      "playerName": "Tony Pollard",
+      "position": "RB",
+      "amount": 28,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 46,
+      "playerName": "DJ Moore",
+      "position": "WR",
+      "amount": 25,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 47,
+      "playerName": "Isaiah Pacheco",
+      "position": "RB",
+      "amount": 16,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 48,
+      "playerName": "Devonta Adams",
+      "position": "WR",
+      "amount": 33,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 49,
+      "playerName": "Bill Merritt",
+      "position": "RB",
+      "amount": 12,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 50,
+      "playerName": "Caleb Williams",
+      "position": "QB",
+      "amount": 1,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 51,
+      "playerName": "Jayden Reed",
+      "position": "WR",
+      "amount": 4,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 52,
+      "playerName": "Jameson Williams",
+      "position": "WR",
+      "amount": 27,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 53,
+      "playerName": "TJ Hockenson",
+      "position": "TE",
+      "amount": 7,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 54,
+      "playerName": "Travis Etienne Jr",
+      "position": "RB",
+      "amount": 7,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 55,
+      "playerName": "JJ McCarthy",
+      "position": "QB",
+      "amount": 5,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 56,
+      "playerName": "Jaylen Waddle",
+      "position": "WR",
+      "amount": 20,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 57,
+      "playerName": "Ricky Pearsall",
+      "position": "WR",
+      "amount": 25,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 58,
+      "playerName": "Zay Flowers",
+      "position": "WR",
+      "amount": 15,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 59,
+      "playerName": "Mark Andrews",
+      "position": "TE",
+      "amount": 8,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 60,
+      "playerName": "Stefon Diggs",
+      "position": "WR",
+      "amount": 9,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 61,
+      "playerName": "Evan Engram",
+      "position": "TE",
+      "amount": 5,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 62,
+      "playerName": "Tyron Tracy",
+      "position": "RB",
+      "amount": 14,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 63,
+      "playerName": "Calvin Ridley",
+      "position": "WR",
+      "amount": 21,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 64,
+      "playerName": "Cam Skattebo",
+      "position": "RB",
+      "amount": 8,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 65,
+      "playerName": "Cooper Kupp",
+      "position": "WR",
+      "amount": 6,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 66,
+      "playerName": "Jared Goff",
+      "position": "QB",
+      "amount": 3,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 67,
+      "playerName": "Travis Hunter",
+      "position": "WR",
+      "amount": 19,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 68,
+      "playerName": "Chris Olave",
+      "position": "WR",
+      "amount": 8,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 69,
+      "playerName": "Jordan Mason",
+      "position": "RB",
+      "amount": 14,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 70,
+      "playerName": "Jordan Addison",
+      "position": "WR",
+      "amount": 11,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 71,
+      "playerName": "Tyler Warren",
+      "position": "TE",
+      "amount": 10,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 72,
+      "playerName": "Javonte Williams",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 73,
+      "playerName": "Brandon Aiyuk",
+      "position": "WR",
+      "amount": 3,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 74,
+      "playerName": "Coleston Loveland",
+      "position": "TE",
+      "amount": 6,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 75,
+      "playerName": "Chris Godwin",
+      "position": "WR",
+      "amount": 5,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 76,
+      "playerName": "Tank Bigsby",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 77,
+      "playerName": "Luther Burden",
+      "position": "WR",
+      "amount": 3,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 78,
+      "playerName": "Matthew Golden",
+      "position": "WR",
+      "amount": 21,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 79,
+      "playerName": "David Njoku",
+      "position": "TE",
+      "amount": 7,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 80,
+      "playerName": "Tucker Kraft",
+      "position": "TE",
+      "amount": 8,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 81,
+      "playerName": "Zach Charbonnet",
+      "position": "RB",
+      "amount": 10,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 82,
+      "playerName": "Juann Jennings",
+      "position": "WR",
+      "amount": 7,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 83,
+      "playerName": "Khalil Shakir",
+      "position": "WR",
+      "amount": 6,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 84,
+      "playerName": "Jaylen Warren",
+      "position": "RB",
+      "amount": 10,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 85,
+      "playerName": "Rhammondre Stevenson",
+      "position": "RB",
+      "amount": 4,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 86,
+      "playerName": "Michael Pittman",
+      "position": "WR",
+      "amount": 4,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 87,
+      "playerName": "Ravens Defense",
+      "position": "DST",
+      "amount": 2,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 88,
+      "playerName": "Austin Ekeler",
+      "position": "RB",
+      "amount": 8,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 89,
+      "playerName": "Darnell Mooney",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 90,
+      "playerName": "Tyjae Spears",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 91,
+      "playerName": "Broncos",
+      "position": "DST",
+      "amount": 6,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 92,
+      "playerName": "Marvin Mims",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 93,
+      "playerName": "Nick Chubb",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 94,
+      "playerName": "Xavier Leggette",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 95,
+      "playerName": "Jayden Higgins",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 96,
+      "playerName": "Quinshon Judkins",
+      "position": "RB",
+      "amount": 8,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 97,
+      "playerName": "Cedric Tillman",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 98,
+      "playerName": "Demario Douglas",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 99,
+      "playerName": "Jakobi Meyers",
+      "position": "WR",
+      "amount": 13,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 100,
+      "playerName": "Brandon Aubrey",
+      "position": "K",
+      "amount": 4,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 101,
+      "playerName": "Deebo Samuel",
+      "position": "WR",
+      "amount": 12,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 102,
+      "playerName": "Chase McLaughlin",
+      "position": "K",
+      "amount": 1,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 103,
+      "playerName": "Harrison Butker",
+      "position": "K",
+      "amount": 3,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 104,
+      "playerName": "Braelon Allen",
+      "position": "RB",
+      "amount": 7,
+      "owner": "Josh",
+      "teamCode": "YKY"
+    },
+    {
+      "pickNumber": 105,
+      "playerName": "Joe Mixon",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 106,
+      "playerName": "Dalton Kincaid",
+      "position": "TE",
+      "amount": 5,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 107,
+      "playerName": "Cam Little",
+      "position": "K",
+      "amount": 7,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 108,
+      "playerName": "Jake Bates",
+      "position": "K",
+      "amount": 3,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 109,
+      "playerName": "Tyler Bass",
+      "position": "K",
+      "amount": 1,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 110,
+      "playerName": "Jalen Coker",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 111,
+      "playerName": "Rashod Bateman",
+      "position": "WR",
+      "amount": 4,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 112,
+      "playerName": "Dylan Sampson",
+      "position": "RB",
+      "amount": 5,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 113,
+      "playerName": "Wil Lutz",
+      "position": "K",
+      "amount": 1,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 114,
+      "playerName": "Christian Kirk",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 115,
+      "playerName": "Steelers",
+      "position": "DST",
+      "amount": 5,
+      "owner": "Brian",
+      "teamCode": "SCS"
+    },
+    {
+      "pickNumber": 116,
+      "playerName": "Brian Robinson",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Scott",
+      "teamCode": "JPH"
+    },
+    {
+      "pickNumber": 117,
+      "playerName": "Tyler Allgier",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 118,
+      "playerName": "Will Reichard",
+      "position": "K",
+      "amount": 1,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 119,
+      "playerName": "Bhashul Tuten",
+      "position": "RB",
+      "amount": 2,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 120,
+      "playerName": "Isaac Teslaa",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 121,
+      "playerName": "Cardinals",
+      "position": "DST",
+      "amount": 2,
+      "owner": "Cole",
+      "teamCode": "MUD"
+    },
+    {
+      "pickNumber": 122,
+      "playerName": "Chris Boswell",
+      "position": "K",
+      "amount": 1,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 123,
+      "playerName": "Cameron Dicker",
+      "position": "K",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 124,
+      "playerName": "49ers DST",
+      "position": "DST",
+      "amount": 1,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 125,
+      "playerName": "Texans",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 126,
+      "playerName": "Packers",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 127,
+      "playerName": "Vikings",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 128,
+      "playerName": "Jake Ferguson",
+      "position": "TE",
+      "amount": 1,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 129,
+      "playerName": "Y Koo",
+      "position": "K",
+      "amount": 1,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 130,
+      "playerName": "Jake Elliott",
+      "position": "K",
+      "amount": 1,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 131,
+      "playerName": "Trey Benson",
+      "position": "RB",
+      "amount": 6,
+      "owner": "JM",
+      "teamCode": "LIT"
+    },
+    {
+      "pickNumber": 132,
+      "playerName": "Commanders",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 133,
+      "playerName": "Hollywood Brown",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 134,
+      "playerName": "Eagles",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 135,
+      "playerName": "Matt Gay",
+      "position": "K",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 136,
+      "playerName": "Jets",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 137,
+      "playerName": "Jalen McMillan",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 138,
+      "playerName": "Rachaad White",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 139,
+      "playerName": "Dak Prescott",
+      "position": "QB",
+      "amount": 3,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 140,
+      "playerName": "JK Dobbins",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 141,
+      "playerName": "Keenan Allen",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 142,
+      "playerName": "Jaydon Blue",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Drake",
+      "teamCode": "PRP"
+    },
+    {
+      "pickNumber": 143,
+      "playerName": "Ollie Gordon",
+      "position": "RB",
+      "amount": 6,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 144,
+      "playerName": "Jerome Ford",
+      "position": "RB",
+      "amount": 3,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 145,
+      "playerName": "Tory Horton",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 146,
+      "playerName": "Jags",
+      "position": "DST",
+      "amount": 1,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 147,
+      "playerName": "Kyle Monungai",
+      "position": "RB",
+      "amount": 2,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 148,
+      "playerName": "Rasheed Shaheed",
+      "position": "WR",
+      "amount": 2,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 149,
+      "playerName": "Kyle Williams",
+      "position": "WR",
+      "amount": 3,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 150,
+      "playerName": "Keaton Mitchell",
+      "position": "RB",
+      "amount": 1,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 151,
+      "playerName": "Kyle Pitts",
+      "position": "TE",
+      "amount": 1,
+      "owner": "Cade",
+      "teamCode": "RRR"
+    },
+    {
+      "pickNumber": 152,
+      "playerName": "Adam Theilen",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 153,
+      "playerName": "Quinton Johnston",
+      "position": "WR",
+      "amount": 4,
+      "owner": "Jack",
+      "teamCode": "FLY"
+    },
+    {
+      "pickNumber": 154,
+      "playerName": "Will Shipley",
+      "position": "RB",
+      "amount": 4,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 155,
+      "playerName": "Rico Dowdell",
+      "position": "RB",
+      "amount": 2,
+      "owner": "Trey",
+      "teamCode": "RAP"
+    },
+    {
+      "pickNumber": 156,
+      "playerName": "D'Onte Thornton",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 157,
+      "playerName": "Brock Purdy",
+      "position": "QB",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 158,
+      "playerName": "Drake Maye",
+      "position": "QB",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 159,
+      "playerName": "Isaiah Likely",
+      "position": "TE",
+      "amount": 2,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 160,
+      "playerName": "Woody Marks",
+      "position": "RB",
+      "amount": 1,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 161,
+      "playerName": "Jarquez Hunter",
+      "position": "RB",
+      "amount": 1,
+      "owner": "Andrew/Noah",
+      "teamCode": "FRI"
+    },
+    {
+      "pickNumber": 162,
+      "playerName": "Chris Rodriguez",
+      "position": "RB",
+      "amount": 2,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 163,
+      "playerName": "Brashard Smith",
+      "position": "RB",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 164,
+      "playerName": "Tre Harris",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    },
+    {
+      "pickNumber": 165,
+      "playerName": "Pat Bryant",
+      "position": "WR",
+      "amount": 1,
+      "owner": "Luke",
+      "teamCode": "MAN"
+    },
+    {
+      "pickNumber": 166,
+      "playerName": "Rochon Johnson",
+      "position": "RB",
+      "amount": 1,
+      "owner": "Ty",
+      "teamCode": "WLH"
+    }
+  ],
+  "rosters2025": {
+    "MAN": [
+      {
+        "slot": "QB",
+        "name": "Dak Prescott",
+        "position": "QB",
+        "amount": 3
+      },
+      {
+        "slot": "RB",
+        "name": "Saquon Barkley",
+        "position": "RB",
+        "amount": 54
+      },
+      {
+        "slot": "RB",
+        "name": "Christian McCaffrey",
+        "position": "RB",
+        "amount": 52
+      },
+      {
+        "slot": "WR",
+        "name": "CeeDee Lamb",
+        "position": "WR",
+        "amount": 60
+      },
+      {
+        "slot": "WR",
+        "name": "Michael Wilson",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "TE",
+        "name": "Trey McBride",
+        "position": "TE",
+        "amount": 25
+      },
+      {
+        "slot": "FLEX",
+        "name": "Puka Nacua",
+        "position": "WR",
+        "amount": 12
+      },
+      {
+        "slot": "FLEX",
+        "name": "Kenneth Gainwell",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "K",
+        "name": "Cameron Dicker",
+        "position": "K",
+        "amount": 1
+      },
+      {
+        "slot": "DEF",
+        "name": "Giants",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Alec Pierce",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Chris Rodriguez Jr",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Trevor Lawrence",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Dylan Sampson",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Taysom Hill",
+        "position": "TE",
+        "amount": 5
+      }
+    ],
+    "YKY": [
+      {
+        "slot": "QB",
+        "name": "Baker Mayfield",
+        "position": "QB",
+        "amount": 8
+      },
+      {
+        "slot": "RB",
+        "name": "RJ Harvey",
+        "position": "RB",
+        "amount": 27
+      },
+      {
+        "slot": "RB",
+        "name": "Jaylen Warren",
+        "position": "RB",
+        "amount": 10
+      },
+      {
+        "slot": "WR",
+        "name": "Jaxon Smith-Njigba",
+        "position": "WR",
+        "amount": 7
+      },
+      {
+        "slot": "WR",
+        "name": "Jameson Williams",
+        "position": "WR",
+        "amount": 27
+      },
+      {
+        "slot": "TE",
+        "name": "Oronde Gadsden",
+        "position": "TE",
+        "amount": 5
+      },
+      {
+        "slot": "FLEX",
+        "name": "DK Metcalf",
+        "position": "WR",
+        "amount": 23
+      },
+      {
+        "slot": "FLEX",
+        "name": "Chris Olave",
+        "position": "WR",
+        "amount": 8
+      },
+      {
+        "slot": "K",
+        "name": "Brandon Aubrey",
+        "position": "K",
+        "amount": 4
+      },
+      {
+        "slot": "DEF",
+        "name": "Eagles",
+        "position": "DEF",
+        "amount": 1
+      },
+      {
+        "slot": "Bench",
+        "name": "Tee Higgins",
+        "position": "WR",
+        "amount": 34
+      },
+      {
+        "slot": "Bench",
+        "name": "Packers",
+        "position": "DEF",
+        "amount": 1
+      },
+      {
+        "slot": "Bench",
+        "name": "Sam LaPorta",
+        "position": "TE",
+        "amount": 4
+      },
+      {
+        "slot": "Bench",
+        "name": "Kimani Vidal",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Kyle Monangai",
+        "position": "RB",
+        "amount": 5
+      }
+    ],
+    "JPH": [
+      {
+        "slot": "QB",
+        "name": "Jared Goff",
+        "position": "QB",
+        "amount": 3
+      },
+      {
+        "slot": "RB",
+        "name": "James Cook",
+        "position": "RB",
+        "amount": 38
+      },
+      {
+        "slot": "RB",
+        "name": "Rhamondre Stevenson",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "WR",
+        "name": "Xavier Worthy",
+        "position": "WR",
+        "amount": 14
+      },
+      {
+        "slot": "WR",
+        "name": "Van Jefferson",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "TE",
+        "name": "TJ Hockenson",
+        "position": "TE",
+        "amount": 7
+      },
+      {
+        "slot": "FLEX",
+        "name": "Bijan Robinson",
+        "position": "RB",
+        "amount": 62
+      },
+      {
+        "slot": "FLEX",
+        "name": "Khalil Shakir",
+        "position": "WR",
+        "amount": 6
+      },
+      {
+        "slot": "K",
+        "name": "Matt Prater",
+        "position": "K",
+        "amount": 5
+      },
+      {
+        "slot": "DEF",
+        "name": "49ers",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Mike Evans",
+        "position": "WR",
+        "amount": 22
+      },
+      {
+        "slot": "Bench",
+        "name": "David Njoku",
+        "position": "TE",
+        "amount": 7
+      },
+      {
+        "slot": "Bench",
+        "name": "Christian Kirk",
+        "position": "WR",
+        "amount": 2
+      },
+      {
+        "slot": "Bench",
+        "name": "Malik Washington",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Chuba Hubbard",
+        "position": "RB",
+        "amount": 5
+      }
+    ],
+    "WLH": [
+      {
+        "slot": "QB",
+        "name": "Drake Maye",
+        "position": "QB",
+        "amount": 1
+      },
+      {
+        "slot": "RB",
+        "name": "Josh Jacobs",
+        "position": "RB",
+        "amount": 50
+      },
+      {
+        "slot": "RB",
+        "name": "TreyVeon Henderson",
+        "position": "RB",
+        "amount": 24
+      },
+      {
+        "slot": "WR",
+        "name": "Rashee Rice",
+        "position": "WR",
+        "amount": 11
+      },
+      {
+        "slot": "WR",
+        "name": "Stefon Diggs",
+        "position": "WR",
+        "amount": 9
+      },
+      {
+        "slot": "TE",
+        "name": "Brock Bowers",
+        "position": "TE",
+        "amount": 9
+      },
+      {
+        "slot": "FLEX",
+        "name": "Jakobi Meyers",
+        "position": "Position",
+        "amount": 13
+      },
+      {
+        "slot": "FLEX",
+        "name": "Devin Singletary",
+        "position": "Position",
+        "amount": 5
+      },
+      {
+        "slot": "K",
+        "name": "Eddy Pineiro",
+        "position": "K",
+        "amount": 5
+      },
+      {
+        "slot": "DEF",
+        "name": "Cowboys",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Brashard Smith",
+        "position": "RB",
+        "amount": 1
+      },
+      {
+        "slot": "Bench",
+        "name": "Rachaad White",
+        "position": "RB",
+        "amount": 3
+      },
+      {
+        "slot": "Bench",
+        "name": "Keenan Allen",
+        "position": "WR",
+        "amount": 2
+      },
+      {
+        "slot": "Bench",
+        "name": "Tyjae Spears",
+        "position": "RB",
+        "amount": 3
+      },
+      {
+        "slot": "Bench",
+        "name": "Chris Godwin Jr.",
+        "position": "WR",
+        "amount": 5
+      }
+    ],
+    "FRI": [
+      {
+        "slot": "QB",
+        "name": "Tyler Shough",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "RB",
+        "name": "Chase Brown",
+        "position": "RB",
+        "amount": 14
+      },
+      {
+        "slot": "RB",
+        "name": "Woody Marks",
+        "position": "RB",
+        "amount": 1
+      },
+      {
+        "slot": "WR",
+        "name": "Amon-Ra St. Brown",
+        "position": "WR",
+        "amount": 25
+      },
+      {
+        "slot": "WR",
+        "name": "AJ Brown",
+        "position": "WR",
+        "amount": 40
+      },
+      {
+        "slot": "TE",
+        "name": "Harold Fannin Jr.",
+        "position": "TE",
+        "amount": 5
+      },
+      {
+        "slot": "FLEX",
+        "name": "Drake London",
+        "position": "WR",
+        "amount": 16
+      },
+      {
+        "slot": "FLEX",
+        "name": "Michael Carter",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "K",
+        "name": "Jason Myers",
+        "position": "K",
+        "amount": 5
+      },
+      {
+        "slot": "DEF",
+        "name": "Saints",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Lamar Jackson",
+        "position": "QB",
+        "amount": 32
+      },
+      {
+        "slot": "Bench",
+        "name": "Jordan Addison",
+        "position": "WR",
+        "amount": 11
+      },
+      {
+        "slot": "Bench",
+        "name": "Christian Watson",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Blake Corum",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Pat Bryant",
+        "position": "WR",
+        "amount": 1
+      }
+    ],
+    "FLY": [
+      {
+        "slot": "QB",
+        "name": "Patrick Mahomes",
+        "position": "QB",
+        "amount": 14
+      },
+      {
+        "slot": "RB",
+        "name": "Javonte Williams",
+        "position": "RB",
+        "amount": 6
+      },
+      {
+        "slot": "RB",
+        "name": "Bam Knight",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "WR",
+        "name": "Ja'Marr Chase",
+        "position": "WR",
+        "amount": 64
+      },
+      {
+        "slot": "WR",
+        "name": "Juann Jennings",
+        "position": "WR",
+        "amount": 7
+      },
+      {
+        "slot": "TE",
+        "name": "Dalton Kincaid",
+        "position": "TE",
+        "amount": 5
+      },
+      {
+        "slot": "FLEX",
+        "name": "Zay Flowers",
+        "position": "Position",
+        "amount": 15
+      },
+      {
+        "slot": "FLEX",
+        "name": "Tony Pollard",
+        "position": "Position",
+        "amount": 28
+      },
+      {
+        "slot": "K",
+        "name": "Jake Elliott",
+        "position": "K",
+        "amount": 1
+      },
+      {
+        "slot": "DEF",
+        "name": "Lions",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "David Montgomery",
+        "position": "RB",
+        "amount": 23
+      },
+      {
+        "slot": "Bench",
+        "name": "Rashod Bateman",
+        "position": "WR",
+        "amount": 4
+      },
+      {
+        "slot": "Bench",
+        "name": "Quentin Johnston",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Matthew Stafford",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Dalton Schutlz",
+        "position": "TE",
+        "amount": 5
+      }
+    ],
+    "RRR": [
+      {
+        "slot": "QB",
+        "name": "Caleb Williams",
+        "position": "QB",
+        "amount": 1
+      },
+      {
+        "slot": "RB",
+        "name": "Deandre Swift",
+        "position": "RB",
+        "amount": 26
+      },
+      {
+        "slot": "RB",
+        "name": "Aaron Jones",
+        "position": "RB",
+        "amount": 15
+      },
+      {
+        "slot": "WR",
+        "name": "DeVonta Smith",
+        "position": "WR",
+        "amount": 15
+      },
+      {
+        "slot": "WR",
+        "name": "Tre Tucker",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "TE",
+        "name": "Kyle Pitts",
+        "position": "TE",
+        "amount": 1
+      },
+      {
+        "slot": "FLEX",
+        "name": "Omarion Hampton",
+        "position": "RB",
+        "amount": 35
+      },
+      {
+        "slot": "FLEX",
+        "name": "DJ Moore",
+        "position": "WR",
+        "amount": 25
+      },
+      {
+        "slot": "K",
+        "name": "Chris Boswell",
+        "position": "K",
+        "amount": 1
+      },
+      {
+        "slot": "DEF",
+        "name": "Texans",
+        "position": "DEF",
+        "amount": 1
+      },
+      {
+        "slot": "Bench",
+        "name": "Jalen Hurts",
+        "position": "QB",
+        "amount": 19
+      },
+      {
+        "slot": "Bench",
+        "name": "George Kittle",
+        "position": "TE",
+        "amount": 21
+      },
+      {
+        "slot": "Bench",
+        "name": "Tyler Allgeier",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Rashid Shaheed",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Jerry Jeudy",
+        "position": "WR",
+        "amount": 2
+      }
+    ],
+    "SCS": [
+      {
+        "slot": "QB",
+        "name": "Joe Burrow",
+        "position": "QB",
+        "amount": 19
+      },
+      {
+        "slot": "RB",
+        "name": "De'Von Achane",
+        "position": "RB",
+        "amount": 8
+      },
+      {
+        "slot": "RB",
+        "name": "Jonathan Taylor",
+        "position": "RB",
+        "amount": 40
+      },
+      {
+        "slot": "WR",
+        "name": "George Pickens",
+        "position": "WR",
+        "amount": 6
+      },
+      {
+        "slot": "WR",
+        "name": "Brian Thomas Jr.",
+        "position": "WR",
+        "amount": 12
+      },
+      {
+        "slot": "TE",
+        "name": "Tyler Warren",
+        "position": "TE",
+        "amount": 10
+      },
+      {
+        "slot": "FLEX",
+        "name": "Jordan Mason",
+        "position": "RB",
+        "amount": 14
+      },
+      {
+        "slot": "FLEX",
+        "name": "Zach Charbonnet",
+        "position": "RB",
+        "amount": 10
+      },
+      {
+        "slot": "K",
+        "name": "Chase McLaughlin",
+        "position": "K",
+        "amount": 1
+      },
+      {
+        "slot": "DEF",
+        "name": "Patriots",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Matthew Golden",
+        "position": "WR",
+        "amount": 21
+      },
+      {
+        "slot": "Bench",
+        "name": "Jordan Love",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Dallas Goedert",
+        "position": "TE",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Brock Purdy",
+        "position": "QB",
+        "amount": 1
+      },
+      {
+        "slot": "Bench",
+        "name": "Romeo Doubs",
+        "position": "WR",
+        "amount": 5
+      }
+    ],
+    "LIT": [
+      {
+        "slot": "QB",
+        "name": "Jacoby Brissett",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "RB",
+        "name": "Travis Etienne Jr",
+        "position": "RB",
+        "amount": 7
+      },
+      {
+        "slot": "RB",
+        "name": "Rico Dowdell",
+        "position": "RB",
+        "amount": 2
+      },
+      {
+        "slot": "WR",
+        "name": "Ladd McConkey",
+        "position": "WR",
+        "amount": 15
+      },
+      {
+        "slot": "WR",
+        "name": "Justin Jefferson",
+        "position": "WR",
+        "amount": 51
+      },
+      {
+        "slot": "TE",
+        "name": "Travis Kelce",
+        "position": "TE",
+        "amount": 9
+      },
+      {
+        "slot": "FLEX",
+        "name": "Kyren Williams",
+        "position": "RB",
+        "amount": 12
+      },
+      {
+        "slot": "FLEX",
+        "name": "Ricky Pearsall",
+        "position": "WR",
+        "amount": 25
+      },
+      {
+        "slot": "K",
+        "name": "Evan McPherson",
+        "position": "K",
+        "amount": 5
+      },
+      {
+        "slot": "DEF",
+        "name": "Broncos",
+        "position": "DEF",
+        "amount": 6
+      },
+      {
+        "slot": "Bench",
+        "name": "Jayden Daniels",
+        "position": "QB",
+        "amount": 12
+      },
+      {
+        "slot": "Bench",
+        "name": "Emeka Egbuka",
+        "position": "WR",
+        "amount": 16
+      },
+      {
+        "slot": "Bench",
+        "name": "Deebo Samuel",
+        "position": "WR",
+        "amount": 12
+      },
+      {
+        "slot": "Bench",
+        "name": "Isaiah Likely",
+        "position": "TE",
+        "amount": 2
+      },
+      {
+        "slot": "Bench",
+        "name": "Bill Merritt",
+        "position": "RB",
+        "amount": 12
+      }
+    ],
+    "RAP": [
+      {
+        "slot": "QB",
+        "name": "JJ McCarthy",
+        "position": "QB",
+        "amount": 5
+      },
+      {
+        "slot": "RB",
+        "name": "Derrick Henry",
+        "position": "RB",
+        "amount": 45
+      },
+      {
+        "slot": "RB",
+        "name": "Ashton Jeanty",
+        "position": "RB",
+        "amount": 45
+      },
+      {
+        "slot": "WR",
+        "name": "Troy Franklin",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "WR",
+        "name": "Josh Downs",
+        "position": "WR",
+        "amount": 2
+      },
+      {
+        "slot": "TE",
+        "name": "Coleston Loveland",
+        "position": "TE",
+        "amount": 6
+      },
+      {
+        "slot": "FLEX",
+        "name": "Devonta Adams",
+        "position": "WR",
+        "amount": 33
+      },
+      {
+        "slot": "FLEX",
+        "name": "Elic Ayomanor",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "K",
+        "name": "Harrison Mevis",
+        "position": "K",
+        "amount": 5
+      },
+      {
+        "slot": "DEF",
+        "name": "Raiders",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Garrett Wilson",
+        "position": "WR",
+        "amount": 6
+      },
+      {
+        "slot": "Bench",
+        "name": "Tet McMillan",
+        "position": "WR",
+        "amount": 27
+      },
+      {
+        "slot": "Bench",
+        "name": "Cooper Kupp",
+        "position": "WR",
+        "amount": 6
+      },
+      {
+        "slot": "Bench",
+        "name": "JK Dobbins",
+        "position": "RB",
+        "amount": 6
+      },
+      {
+        "slot": "Bench",
+        "name": "Jaxson Dart",
+        "position": "QB",
+        "amount": 5
+      }
+    ],
+    "PRP": [
+      {
+        "slot": "QB",
+        "name": "Josh Allen",
+        "position": "QB",
+        "amount": 26
+      },
+      {
+        "slot": "RB",
+        "name": "Bucky Irving",
+        "position": "RB",
+        "amount": 6
+      },
+      {
+        "slot": "RB",
+        "name": "Tyrone Tracy",
+        "position": "RB",
+        "amount": 5
+      },
+      {
+        "slot": "WR",
+        "name": "Nico Collins",
+        "position": "WR",
+        "amount": 51
+      },
+      {
+        "slot": "WR",
+        "name": "Courtland Sutton",
+        "position": "WR",
+        "amount": 19
+      },
+      {
+        "slot": "TE",
+        "name": "Jake Ferguson",
+        "position": "TE",
+        "amount": 1
+      },
+      {
+        "slot": "FLEX",
+        "name": "Breece Hall",
+        "position": "RB",
+        "amount": 34
+      },
+      {
+        "slot": "FLEX",
+        "name": "Marvin Harrison",
+        "position": "WR",
+        "amount": 26
+      },
+      {
+        "slot": "K",
+        "name": "Jake Bates",
+        "position": "K",
+        "amount": 3
+      },
+      {
+        "slot": "DEF",
+        "name": "Seahawks",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Keon Coleman",
+        "position": "WR",
+        "amount": 9
+      },
+      {
+        "slot": "Bench",
+        "name": "Michael Pittman",
+        "position": "WR",
+        "amount": 4
+      },
+      {
+        "slot": "Bench",
+        "name": "Jayden Higgins",
+        "position": "WR",
+        "amount": 2
+      },
+      {
+        "slot": "Bench",
+        "name": "Quinshon Judkins",
+        "position": "RB",
+        "amount": 8
+      },
+      {
+        "slot": "Bench",
+        "name": "Kareem Hunt",
+        "position": "RB",
+        "amount": 5
+      }
+    ],
+    "MUD": [
+      {
+        "slot": "QB",
+        "name": "Bo Nix",
+        "position": "QB",
+        "amount": 9
+      },
+      {
+        "slot": "RB",
+        "name": "Kenneth Walker",
+        "position": "RB",
+        "amount": 9
+      },
+      {
+        "slot": "RB",
+        "name": "Jahmyr Gibbs",
+        "position": "RB",
+        "amount": 66
+      },
+      {
+        "slot": "WR",
+        "name": "Terry McLaurin",
+        "position": "WR",
+        "amount": 30
+      },
+      {
+        "slot": "WR",
+        "name": "Darius Slayton",
+        "position": "WR",
+        "amount": 5
+      },
+      {
+        "slot": "TE",
+        "name": "Juwan Johnson",
+        "position": "TE",
+        "amount": 5
+      },
+      {
+        "slot": "FLEX",
+        "name": "Jaylen Waddle",
+        "position": "WR",
+        "amount": 20
+      },
+      {
+        "slot": "FLEX",
+        "name": "Luther Burden",
+        "position": "WR",
+        "amount": 3
+      },
+      {
+        "slot": "K",
+        "name": "Cam Little",
+        "position": "K",
+        "amount": 7
+      },
+      {
+        "slot": "DEF",
+        "name": "Steelers",
+        "position": "DEF",
+        "amount": 5
+      },
+      {
+        "slot": "Bench",
+        "name": "Rome Odunze",
+        "position": "WR",
+        "amount": 14
+      },
+      {
+        "slot": "Bench",
+        "name": "Alvin Kamara",
+        "position": "WR",
+        "amount": 25
+      },
+      {
+        "slot": "Bench",
+        "name": "Nick Chubb",
+        "position": "WR",
+        "amount": 6
+      },
+      {
+        "slot": "Bench",
+        "name": "Jalen Coker",
+        "position": "WR",
+        "amount": 2
+      },
+      {
+        "slot": "Bench",
+        "name": "Justin Herbert",
+        "position": "WR",
+        "amount": 5
+      }
+    ]
+  },
+  "records": [
+    {
+      "teamCode": "FRI",
+      "owner": "Andrew Moore & Noah",
+      "championships": 1,
+      "playoffAppearances": 3,
+      "totalWins": 37,
+      "totalLosses": 19,
+      "averageStanding": 4.0,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 7,
+          "losses": 7,
+          "standing": 10
+        },
+        {
+          "season": 2023,
+          "wins": 12,
+          "losses": 2,
+          "standing": 2
+        },
+        {
+          "season": 2024,
+          "wins": 10,
+          "losses": 4,
+          "standing": 1
+        },
+        {
+          "season": 2025,
+          "wins": 8,
+          "losses": 6,
+          "standing": 3
+        }
+      ]
+    },
+    {
+      "teamCode": "MAN",
+      "owner": "Luke Rapert",
+      "championships": 2,
+      "playoffAppearances": 2,
+      "totalWins": 38,
+      "totalLosses": 18,
+      "averageStanding": 4.5,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 7,
+          "losses": 7,
+          "standing": 6
+        },
+        {
+          "season": 2023,
+          "wins": 11,
+          "losses": 3,
+          "standing": 1
+        },
+        {
+          "season": 2024,
+          "wins": 7,
+          "losses": 7,
+          "standing": 10
+        },
+        {
+          "season": 2025,
+          "wins": 13,
+          "losses": 1,
+          "standing": 1
+        }
+      ]
+    },
+    {
+      "teamCode": "MUD",
+      "owner": "Cole Walker",
+      "championships": 0,
+      "playoffAppearances": 2,
+      "totalWins": 19,
+      "totalLosses": 37,
+      "averageStanding": 8.25,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 9,
+          "losses": 5,
+          "standing": 4
+        },
+        {
+          "season": 2023,
+          "wins": 0,
+          "losses": 14,
+          "standing": 12
+        },
+        {
+          "season": 2024,
+          "wins": 3,
+          "losses": 11,
+          "standing": 12
+        },
+        {
+          "season": 2025,
+          "wins": 7,
+          "losses": 7,
+          "standing": 5
+        }
+      ]
+    },
+    {
+      "teamCode": "SCS",
+      "owner": "Brian Walker",
+      "championships": 1,
+      "playoffAppearances": 2,
+      "totalWins": 33,
+      "totalLosses": 23,
+      "averageStanding": 6.5,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 11,
+          "losses": 3,
+          "standing": 1
+        },
+        {
+          "season": 2023,
+          "wins": 9,
+          "losses": 5,
+          "standing": 6
+        },
+        {
+          "season": 2024,
+          "wins": 7,
+          "losses": 7,
+          "standing": 8
+        },
+        {
+          "season": 2025,
+          "wins": 6,
+          "losses": 8,
+          "standing": 11
+        }
+      ]
+    },
+    {
+      "teamCode": "WLH",
+      "owner": "Doug Walker / Ty Langston",
+      "championships": 0,
+      "playoffAppearances": 2,
+      "totalWins": 30,
+      "totalLosses": 26,
+      "averageStanding": 7.25,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 6,
+          "losses": 8,
+          "standing": 12
+        },
+        {
+          "season": 2023,
+          "wins": 7,
+          "losses": 7,
+          "standing": 7
+        },
+        {
+          "season": 2024,
+          "wins": 10,
+          "losses": 4,
+          "standing": 4
+        },
+        {
+          "season": 2025,
+          "wins": 7,
+          "losses": 7,
+          "standing": 6
+        }
+      ]
+    },
+    {
+      "teamCode": "RAP",
+      "owner": "Trey Langston",
+      "championships": 0,
+      "playoffAppearances": 2,
+      "totalWins": 27,
+      "totalLosses": 29,
+      "averageStanding": 6.75,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 4,
+          "losses": 10,
+          "standing": 8
+        },
+        {
+          "season": 2023,
+          "wins": 8,
+          "losses": 6,
+          "standing": 4
+        },
+        {
+          "season": 2024,
+          "wins": 9,
+          "losses": 5,
+          "standing": 6
+        },
+        {
+          "season": 2025,
+          "wins": 6,
+          "losses": 8,
+          "standing": 9
+        }
+      ]
+    },
+    {
+      "teamCode": "YKY",
+      "owner": "Josh Belford / Luke Mitchell",
+      "championships": 1,
+      "playoffAppearances": 2,
+      "totalWins": 29,
+      "totalLosses": 27,
+      "averageStanding": 5.5,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 6,
+          "losses": 8,
+          "standing": 1
+        },
+        {
+          "season": 2023,
+          "wins": 9,
+          "losses": 5,
+          "standing": 9
+        },
+        {
+          "season": 2024,
+          "wins": 8,
+          "losses": 6,
+          "standing": 5
+        },
+        {
+          "season": 2025,
+          "wins": 6,
+          "losses": 8,
+          "standing": 7
+        }
+      ]
+    },
+    {
+      "teamCode": "FLY",
+      "owner": "Jack Porter",
+      "championships": 0,
+      "playoffAppearances": 1,
+      "totalWins": 21,
+      "totalLosses": 35,
+      "averageStanding": 8.5,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 8,
+          "losses": 6,
+          "standing": 5
+        },
+        {
+          "season": 2023,
+          "wins": 5,
+          "losses": 9,
+          "standing": 10
+        },
+        {
+          "season": 2024,
+          "wins": 5,
+          "losses": 9,
+          "standing": 7
+        },
+        {
+          "season": 2025,
+          "wins": 3,
+          "losses": 11,
+          "standing": 12
+        }
+      ]
+    },
+    {
+      "teamCode": "LIT",
+      "owner": "John Mark Otten",
+      "championships": 0,
+      "playoffAppearances": 2,
+      "totalWins": 27,
+      "totalLosses": 29,
+      "averageStanding": 6.75,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 9,
+          "losses": 5,
+          "standing": 3
+        },
+        {
+          "season": 2023,
+          "wins": 8,
+          "losses": 6,
+          "standing": 3
+        },
+        {
+          "season": 2024,
+          "wins": 4,
+          "losses": 10,
+          "standing": 11
+        },
+        {
+          "season": 2025,
+          "wins": 6,
+          "losses": 8,
+          "standing": 10
+        }
+      ]
+    },
+    {
+      "teamCode": "PRP",
+      "owner": "Drake Davis",
+      "championships": 0,
+      "playoffAppearances": 3,
+      "totalWins": 28,
+      "totalLosses": 28,
+      "averageStanding": 5.5,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 6,
+          "losses": 8,
+          "standing": 11
+        },
+        {
+          "season": 2023,
+          "wins": 7,
+          "losses": 7,
+          "standing": 5
+        },
+        {
+          "season": 2024,
+          "wins": 7,
+          "losses": 7,
+          "standing": 2
+        },
+        {
+          "season": 2025,
+          "wins": 8,
+          "losses": 6,
+          "standing": 4
+        }
+      ]
+    },
+    {
+      "teamCode": "JPH",
+      "owner": "Scott Davis",
+      "championships": 0,
+      "playoffAppearances": 1,
+      "totalWins": 21,
+      "totalLosses": 35,
+      "averageStanding": 8.0,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 5,
+          "losses": 9,
+          "standing": 7
+        },
+        {
+          "season": 2023,
+          "wins": 6,
+          "losses": 8,
+          "standing": 8
+        },
+        {
+          "season": 2024,
+          "wins": 4,
+          "losses": 10,
+          "standing": 9
+        },
+        {
+          "season": 2025,
+          "wins": 6,
+          "losses": 8,
+          "standing": 8
+        }
+      ]
+    },
+    {
+      "teamCode": "RRR",
+      "owner": "Cade Walker",
+      "championships": 0,
+      "playoffAppearances": 3,
+      "totalWins": 26,
+      "totalLosses": 30,
+      "averageStanding": 6.25,
+      "seasons": [
+        {
+          "season": 2022,
+          "wins": 3,
+          "losses": 11,
+          "standing": 11
+        },
+        {
+          "season": 2023,
+          "wins": 5,
+          "losses": 9,
+          "standing": 9
+        },
+        {
+          "season": 2024,
+          "wins": 10,
+          "losses": 4,
+          "standing": 3
+        },
+        {
+          "season": 2025,
+          "wins": 8,
+          "losses": 6,
+          "standing": 2
+        }
+      ]
+    }
+  ]
+}

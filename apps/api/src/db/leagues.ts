@@ -20,6 +20,11 @@ function mapLeague(row: Record<string, unknown>): League {
     sleeperUserId: row['sleeper_user_id'] != null ? String(row['sleeper_user_id']) : undefined,
     dynastyMode: (row['dynasty_mode'] as League['dynastyMode']) ?? undefined,
     auctionBudget: row['auction_budget'] != null ? Number(row['auction_budget']) : undefined,
+    contractRules: (row['format_state'] as League['formatState'])?.contractRules,
+    formatState:
+      row['format_state'] && typeof row['format_state'] === 'object'
+        ? (row['format_state'] as League['formatState'])
+        : undefined,
   };
 }
 
@@ -47,10 +52,10 @@ export async function getLeagueForUser(
 export async function upsertLeagueRow(pool: Pool, league: League): Promise<League> {
   if (!league.userId) throw new Error('League.userId is required');
 
-  if (league.platform === 'sleeper' && league.externalId) {
+  if (league.externalId) {
     const existing = await pool.query(
-      `SELECT id FROM leagues WHERE user_id = $1 AND platform = 'sleeper' AND external_id = $2`,
-      [league.userId, league.externalId],
+      `SELECT id FROM leagues WHERE user_id = $1 AND platform = $2 AND external_id = $3`,
+      [league.userId, league.platform, league.externalId],
     );
     if (existing.rows[0]) {
       const id = String(existing.rows[0]['id']);
@@ -58,7 +63,8 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
         `UPDATE leagues SET
            name = $2, type = $3, draft_type = $4, team_count = $5, season = $6,
            scoring = $7, roster = $8, draft_slot = $9, strategy_id = $10,
-           sleeper_draft_id = $11, sleeper_user_id = $12, dynasty_mode = $13, auction_budget = $14
+           sleeper_draft_id = $11, sleeper_user_id = $12, dynasty_mode = $13, auction_budget = $14,
+           format_state = COALESCE($15::jsonb, format_state)
          WHERE id = $1
          RETURNING *`,
         [
@@ -76,6 +82,7 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
           league.sleeperUserId ?? null,
           league.dynastyMode ?? null,
           league.auctionBudget ?? null,
+          league.formatState ? JSON.stringify(league.formatState) : null,
         ],
       );
       return mapLeague(result.rows[0]!);
@@ -86,10 +93,10 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
     `INSERT INTO leagues (
        id, user_id, name, platform, external_id, type, draft_type, team_count, season,
        scoring, roster, draft_slot, strategy_id, sleeper_draft_id, sleeper_user_id,
-       dynasty_mode, auction_budget
+       dynasty_mode, auction_budget, format_state
      ) VALUES (
        COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9,
-       $10, $11, $12, $13, $14, $15, $16, $17
+       $10, $11, $12, $13, $14, $15, $16, $17, COALESCE($18::jsonb, '{}'::jsonb)
      )
      RETURNING *`,
     [
@@ -110,6 +117,7 @@ export async function upsertLeagueRow(pool: Pool, league: League): Promise<Leagu
       league.sleeperUserId ?? null,
       league.dynastyMode ?? null,
       league.auctionBudget ?? null,
+      league.formatState ? JSON.stringify(league.formatState) : null,
     ],
   );
   return mapLeague(result.rows[0]!);
@@ -127,7 +135,8 @@ export async function updateLeagueRow(
   const result = await pool.query(
     `UPDATE leagues SET
        name = $3, strategy_id = $4, draft_slot = $5, sleeper_draft_id = $6,
-       dynasty_mode = $7, auction_budget = $8
+       dynasty_mode = $7, auction_budget = $8,
+       format_state = COALESCE($9::jsonb, format_state)
      WHERE id = $1 AND user_id = $2
      RETURNING *`,
     [
@@ -139,6 +148,7 @@ export async function updateLeagueRow(
       next.sleeperDraftId ?? null,
       next.dynastyMode ?? null,
       next.auctionBudget ?? null,
+      next.formatState ? JSON.stringify(next.formatState) : null,
     ],
   );
   const row = result.rows[0];
@@ -155,4 +165,16 @@ export async function deleteLeagueRow(
     userId,
   ]);
   return (result.rowCount ?? 0) > 0;
+}
+
+export async function persistLeagueFormatState(
+  pool: Pool,
+  userId: string,
+  leagueId: string,
+  formatState: League['formatState'],
+): Promise<void> {
+  await pool.query(
+    `UPDATE leagues SET format_state = $3::jsonb WHERE id = $1 AND user_id = $2`,
+    [leagueId, userId, JSON.stringify(formatState ?? {})],
+  );
 }

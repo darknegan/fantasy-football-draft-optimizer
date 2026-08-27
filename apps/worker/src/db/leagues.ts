@@ -20,6 +20,11 @@ function mapLeague(row: Record<string, unknown>): League {
     sleeperUserId: row['sleeper_user_id'] != null ? String(row['sleeper_user_id']) : undefined,
     dynastyMode: (row['dynasty_mode'] as League['dynastyMode']) ?? undefined,
     auctionBudget: row['auction_budget'] != null ? Number(row['auction_budget']) : undefined,
+    formatState:
+      row['format_state'] && typeof row['format_state'] === 'object'
+        ? (row['format_state'] as League['formatState'])
+        : undefined,
+    contractRules: (row['format_state'] as League['formatState'] | undefined)?.contractRules,
   };
 }
 
@@ -42,6 +47,7 @@ function leagueInsert(league: League) {
     sleeper_user_id: league.sleeperUserId ?? null,
     dynasty_mode: league.dynastyMode ?? null,
     auction_budget: league.auctionBudget ?? null,
+    format_state: league.formatState ?? {},
   };
 }
 
@@ -88,12 +94,12 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
   if (!league.userId) throw new Error('League.userId is required');
 
   if (db.kind === 'supabase') {
-    if (league.platform === 'sleeper' && league.externalId) {
+    if (league.externalId) {
       const { data: existing, error: findErr } = await db.sb
         .from('leagues')
         .select('id')
         .eq('user_id', league.userId)
-        .eq('platform', 'sleeper')
+        .eq('platform', league.platform)
         .eq('external_id', league.externalId)
         .maybeSingle();
       if (findErr) throw new Error(findErr.message);
@@ -117,11 +123,11 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
   }
 
   const sql = db.sql;
-  if (league.platform === 'sleeper' && league.externalId) {
+  if (league.externalId) {
     const existing = await sql`
       SELECT id FROM leagues
       WHERE user_id = ${league.userId}
-        AND platform = 'sleeper'
+        AND platform = ${league.platform}
         AND external_id = ${league.externalId}
     `;
     if (existing[0]) {
@@ -140,7 +146,8 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
           sleeper_draft_id = ${league.sleeperDraftId ?? null},
           sleeper_user_id = ${league.sleeperUserId ?? null},
           dynasty_mode = ${league.dynastyMode ?? null},
-          auction_budget = ${league.auctionBudget ?? null}
+          auction_budget = ${league.auctionBudget ?? null},
+          format_state = ${sql.json((league.formatState ?? {}) as never)}
         WHERE id = ${id}
         RETURNING *
       `;
@@ -152,7 +159,7 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
     INSERT INTO leagues (
       id, user_id, name, platform, external_id, type, draft_type, team_count, season,
       scoring, roster, draft_slot, strategy_id, sleeper_draft_id, sleeper_user_id,
-      dynasty_mode, auction_budget
+      dynasty_mode, auction_budget, format_state
     ) VALUES (
       COALESCE(${league.id || null}::uuid, gen_random_uuid()),
       ${league.userId},
@@ -170,7 +177,8 @@ export async function upsertLeagueRow(db: Db, league: League): Promise<League> {
       ${league.sleeperDraftId ?? null},
       ${league.sleeperUserId ?? null},
       ${league.dynastyMode ?? null},
-      ${league.auctionBudget ?? null}
+      ${league.auctionBudget ?? null},
+      ${sql.json((league.formatState ?? {}) as never)}
     )
     RETURNING *
   `;
@@ -197,6 +205,7 @@ export async function updateLeagueRow(
         sleeper_draft_id: next.sleeperDraftId ?? null,
         dynasty_mode: next.dynastyMode ?? null,
         auction_budget: next.auctionBudget ?? null,
+        format_state: next.formatState ?? {},
       })
       .eq('id', leagueId)
       .eq('user_id', userId)
@@ -213,7 +222,8 @@ export async function updateLeagueRow(
       draft_slot = ${next.draftSlot ?? null},
       sleeper_draft_id = ${next.sleeperDraftId ?? null},
       dynasty_mode = ${next.dynastyMode ?? null},
-      auction_budget = ${next.auctionBudget ?? null}
+      auction_budget = ${next.auctionBudget ?? null},
+      format_state = ${db.sql.json((next.formatState ?? {}) as never)}
     WHERE id = ${leagueId} AND user_id = ${userId}
     RETURNING *
   `;
@@ -240,4 +250,13 @@ export async function deleteLeagueRow(
     RETURNING id
   `;
   return rows.length > 0;
+}
+
+export async function persistLeagueFormatState(
+  db: Db,
+  userId: string,
+  leagueId: string,
+  formatState: League['formatState'],
+): Promise<void> {
+  await updateLeagueRow(db, userId, leagueId, { formatState: formatState ?? {} });
 }

@@ -12,8 +12,9 @@ import {
   sharedSleeperLimiter,
 } from '@draftlab/integrations';
 import { authenticate, requireUser } from '../auth/plugin.js';
-import { deleteLeagueRow, getLeagueForUser, listLeaguesForUser, updateLeagueRow, upsertLeagueRow } from '../db/leagues.js';
+import { deleteLeagueRow, getLeagueForUser, listLeaguesForUser, persistLeagueFormatState, updateLeagueRow, upsertLeagueRow } from '../db/leagues.js';
 import type { AppStore } from '../services/store.js';
+import { ensureWfflForUser } from '../services/ensure-wffl.js';
 import type { DraftPoller } from '../services/draft-poller.js';
 
 async function ownedLeague(
@@ -43,8 +44,13 @@ export async function leagueRoutes(
   app.get('/api/leagues', { preHandler: authenticate }, async (req, reply) => {
     if (reply.sent) return;
     const user = requireUser(req);
-    const fromDb = await listLeaguesForUser(pool, user.sub);
-    store.hydrateLeagues(fromDb);
+    await ensureWfflForUser(store, user.sub, {
+      list: () => listLeaguesForUser(pool, user.sub),
+      upsert: (league) => upsertLeagueRow(pool, league),
+      persistFormat: async (leagueId, league) => {
+        await persistLeagueFormatState(pool, user.sub, leagueId, league.formatState);
+      },
+    });
     return store.listLeagues(user.sub).map((league) => ({
       ...league,
       scoringSummary: scoringConfirmation(league),
