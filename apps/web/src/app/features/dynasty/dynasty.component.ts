@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { draftablePositions } from '@draftlab/domain';
 import { ApiService } from '../../core/api.service';
 import type {
   DynastyBoardRow,
@@ -19,8 +20,6 @@ import type {
   League,
   Position,
 } from '../../core/api.types';
-
-const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
 interface PositionGroup {
   position: Position;
@@ -109,6 +108,9 @@ export class DynastyComponent implements OnInit {
           },
         ];
 
+    const positions = draftablePositions(
+      this.league()?.roster ?? { qb: 1, rb: 2, wr: 2, te: 1, flex: 1, superflex: 0, bench: 6, totalStarters: 7 },
+    );
     return teams
       .map((team) => {
         const nameHit = Boolean(q) && team.name.toLowerCase().includes(q);
@@ -129,7 +131,7 @@ export class DynastyComponent implements OnInit {
           spent: team.spent,
           remaining: team.remaining,
           playerCount: players.length,
-          groups: POSITIONS.map((position) => ({
+          groups: positions.map((position) => ({
             position,
             players: players.filter((row) => row.position === position),
           })),

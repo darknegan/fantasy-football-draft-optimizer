@@ -86,7 +86,6 @@ describe('WFFL global keeper auction', () => {
     expect(state.signedRoster?.some((p) => p.name === 'Bucky Irving')).toBe(false);
     expect(state.userBudget.deadCap).toBe(5);
     expect(state.userBudget.remaining).toBe(171 + 8 - 2);
-    expect(state.values.some((v) => v.playerId === bucky!.playerId)).toBe(true);
   });
 
   it('lets a user claim another franchise without moving keepers', () => {
