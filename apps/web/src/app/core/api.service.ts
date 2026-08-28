@@ -229,6 +229,10 @@ export class ApiService {
     return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/claim-team`, { rosterId });
   }
 
+  resetWfflAuction(leagueId: string) {
+    return this.http.post<AuctionState>(`/api/leagues/${leagueId}/auction/reset`, {});
+  }
+
   auctionMaxBid(leagueId: string, playerId: string) {
     return this.http.get<MaxBidResult>(`/api/leagues/${leagueId}/auction/max-bid`, {
       params: { playerId },

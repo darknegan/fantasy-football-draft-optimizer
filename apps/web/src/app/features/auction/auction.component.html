@@ -28,6 +28,17 @@
         <div class="stat-val dl-mono">{{ inflationLabel() }}</div>
         <div class="stat-sub">{{ inflationNote() }}</div>
       </div>
+
+      @if (isWffl()) {
+        <button
+          type="button"
+          class="reset-btn"
+          (click)="resetWffl()"
+          [disabled]="resetting() || bidding() || claimingId() !== null"
+        >
+          Reset to keepers
+        </button>
+      }
     </header>
 
     <div class="body">

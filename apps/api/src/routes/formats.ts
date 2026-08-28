@@ -144,6 +144,15 @@ export async function formatRoutes(app: FastifyInstance, store: AppStore, pool: 
     },
   );
 
+  app.post<{ Params: { id: string } }>('/api/leagues/:id/auction/reset', auth, async (req, reply) => {
+    if (!(await requireOwnedLeague(req, reply, store, pool))) return;
+    const result = store.resetWfflAuction(req.params.id);
+    if (!result) return reply.code(404).send({ error: 'League not found' });
+    if ('error' in result) return reply.code(400).send(result);
+    await persistAuction(store, pool, requireUser(req).sub, req.params.id);
+    return result;
+  });
+
   app.get<{ Params: { id: string } }>(
     '/api/leagues/:id/calibration',
     auth,

@@ -95,6 +95,7 @@ export class AuctionComponent implements OnInit {
   readonly winnerRosterId = signal<string | null>(null);
   readonly winnerAmount = signal(1);
   readonly claimingId = signal<string | null>(null);
+  readonly resetting = signal(false);
   /** Last committed name per roster, used to restore on cancel / blank blur. */
   private readonly teamNameBackup = signal<Record<string, string>>({});
 
@@ -294,6 +295,10 @@ export class AuctionComponent implements OnInit {
     return `${teams} teams · $${cap} cap · contracts up to ${years} years · lot ${lot} of ${total}${boardBit}${wffl}`;
   }
 
+  isWffl(): boolean {
+    return this.league()?.externalId === 'global:wffl';
+  }
+
   cap(): number {
     return this.state()?.cap ?? this.state()?.userBudget.startingBudget ?? 200;
   }
@@ -450,7 +455,7 @@ export class AuctionComponent implements OnInit {
     const player = this.onBlock();
     const rosterId = this.winnerRosterId();
     const team = this.winnerTeam();
-    if (!player || !rosterId || !team || this.bidding() || !this.canConfirmWinner()) return;
+    if (!player || !rosterId || !team || this.bidding() || this.resetting() || !this.canConfirmWinner()) return;
     const amount = Math.min(team.remaining, Math.max(1, this.winnerAmount()));
     this.bidding.set(true);
     this.error.set(null);
@@ -475,7 +480,7 @@ export class AuctionComponent implements OnInit {
   }
 
   dropContract(playerId: string, name: string, penalty: number): void {
-    if (this.droppingId() || this.bidding() || this.claimingId()) return;
+    if (this.droppingId() || this.bidding() || this.claimingId() || this.resetting()) return;
     const confirmDrop =
       penalty > 0
         ? `Drop ${name}? This season's dead-cap penalty is $${penalty}.`
@@ -496,7 +501,7 @@ export class AuctionComponent implements OnInit {
   }
 
   claimTeam(team: TeamRoomView): void {
-    if (this.claimingId() || this.bidding() || team.isYou) return;
+    if (this.claimingId() || this.bidding() || this.resetting() || team.isYou) return;
     const confirmClaim = `Draft as ${team.name}? Keepers and remaining budget stay with that franchise.`;
     if (typeof window !== 'undefined' && !window.confirm(confirmClaim)) return;
     this.claimingId.set(team.rosterId);
@@ -509,6 +514,28 @@ export class AuctionComponent implements OnInit {
       error: (err: { error?: { error?: string }; message?: string }) => {
         this.claimingId.set(null);
         this.error.set(err?.error?.error ?? err?.message ?? 'Could not switch teams.');
+      },
+    });
+  }
+
+  resetWffl(): void {
+    if (!this.isWffl() || this.resetting() || this.bidding() || this.claimingId()) return;
+    const ok =
+      typeof window === 'undefined' ||
+      window.confirm(
+        'Reset WFFL back to original keepers? Live bids and dropped contracts will be undone. Your franchise stays the same.',
+      );
+    if (!ok) return;
+    this.resetting.set(true);
+    this.error.set(null);
+    this.api.resetWfflAuction(this.leagueId).subscribe({
+      next: (s) => {
+        this.applyState(s);
+        this.resetting.set(false);
+      },
+      error: (err: { error?: { error?: string }; message?: string }) => {
+        this.resetting.set(false);
+        this.error.set(err?.error?.error ?? err?.message ?? 'Could not reset the WFFL auction.');
       },
     });
   }

@@ -138,4 +138,45 @@ describe('WFFL global keeper auction', () => {
     expect(board.some((row) => row.player.position === 'K')).toBe(true);
     expect(board.some((row) => row.player.position === 'DEF')).toBe(true);
   });
+
+  it('resets live bids and dropped keepers back to the original template', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    const before = store.auctionState(league.id)!;
+    const bucky = before.signedRoster?.find((p) => p.name === 'Bucky Irving');
+    expect(bucky).toBeTruthy();
+    store.releaseAuctionContract(league.id, bucky!.playerId);
+    const available = before.values.find((v) => v.name === 'Jahmyr Gibbs') ?? before.values[0];
+    expect(available).toBeTruthy();
+    store.placeAuctionBid(league.id, { playerId: available!.playerId, amount: 20, contractYears: 4 });
+
+    const reset = store.resetWfflAuction(league.id);
+    expect(reset && 'error' in reset).toBe(false);
+    const state = reset as NonNullable<typeof before>;
+    expect(state.userBudget.code).toBe('PRP');
+    expect(state.userBudget.spent).toBe(26);
+    expect(state.userBudget.deadCap).toBe(3);
+    expect(state.userBudget.remaining).toBe(171);
+    expect(state.signedRoster?.some((p) => p.name === 'Bucky Irving')).toBe(true);
+    expect(state.signedRoster?.some((p) => p.name === 'Jahmyr Gibbs')).toBe(false);
+    expect(state.bids.filter((b) => !b.isKeeper && !b.isPenalty)).toHaveLength(0);
+  });
+
+  it('keeps the claimed franchise when resetting WFFL keepers', () => {
+    const store = new AppStore(catalog);
+    const league = store.seedWfflLeague('user-1');
+    const man = store.auctionState(league.id)!.budgets.find((b) => b.code === 'MAN')!;
+    store.claimAuctionTeam(league.id, man.rosterId);
+    store.placeAuctionBid(league.id, {
+      playerId: store.auctionState(league.id)!.values[0]!.playerId,
+      amount: 5,
+      contractYears: 1,
+    });
+
+    const reset = store.resetWfflAuction(league.id) as NonNullable<ReturnType<AppStore['auctionState']>>;
+    expect(reset.userBudget.code).toBe('MAN');
+    expect(reset.userBudget.name).toBe('Manhattan Empire');
+    expect(reset.signedRoster?.some((p) => p.name === 'Puka Nacua')).toBe(true);
+    expect(reset.bids.filter((b) => !b.isKeeper && !b.isPenalty)).toHaveLength(0);
+  });
 });
