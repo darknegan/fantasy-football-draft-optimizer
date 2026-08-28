@@ -90,6 +90,7 @@ async function createAuction(
     renameAuctionTeam?: ReturnType<typeof vi.fn>;
     releaseAuctionContract?: ReturnType<typeof vi.fn>;
     claimAuctionTeam?: ReturnType<typeof vi.fn>;
+    resetWfflAuction?: ReturnType<typeof vi.fn>;
     league?: League;
   } = {},
 ) {
@@ -109,6 +110,7 @@ async function createAuction(
     );
   const releaseAuctionContract = extras.releaseAuctionContract ?? vi.fn(() => of(state));
   const claimAuctionTeam = extras.claimAuctionTeam ?? vi.fn(() => of(state));
+  const resetWfflAuction = extras.resetWfflAuction ?? vi.fn(() => of(state));
   await TestBed.configureTestingModule({
     imports: [AuctionComponent],
     providers: [
@@ -122,6 +124,7 @@ async function createAuction(
           renameAuctionTeam,
           releaseAuctionContract,
           claimAuctionTeam,
+          resetWfflAuction,
           auctionMaxBid: () =>
             of({
               playerId: hall.playerId,
@@ -141,7 +144,7 @@ async function createAuction(
   }).compileComponents();
   const fixture = TestBed.createComponent(AuctionComponent);
   fixture.detectChanges();
-  return { fixture, bid, renameAuctionTeam, releaseAuctionContract, claimAuctionTeam };
+  return { fixture, bid, renameAuctionTeam, releaseAuctionContract, claimAuctionTeam, resetWfflAuction };
 }
 
 describe('AuctionComponent on-the-block', () => {
@@ -474,5 +477,27 @@ describe('AuctionComponent on-the-block', () => {
       (el as HTMLElement).textContent?.trim(),
     );
     expect(tabs).toEqual(['ALL', 'QB', 'RB', 'WR', 'TE']);
+  });
+
+  it('hides reset-to-keepers on a non-WFFL auction', async () => {
+    const { fixture } = await createAuction(makeState());
+    expect(fixture.nativeElement.querySelector('.reset-btn')).toBeNull();
+  });
+
+  it('resets WFFL keepers after confirming', async () => {
+    const resetWfflAuction = vi.fn(() => of(makeState()));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { fixture } = await createAuction(makeState(), {
+      resetWfflAuction,
+      league: { ...makeLeague(), externalId: 'global:wffl', name: 'WFFL Auction Keepers' },
+    });
+    const btn = fixture.nativeElement.querySelector('.reset-btn') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.textContent).toMatch(/Reset to keepers/i);
+    btn.click();
+    fixture.detectChanges();
+    expect(confirm).toHaveBeenCalled();
+    expect(resetWfflAuction).toHaveBeenCalledWith('league-1');
+    confirm.mockRestore();
   });
 });

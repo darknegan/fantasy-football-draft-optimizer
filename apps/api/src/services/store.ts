@@ -257,6 +257,29 @@ export class AppStore {
     return snapshot;
   }
 
+  /**
+   * Restore original WFFL keepers and drop penalties. Live auction bids and
+   * dropped contracts are undone; the claimed franchise stays put.
+   */
+  resetWfflAuction(leagueId: string) {
+    const league = this.leagues.get(leagueId);
+    if (!league) return null;
+    if (!isWfflLeague(league.externalId)) {
+      return { error: 'Only the WFFL keeper auction can be reset to original keepers' as const };
+    }
+    const userRosterId = this.drafts.get(leagueId)?.userRosterId ?? 'roster-user';
+    const budgets = this.formats.auctionBudgets.get(leagueId) ?? [];
+    const code =
+      league.formatState?.userTeamCode ??
+      budgets.find((b) => b.rosterId === userRosterId)?.code ??
+      WFFL_DEFAULT_TEAM_CODE;
+    this.formats.outcomes.delete(leagueId);
+    this.formats.calibration.delete(leagueId);
+    this.applyWfflTemplate(leagueId, code);
+    this.recalculateForLeague(leagueId);
+    return this.auctionState(leagueId);
+  }
+
   applyWfflTemplateIfEmpty(leagueId: string) {
     const bids = this.formats.auctionBids.get(leagueId);
     const league = this.leagues.get(leagueId);

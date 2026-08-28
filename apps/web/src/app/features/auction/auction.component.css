@@ -70,6 +70,26 @@
   background: color-mix(in srgb, var(--dl-warning) 14%, transparent);
 }
 
+.reset-btn {
+  border: 1px solid color-mix(in srgb, var(--dl-danger, #e35) 35%, var(--dl-border-strong));
+  background: var(--dl-surface-overlay);
+  color: var(--dl-danger, #e35);
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reset-btn:hover:not(:disabled) {
+  border-color: var(--dl-danger, #e35);
+}
+
+.reset-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .stat-val {
   font-size: 1.35rem;
   font-weight: 700;
